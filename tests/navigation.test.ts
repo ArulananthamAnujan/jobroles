@@ -14,3 +14,5 @@ test('back to results preserves search filters and pagination but excludes unrel
  assert.equal(resultsHref('q=Nurse&location=Melbourne&page=3&token_hash=secret&view=hiring'),'/search?q=Nurse&location=Melbourne&page=3');
  assert.equal(resultsHref(''),'/search');
 });
+
+test('application preference navigation is recognised',()=>{assert.equal(accountView('view=preferences',''),'preferences');});

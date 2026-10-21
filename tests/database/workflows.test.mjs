@@ -132,5 +132,16 @@ test('PostgreSQL workflows and row-level security',async t=>{
   await rows(owner,"select jp_team_command('assign',$1::jsonb)",[JSON.stringify({jobId:job,userId:recruiter,assigned:false})]);assert.equal((await rows(recruiter,'select * from applications')).length,0);
  });
  await t.test('applicants retain job details after closure but public users do not',async()=>{await command(owner,'job.state',{id:job,state:'closed'});assert.equal((await rows(seeker,'select id from jobs where id=$1',[job])).length,1);assert.equal((await rows(null,'select id from jobs where id=$1',[job])).length,0);});
+ await t.test('application preferences are private and cannot activate dispatch',async()=>{
+  await rows(seeker,"insert into application_preferences(user_id,mode) values($1,'manual')",[seeker]);
+  assert.equal((await rows(other,'select * from application_preferences')).length,0);
+  assert.equal((await rows(owner,'select * from application_preferences')).length,0);
+  await assert.rejects(()=>rows(other,"insert into application_preferences(user_id,mode) values($1,'manual')",[seeker]));
+  await assert.rejects(()=>rows(seeker,'update application_preferences set sending_enabled=true where user_id=$1',[seeker]));
+  await assert.rejects(()=>rows(other,"insert into application_preferences(user_id,mode,resume_version_id,setup_acknowledged) values($1,'automatic',$2,true)",[other,resume]));
+  await rows(seeker,"update application_preferences set mode='automatic',resume_version_id=$2,setup_acknowledged=true where user_id=$1",[seeker,resume]);
+  assert.equal((await rows(seeker,'select sending_enabled from application_preferences'))[0].sending_enabled,false);
+  await rows(seeker,"update application_preferences set mode='manual',criteria='{}',resume_version_id=null,setup_acknowledged=false where user_id=$1",[seeker]);
+ });
  await db.close();
 });
