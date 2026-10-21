@@ -9,8 +9,12 @@ export async function GET(request:Request){try{
  if(filters.company)query=query.ilike('companies.name',literalPattern(filters.company));
  if(filters.arrangement)query=query.eq('arrangement',filters.arrangement);
  if(filters.type)query=query.eq('employment_type',filters.type);
- // Salary sort uses annual roles only, so hourly and annual amounts are never compared.
- if(filters.sort==='salary')query=query.eq('salary_period','year').order('salary_min',{ascending:false,nullsFirst:false});
+ // Salary bands overlap the requested range, always in the selected pay period.
+ const pay=filters.salary;
+ if(pay.minimum!==null||pay.maximum!==null||filters.sort==='salary')query=query.eq('salary_period',pay.period).eq('currency','AUD');
+ if(pay.minimum!==null)query=query.gte('salary_max',pay.minimum);
+ if(pay.maximum!==null)query=query.lte('salary_min',pay.maximum);
+ if(filters.sort==='salary')query=query.order('salary_min',{ascending:false,nullsFirst:false});
  query=query.order('published_at',{ascending:false}).order('id');
  let result=await query.range((filters.page-1)*20,filters.page*20-1);
  // Results may shrink between page requests (closed roles or changed filters).

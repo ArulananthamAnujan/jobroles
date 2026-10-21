@@ -32,3 +32,5 @@
 /* Keep customer-entered titles and company names inside narrow layouts. */
 .account-content h2,.account-content h3,.live-shell h1,.live-shell .company-row strong,.application-title{overflow-wrap:anywhere}
 .account-sidebar nav button{min-width:0;overflow-wrap:anywhere}
+
+.salary-highlight{font-weight:700;color:var(--teal);background:var(--mint);padding:10px 12px;border-radius:8px;width:fit-content}.market-overview{margin-bottom:26px}.market-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.market-stats strong{display:block;font-size:28px}.market-browse{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}@media(max-width:600px){.market-stats{grid-template-columns:1fr}}
