@@ -1,0 +1,2 @@
+import {authenticatedClient,response,failure,ApiError} from '@/lib/backend/server';
+export async function GET(){try{const {client}=await authenticatedClient();const {data,error}=await client.rpc('jp_notification_status');if(error)throw new ApiError(error.code==='42501'?403:503,'Email delivery status is available to administrators only.');return response(data);}catch(error){return failure(error);}}

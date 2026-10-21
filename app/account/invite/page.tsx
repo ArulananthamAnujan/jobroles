@@ -1,0 +1,5 @@
+'use client';
+import {useEffect,useState} from 'react';
+import Link from 'next/link';
+import {Panel,Btn,Heading} from '@/components/market-ui';
+export default function Invite(){const [token,T]=useState(''),[message,M]=useState(''),[busy,B]=useState(false);useEffect(()=>{T(location.hash.slice(1));history.replaceState(null,'','/account/invite');},[]);return <main className="main account-shell"><Heading title="Join your hiring team"/><Panel><p>Sign in with the email address the company invited, then open your invitation link again.</p><Link href="/account" className="text-link">Go to sign in</Link><Btn disabled={busy||!token} onClick={async()=>{B(true);try{const res=await fetch('/api/team',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'accept',token})});const data=await res.json() as {error?:string};if(!res.ok)throw new Error(data.error);M('Invitation accepted. Open your account to see your team.');T('');}catch(e){M((e as Error).message);}finally{B(false);}}}>Accept invitation</Btn>{message&&<p role="status">{message}</p>}<Link href="/account" className="text-link">Open account</Link></Panel></main>}
