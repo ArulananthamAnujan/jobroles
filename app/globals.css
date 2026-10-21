@@ -34,3 +34,13 @@
 .account-sidebar nav button{min-width:0;overflow-wrap:anywhere}
 
 .salary-highlight{font-weight:700;color:var(--teal);background:var(--mint);padding:10px 12px;border-radius:8px;width:fit-content}.market-overview{margin-bottom:26px}.market-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.market-stats strong{display:block;font-size:28px}.market-browse{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}@media(max-width:600px){.market-stats{grid-template-columns:1fr}}
+
+/* Market research and employer writing tools */
+.guide-salary{font-size:1.6rem;font-weight:700;color:var(--ink,#173a37)}
+.guide-salary small{display:block;font-size:.85rem;font-weight:400;margin-top:.4rem}
+.listing-tools{padding:1.25rem;background:#eef7f5;border:1px solid #c9dfd9;border-radius:14px;margin:1rem 0 1.5rem;min-width:0}
+.listing-tools hr{margin:1.4rem 0;border:0;border-top:1px solid #c9dfd9}
+.listing-tools .jp-btn{margin:.5rem .75rem .5rem 0;white-space:normal;height:auto;min-height:42px}
+.ai-preview{background:white;border:1px solid #c9dfd9;border-radius:10px;padding:1rem;margin-top:1rem;overflow-wrap:anywhere}
+.ai-preview ul{list-style:disc;padding-left:1.5rem}
+@media(max-width:700px){.topbar{flex-wrap:wrap}.top-nav{flex-wrap:wrap}.guide-salary{font-size:1.35rem}}

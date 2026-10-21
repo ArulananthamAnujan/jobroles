@@ -56,3 +56,7 @@ Deployment is not launch certification. Real-user and mobile browser acceptance 
 The original ChatGPT site was private. That access gate does not transfer to Netlify: configure Netlify site protection before allowing pilot access. Application-level Supabase authentication and RLS remain in place. Search-engine indexing stays disabled pending launch review.
 
 No secrets, private user exports, deployment access tokens or production database contents are included.
+
+### Sector guides and AI listing tools
+
+Browse `/market-guide` for 22 researched roles across 12 sectors, salary sources and external vacancy links. In the employer portal, open **Post a job** to use a salary guide, draft or improve a listing with AI, or suggest interview questions. See [activation, data provenance and verification notes](docs/MARKET-GUIDE-AND-AI.md). AI needs runtime provider credentials or an active Netlify AI Gateway; manual posting continues to work without it.

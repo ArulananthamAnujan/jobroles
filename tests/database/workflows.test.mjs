@@ -24,6 +24,21 @@ async function setup(){
 }
 test('PostgreSQL workflows and row-level security',async t=>{
  await setup();let application;
+ await t.test('AI drafting requires an active employer and cannot reset its private quota',async()=>{
+  await assert.rejects(()=>rows(null,'select jp_listing_ai_quota($1)',[company]),/permission denied/);
+  for(const actor of [seeker,manager,other])await assert.rejects(()=>rows(actor,'select jp_listing_ai_quota($1)',[company]),/Employer access required/);
+  assert.equal((await rows(owner,'select jp_listing_ai_quota($1) as allowed',[company]))[0].allowed,true);
+  assert.equal((await rows(owner,'select jp_listing_ai_quota($1) as allowed',[company]))[0].allowed,false);
+  await assert.rejects(()=>rows(owner,'update private.listing_ai_usage set attempts=1'),/permission denied/);
+  await db.exec('reset role');await db.query("update private.listing_ai_usage set attempts=10,last_attempt=now()-interval '2 minutes' where user_id=$1",[owner]);
+  assert.equal((await rows(owner,'select jp_listing_ai_quota($1) as allowed',[company]))[0].allowed,false);
+  await db.exec('reset role');await db.query("update private.listing_ai_usage set usage_day=current_date-1 where user_id=$1",[owner]);
+  assert.equal((await rows(owner,'select jp_listing_ai_quota($1) as allowed',[company]))[0].allowed,true);
+  await db.exec('reset role');await db.query('update companies set suspended_at=now() where id=$1',[company]);
+  await assert.rejects(()=>rows(recruiter,'select jp_listing_ai_quota($1)',[company]),/Employer access required/);
+  await db.exec('reset role');await db.query('update companies set suspended_at=null where id=$1',[company]);
+ });
+
  await t.test('privacy requests derive identity and are hidden from employers',async()=>{
   await command(seeker,'profile.save',{name:'Privacy tester',searchable:true});
   const [{result}]=await rows(seeker,"select jp_privacy_command('create',$1::jsonb) as result",[JSON.stringify({kind:'deletion',detail:'Please delete my account and personal data.',userId:owner})]);
