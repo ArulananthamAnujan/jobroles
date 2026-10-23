@@ -2,6 +2,8 @@ import type {Metadata} from 'next';
 import Link from 'next/link';
 import {notFound} from 'next/navigation';
 import {cache} from 'react';
+import {headers} from 'next/headers';
+import {rateLimit} from '@/lib/backend/guard';
 import {publicJobsClient,jobFields} from '@/lib/backend/public-jobs';
 import {backendConfigured} from '@/lib/backend/server';
 import {salaryLabel} from '@/lib/salary';
@@ -27,9 +29,16 @@ export async function generateMetadata({params}:{params:Promise<{id:string}>}):P
  const description=`${job.companies.name} · ${where(job)} · ${pay}. ${job.description.slice(0,140)}`.slice(0,300);
  return {title:`${job.title} · ${job.companies.name} · ${where(job)} | JobRoles`,description,alternates:{canonical:`${siteOrigin()}/jobs/${job.id}`},openGraph:{title:`${job.title} at ${job.companies.name}`,description,type:'website',url:`${siteOrigin()}/jobs/${job.id}`}};
 }
+// Counts a view for the employer's statistics: one per address per job per hour, never for crawlers.
+async function countView(id:string){
+ try{const h=await headers();if(/bot|crawl|spider|slurp|preview|monitor/i.test(h.get('user-agent')||''))return;
+  const ip=h.get('x-nf-client-connection-ip')||h.get('x-forwarded-for')?.split(',')[0].trim()||'unknown';
+  rateLimit(`view:${id}:${ip}`,1,60*60_000);await publicJobsClient().rpc('jp_record_job_view',{target:id});}catch{}
+}
 export default async function JobPage({params}:{params:Promise<{id:string}>}){
  const job=await loadJob((await params).id);
  if(!job)notFound();
+ await countView(job.id);
  const apply=`/job-seeker?job=${job.id}#application`;
  return <>
   <script type="application/ld+json" dangerouslySetInnerHTML={{__html:serializeJsonLd(jobPostingJsonLd(job,siteOrigin()))}}/>

@@ -1,0 +1,15 @@
+'use client';
+import {useEffect,useState} from 'react';
+import Link from 'next/link';
+type Stat={job_id:string;title:string;state:string;views_30d:number;applications:number;apply_rate:number|null;interviewing:number;hired:number;median_days_to_hire:number|null};
+// Per-listing funnel for owners and recruiters: views in the last 30 days, applications, interviews and hires.
+export default function JobStats({companies}:{companies:{id:string;name:string}[]}){
+ const [company,C]=useState(companies[0]?.id||''),[stats,S]=useState<Stat[]|null>(null),[error,E]=useState('');
+ useEffect(()=>{if(!company)return;const c=new AbortController();fetch(`/api/job-stats?company=${company}`,{signal:c.signal,cache:'no-store'}).then(async r=>{const d=await r.json() as {stats?:Stat[];error?:string};if(!r.ok)throw new Error(d.error);S(d.stats||[]);E('');}).catch(e=>{if(e.name!=='AbortError'){E(e.message);S(null);}});return()=>c.abort();},[company]);
+ if(!companies.length)return null;
+ return <section aria-labelledby="stats-title"><h2 id="stats-title" className="section-title">Listing performance</h2>
+  {companies.length>1&&<label className="field"><span>Company</span><select value={company} onChange={e=>C(e.target.value)}>{companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>}
+  {error&&<p role="alert">{error}</p>}
+  {stats&&(stats.length?<div className="table-card"><table><thead><tr><th>Role</th><th>Status</th><th>Views (30 days)</th><th>Applications</th><th>Apply rate</th><th>Interview or offer</th><th>Hired</th><th>Median days to hire</th></tr></thead><tbody>{stats.map(s=><tr key={s.job_id}><td><Link className="text-link" href={`/jobs/${s.job_id}`}>{s.title}</Link></td><td>{s.state.replace('_',' ')}</td><td>{s.views_30d}</td><td>{s.applications}</td><td>{s.apply_rate===null?'–':`${s.apply_rate}%`}</td><td>{s.interviewing}</td><td>{s.hired}</td><td>{s.median_days_to_hire??'–'}</td></tr>)}</tbody></table></div>:<p>No published listings yet.</p>)}
+ </section>;
+}
