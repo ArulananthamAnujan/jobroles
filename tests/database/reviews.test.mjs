@@ -26,7 +26,7 @@ test('company reviews',async t=>{
   assert.equal((await rows(null,'select title from company_reviews'))[0].title,review[0]);
   await assert.rejects(()=>rows(recruiter,'select jp_respond_review($1,$2)',[p.id,'Thanks for the feedback on scheduling.']),/owner required/);
   await rows(owner,'select jp_respond_review($1,$2)',[p.id,'Thanks for the feedback on scheduling.']);
-  assert.deepEqual((await rows(null,'select jp_company_rating($1) as r',[company]))[0].r,{average:4,count:1});
+  const rating=(await rows(null,'select jp_company_rating($1) as r',[company]))[0].r;assert.deepEqual([rating.average,rating.count,rating.distribution['4']],[4,1,1]);
   assert.equal((await rows(other,'select employer_response from company_reviews'))[0].employer_response,'Thanks for the feedback on scheduling.');
  });
  await db.close();
