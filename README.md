@@ -30,6 +30,10 @@ When moving to jobroles.com.au, choose a canonical www or apex origin, update AP
 
 Supabase Edge Functions remain hosted on Supabase, independently of Netlify. `resume-download` must be deployed for private document downloads; it authenticates callers internally. `notification-mail` requires JWT verification and separate worker-secret authentication; it is not an unauthenticated endpoint. Email setup and scheduling are currently paused. Do not enable sending until credentials, verified sender and delivery testing are completed.
 
+## Launching
+
+See [docs/LAUNCH-CHECKLIST.md](docs/LAUNCH-CHECKLIST.md) for the migrations, Edge Functions, schedules, accounts and settings that switch on alerts, feeds, payments, malware scanning, social sign-in and search indexing.
+
 ## Local development
 
 Node 22.13 or newer:

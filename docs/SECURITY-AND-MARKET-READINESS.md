@@ -31,6 +31,13 @@ Reviewed 23 October 2026 against commit `6612a33` plus the fixes in this branch.
 - Opening an email confirmation link with GET does not consume the one-time token, so email security scanners can't sign people in by prefetching it.
 - No secrets, keys or production data are committed.
 
+## Update: built in this branch
+
+Everything listed as "Still open" in section 1 and in phases 1 to 3 of section 2 is now built and tested,
+except the items marked "Not built yet" in [LAUNCH-CHECKLIST.md](LAUNCH-CHECKLIST.md). The checklist also lists
+the accounts and settings needed to switch each feature on. Sections 1 and 2 below are the original review,
+kept for reference.
+
 ## 2. Is JobRoles ready to compete with Indeed?
 
 **Not yet.** The product side is solid for a pilot. Search, applying with chosen resume versions, screening questions, saved jobs, application tracking, messaging, interview scheduling, an employer pipeline, team roles, ABN-verified employers, moderation, privacy export and an AI listing assistant all exist. Indeed's advantage, though, comes from four things JobRoles lacks: **job volume, Google traffic, alerts that bring people back, and a business model.** No startup beats Indeed head-on. The realistic aim is to win a niche Indeed serves badly: **Australian jobs where the pay is always shown and the employer is verified.** The plan below is built around that position.
