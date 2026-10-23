@@ -5,7 +5,7 @@ that only the business owner can create. Work through the steps in order.
 
 ## 1. Database
 
-Apply the seven new migrations to the production Supabase project. Check the remote history first and never
+Apply the eleven new migrations to the production Supabase project. Check the remote history first and never
 run `supabase db reset` against production.
 
 ```
@@ -22,6 +22,10 @@ supabase db push --linked
 | `20261023000005_job_feeds` | ATS and careers-site feed imports |
 | `20261023000006_recommendations_and_stats` | Jobs for you, listing views and the hiring funnel |
 | `20261023000007_monetisation_and_trust` | Sponsored listings, candidate search, invitations, risk flags, responsiveness |
+| `20261024000001_australian_postcodes` | Every Australian locality and postcode for distance search (about 830 KB) |
+| `20261024000002_company_reviews` | Moderated hiring-experience reviews from applicants |
+| `20261024000003_push_notifications` | Phone and browser push subscriptions for job alerts |
+| `20261024000004_ats_formats` | Greenhouse and Lever feed formats |
 
 ## 2. Edge Functions
 
@@ -39,6 +43,7 @@ Set their secrets with `supabase secrets set NAME=value`:
 | Job alerts | `JOB_ALERT_WORKER_SECRET`, `JOB_ALERTS_ENABLED=true`, `RESEND_API_KEY`, `NOTIFICATION_FROM`, `APP_ORIGIN` |
 | Feed imports | `JOB_FEED_WORKER_SECRET` |
 | Sponsored listings | `STRIPE_SECRET_KEY`, `STRIPE_PRICE_SPONSOR`, `STRIPE_WEBHOOK_SECRET`, `SPONSOR_DAYS` (default 30) |
+| Push notifications (job-alerts function) | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT=mailto:you@yourdomain` |
 
 `RESUME_SCANNER_URL` must point to a service that accepts a file in a POST and answers `{"clean": true|false}`.
 A small ClamAV container on Cloud Run or Fly.io is enough.
@@ -65,6 +70,11 @@ call is a POST with its secret header:
 - **Google, Apple and LinkedIn sign-in**: enable each provider in Supabase Auth, add `/auth/callback` to the
   allowed redirect URLs, then list them in Netlify as `NEXT_PUBLIC_AUTH_PROVIDERS=google,apple,linkedin_oidc`.
 - **OpenAI**: `OPENAI_API_KEY` in Netlify switches on the listing assistant and resume autofill.
+- **Push notifications**: run `npx web-push generate-vapid-keys` once. Put the public key in Netlify as
+  `NEXT_PUBLIC_VAPID_PUBLIC_KEY` and both keys in the job-alerts function secrets (above).
+- **Sentry** (optional): create a project and set `SENTRY_DSN` in Netlify. Without it, errors still go to the
+  Netlify function log.
+- **Store apps**: follow [MOBILE-APPS.md](MOBILE-APPS.md) for Google Play and the App Store.
 
 ## 5. Netlify settings
 
@@ -83,9 +93,8 @@ Set these with **Builds and Functions** scope, then redeploy:
   capital and regional centres are seeded.
 - Recruit verified employers in one city and one or two sectors first. A board with few jobs loses seekers.
 
-## Not built yet
+## Data credits
 
-- Native iOS and Android apps, and push notifications. The site installs as a web app instead.
-- Company reviews from employees. The company pages show measured responsiveness and verified pay instead.
-- Direct API integrations with specific ATS products. Feeds cover most of them through their XML exports.
-- Error tracking such as Sentry, which needs an account.
+Locality and postcode coordinates come from Matthew Proctor's Australian Postcodes dataset
+(https://www.matthewproctor.com/australian_postcodes). Confirm its current licence terms before launch and credit it
+on the privacy or terms page if it requires attribution.

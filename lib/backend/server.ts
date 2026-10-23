@@ -23,6 +23,8 @@ export class ApiError extends Error { constructor(public status:number,message:s
 export function response(body:unknown,status=200){return Response.json(body,{status,headers:{'Cache-Control':'private, no-store','Vary':'Cookie','X-Content-Type-Options':'nosniff'}});}
 export function failure(error:unknown){
   if (error instanceof ApiError) return response({error:error.message},error.status);
+  // Unexpected failures are reported; the client still gets a generic message.
+  void import('../error-report').then(m=>m.reportError(error,{source:'api'})).catch(()=>{});
   return response({error:'The request could not be completed. Please try again.'},500);
 }
 export function sameOrigin(request:Request){

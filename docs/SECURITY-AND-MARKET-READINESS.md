@@ -34,7 +34,8 @@ Reviewed 23 October 2026 against commit `6612a33` plus the fixes in this branch.
 ## Update: built in this branch
 
 Everything listed as "Still open" in section 1 and in phases 1 to 3 of section 2 is now built and tested,
-except the items marked "Not built yet" in [LAUNCH-CHECKLIST.md](LAUNCH-CHECKLIST.md). The checklist also lists
+including native store apps (see MOBILE-APPS.md), push notifications, reviews, direct ATS imports and error
+tracking. [LAUNCH-CHECKLIST.md](LAUNCH-CHECKLIST.md) lists
 the accounts and settings needed to switch each feature on. Sections 1 and 2 below are the original review,
 kept for reference.
 

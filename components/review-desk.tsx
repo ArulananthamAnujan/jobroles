@@ -6,7 +6,7 @@ type Review={id:string;company_id:string;company_name?:string;rating:number;titl
 export default function ReviewDesk({companies,ownerOf}:{companies:{id:string;name:string}[];ownerOf:string[]}){
  const [company,C]=useState(ownerOf[0]||''),[data,D]=useState<{published:Review[];pending:Review[]}>({published:[],pending:[]}),[error,E]=useState(''),[busy,B]=useState(false);
  const load=useCallback(async(signal?:AbortSignal)=>{const r=await fetch(`/api/reviews?company=${company}`,{signal,cache:'no-store'});const d=await r.json() as {published:Review[];pending:Review[];error?:string};if(!r.ok)throw new Error(d.error);D(d);},[company]);
- useEffect(()=>{const c=new AbortController();load(c.signal).catch(e=>{if(e.name!=='AbortError')E(e.message);});return()=>c.abort();},[load]);
+ useEffect(()=>{const c=new AbortController();fetch(`/api/reviews?company=${company}`,{signal:c.signal,cache:'no-store'}).then(async r=>{const d=await r.json() as {published:Review[];pending:Review[];error?:string};if(!r.ok)throw new Error(d.error);D(d);}).catch(e=>{if(e.name!=='AbortError')E(e.message);});return()=>c.abort();},[company]);
  async function act(body:unknown){B(true);E('');try{const r=await fetch('/api/reviews',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json() as {error?:string};if(!r.ok)throw new Error(d.error);await load();}catch(e){E((e as Error).message);}finally{B(false);}}
  const stars=(n:number)=>`${'★'.repeat(n)}${'☆'.repeat(5-n)}`;
  return <section aria-labelledby="reviews-title"><h2 id="reviews-title" className="section-title">Reviews</h2>{error&&<p role="alert">{error}</p>}
