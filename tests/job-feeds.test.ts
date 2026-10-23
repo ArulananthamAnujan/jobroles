@@ -39,3 +39,15 @@ test('the worker imports each claimed feed and records failures',async()=>{
  assert.deepEqual(await r.json(),{feeds:[{feed:'f1',created:1},{feed:'f2',failed:true}]});
  assert.equal((calls[1][1].items as unknown[]).length,1);assert.deepEqual(calls[2][1],{feed:'f2',lease:'l2',items:null,problem:'Feed returned HTTP 500'});
 });
+import {parseGreenhouse,parseLever} from '../supabase/functions/job-feed-import/parse.ts';
+test('Greenhouse boards map pay ranges from cents and decode HTML content',()=>{
+ const body=JSON.stringify({jobs:[{id:4012,title:'Clinical Nurse Specialist',location:{name:'Geelong VIC'},content:'&lt;p&gt;Lead the ward team.&lt;/p&gt;&lt;p&gt;Support graduate nurses every day.&lt;/p&gt;',metadata:[{name:'Employment Type',value:'Part-time'}],pay_input_ranges:[{min_cents:5200,max_cents:6100,currency_type:'AUD',title:'Hourly rate'}]},{id:4013,title:'No pay',location:{name:'Perth WA'},content:'&lt;p&gt;Long enough description for a real role here.&lt;/p&gt;',pay_input_ranges:[]}]});
+ const {items,rejected}=parseGreenhouse(body);
+ assert.equal(rejected,1);assert.deepEqual(items[0],{externalId:'4012',title:'Clinical Nurse Specialist',description:'Lead the ward team.\nSupport graduate nurses every day.',type:'Part-time',arrangement:'on_site',locations:['Geelong VIC'],min:52,max:61,period:'hour'});
+});
+test('Lever postings map salary ranges, commitment and workplace type',()=>{
+ const body=JSON.stringify([{id:'abc-1',text:'Data Engineer',categories:{commitment:'Full-time',location:'Melbourne VIC',allLocations:['Melbourne VIC','Sydney NSW']},workplaceType:'hybrid',description:'<p>Build pipelines for our analytics platform.</p>',lists:[{text:'What you will do',content:'<li>Model data</li>'}],salaryRange:{min:140000,max:160000,currency:'AUD',interval:'per-year-salary'}},{id:'abc-2',text:'USD role',categories:{commitment:'Full-time',location:'Remote'},description:'<p>Long enough description for the role in question.</p>',salaryRange:{min:1,max:2,currency:'USD',interval:'per-year-salary'}}]);
+ const {items,rejected}=parseLever(body);
+ assert.equal(rejected,1);assert.deepEqual([items[0].externalId,items[0].type,items[0].arrangement,items[0].min,items[0].max,items[0].period],['abc-1','Full-time','hybrid',140000,160000,'year']);
+ assert.deepEqual(items[0].locations,['Melbourne VIC','Sydney NSW']);assert.match(items[0].description,/What you will do\n• Model data/);
+});

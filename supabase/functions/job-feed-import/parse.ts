@@ -63,3 +63,36 @@ export function safeFeedUrl(raw:string){
  if(/^\d+\.\d+\.\d+\.\d+$/.test(h)||h.includes(':'))return false;
  return true;
 }
+// Greenhouse job board API: https://boards-api.greenhouse.io/v1/boards/<board>/jobs?content=true&pay_transparency=true
+// Pay comes from pay_input_ranges (cents); roles without an AUD range are skipped.
+export function parseGreenhouse(body:string){
+ const data=JSON.parse(body) as {jobs?:Record<string,unknown>[]};if(!Array.isArray(data?.jobs))throw new Error('Greenhouse response has no "jobs" array; check the board name and add ?content=true&pay_transparency=true');
+ let rejected=0;const items:FeedItem[]=[];
+ for(const j of data.jobs.slice(0,2000)){
+  const ranges=(j.pay_input_ranges as {min_cents?:number;max_cents?:number;currency_type?:string;title?:string;blurb?:string}[]|undefined)||[];
+  const r=ranges.find(x=>(x.currency_type||'AUD').toUpperCase()==='AUD'&&Number.isFinite(x.min_cents)&&Number.isFinite(x.max_cents));
+  const min=r?Number(r.min_cents)/100:0,max=r?Number(r.max_cents)/100:0;
+  const meta=(j.metadata as {name?:string;value?:unknown}[]|null)||[];
+  const typeMeta=meta.find(m=>/employment|job type|work type/i.test(m.name||''))?.value;
+  const loc=String((j.location as {name?:string}|undefined)?.name||'');
+  const parsed=item({id:String(j.id??''),title:String(j.title??''),description:decode(String(j.content??'')),type:String(Array.isArray(typeMeta)?typeMeta[0]:typeMeta??'Full-time'),arrangement:normaliseArrangement(`${loc} ${JSON.stringify(meta)}`),locations:loc?[loc]:[],salary:r&&min<=max?{min,max,period:normalisePeriod(`${r.title||''} ${r.blurb||''}`)??(min>=1000?'year':'hour')}:null});
+  if(parsed)items.push(parsed);else rejected++;
+ }
+ return {items,rejected};
+}
+// Lever postings API: https://api.lever.co/v0/postings/<company>?mode=json
+export function parseLever(body:string){
+ const data=JSON.parse(body) as Record<string,unknown>[];if(!Array.isArray(data))throw new Error('Lever response is not a list of postings; check the company name and add ?mode=json');
+ let rejected=0;const items:FeedItem[]=[];
+ const intervals:Record<string,string>={'per-year-salary':'year','per-month-salary':'month','per-day-wage':'day','per-hour-wage':'hour'};
+ for(const j of data.slice(0,2000)){
+  const s=j.salaryRange as {min?:number;max?:number;currency?:string;interval?:string}|undefined;
+  const salary=s&&(s.currency||'AUD').toUpperCase()==='AUD'&&Number.isFinite(s.min)&&Number.isFinite(s.max)&&intervals[s.interval||'']?{min:Number(s.min),max:Number(s.max),period:intervals[s.interval!]}:null;
+  const cat=(j.categories||{}) as {commitment?:string;location?:string;allLocations?:string[]};
+  const lists=((j.lists||[]) as {text?:string;content?:string}[]).map(l=>`<h3>${l.text||''}</h3><ul>${l.content||''}</ul>`).join('');
+  const workplace=String(j.workplaceType||'');
+  const parsed=item({id:String(j.id??''),title:String(j.text??''),description:`${String(j.description??j.descriptionPlain??'')}${lists}${String(j.additional??'')}`,type:cat.commitment||'Full-time',arrangement:workplace==='remote'?'remote':workplace==='hybrid'?'hybrid':normaliseArrangement(cat.location||''),locations:cat.allLocations?.length?cat.allLocations:cat.location?[cat.location]:[],salary});
+  if(parsed)items.push(parsed);else rejected++;
+ }
+ return {items,rejected};
+}

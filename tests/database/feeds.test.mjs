@@ -48,3 +48,10 @@ test('job feed import',async t=>{
  });
  await db.close();
 });
+test('Greenhouse and Lever feeds can be added',async()=>{
+ const {db,rows}=await createDb();
+ for(const [format,url] of [['greenhouse','https://boards-api.greenhouse.io/v1/boards/bayside/jobs?content=true'],['lever','https://api.lever.co/v0/postings/bayside?mode=json']])
+  assert.ok((await rows(owner,"select jp_feed_command('create',$1::jsonb) as r",[JSON.stringify({companyId:company,url,format})]))[0].r.id);
+ await assert.rejects(()=>rows(owner,"select jp_feed_command('create',$1::jsonb)",[JSON.stringify({companyId:company,url:'https://x.example/f',format:'workday'})]),/format/);
+ await db.close();
+});

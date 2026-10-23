@@ -2,7 +2,7 @@ import {z} from 'zod';
 import {authenticatedClient,failure,response,sameOrigin,jsonBody,ApiError} from '@/lib/backend/server';
 const id=z.string().uuid();
 const schema=z.discriminatedUnion('action',[
- z.object({action:z.literal('create'),payload:z.object({companyId:id,url:z.string().url().max(2000).startsWith('https://'),format:z.enum(['json','xml'])})}),
+ z.object({action:z.literal('create'),payload:z.object({companyId:id,url:z.string().url().max(2000).startsWith('https://'),format:z.enum(['json','xml','greenhouse','lever'])})}),
  z.object({action:z.literal('pause'),payload:z.object({id})}),z.object({action:z.literal('resume'),payload:z.object({id})}),z.object({action:z.literal('delete'),payload:z.object({id})}),
  z.object({action:z.literal('trust'),payload:z.object({id,autoPublish:z.boolean()})}),
 ]);

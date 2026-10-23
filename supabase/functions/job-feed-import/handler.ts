@@ -1,5 +1,5 @@
-import {parseJsonFeed,parseXmlFeed,safeFeedUrl} from './parse.ts';
-type Feed={id:string;url:string;format:'json'|'xml';lease:string};
+import {parseJsonFeed,parseXmlFeed,parseGreenhouse,parseLever,safeFeedUrl} from './parse.ts';
+type Feed={id:string;url:string;format:'json'|'xml'|'greenhouse'|'lever';lease:string};
 const MAX_BYTES=5*1024*1024;
 async function readLimited(res:Response){
  const reader=res.body?.getReader();if(!reader)return '';
@@ -34,7 +34,8 @@ export function makeFeedWorker(createClient:(url:string,key:string,opts:object)=
   for(const feed of (feeds||[]) as Feed[]){
    try{
     const body=await fetchFeed(feed.url,send);
-    const {items}=feed.format==='json'?parseJsonFeed(body):parseXmlFeed(body);
+    const parse={json:parseJsonFeed,xml:parseXmlFeed,greenhouse:parseGreenhouse,lever:parseLever}[feed.format];if(!parse)throw new Error('Unknown feed format');
+    const {items}=parse(body);
     const {data,error:importError}=await client.rpc('jp_import_feed',{feed:feed.id,lease:feed.lease,items});
     if(importError)throw importError;results.push({feed:feed.id,...data});
    }catch(e){
