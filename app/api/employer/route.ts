@@ -33,6 +33,7 @@ async function read(client:Client,userId:string,resource:string,p:URLSearchParam
   case 'templates':{const {data,error}=await client.from('message_templates').select('id,name,body,created_at').eq('company_id',need(company)).order('name');if(error)throw new ApiError(503,'Templates unavailable.');return {templates:data};}
   case 'billing':{const {data,error}=await client.from('job_sponsorships').select('id,job_id,amount_total,currency,starts_at,ends_at,created_at,invoice_url,jobs(title)').eq('company_id',need(company)).order('created_at',{ascending:false}).limit(200);if(error)throw new ApiError(503,'Billing unavailable.');return {orders:data};}
   case 'prefs':{const {data}=await client.from('notification_prefs').select('new_applicant,messages,stage_changes,daily_digest').eq('user_id',userId).maybeSingle();return {prefs:data||{new_applicant:true,messages:true,stage_changes:true,daily_digest:false}};}
+  case 'advertising':{const {data,error}=await client.rpc('jp_ad_account',{company:need(company)});if(error)denied(error,'Advertising unavailable.');return data;}
   case 'company':{const {data,error}=await client.from('companies').select('id,name,about,abn,verified_at,logo_url,cover_url,website,industry,size_band,headquarters,founded_year,pitch,benefits,photos').eq('id',need(company)).maybeSingle();if(error||!data)throw new ApiError(404,'Company unavailable.');return {company:data};}
  }
  throw new ApiError(400,'Unknown resource.');
@@ -52,6 +53,7 @@ const write=z.discriminatedUnion('action',[
  z.object({action:z.literal('prefs'),newApplicant:z.boolean(),messages:z.boolean(),stageChanges:z.boolean(),dailyDigest:z.boolean()}),
  z.object({action:z.literal('invite.revoke'),id}),
  z.object({action:z.literal('read'),applicationId:id}),
+ z.object({action:z.literal('campaign'),jobId:id,dailyBudget:z.number().int().min(500).max(100000),cpc:z.number().int().min(50).max(2000),active:z.boolean()}),
 ]);
 export async function POST(request:Request){try{
  sameOrigin(request);const {client,user}=await authenticatedClient();rateLimit(`employer-write:${user.id}`,120,60_000);
@@ -66,6 +68,7 @@ export async function POST(request:Request){try{
   :d.action==='propose'?await client.rpc('jp_propose_interview',{target:d.applicationId,options:d.slots,zone:d.timeZone,details:d.format})
   :d.action==='prefs'?await client.rpc('jp_set_notification_prefs',{payload:{newApplicant:d.newApplicant,messages:d.messages,stageChanges:d.stageChanges,dailyDigest:d.dailyDigest}})
   :d.action==='invite.revoke'?await client.rpc('jp_revoke_invitation',{target:d.id})
+  :d.action==='campaign'?await client.rpc('jp_set_campaign',{target:d.jobId,daily_budget:d.dailyBudget,cpc:d.cpc,turn_on:d.active})
   :await client.rpc('jp_mark_read',{target:d.applicationId});
  if(error)denied(error,'The change could not be saved.');
  return response({result:data});

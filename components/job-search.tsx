@@ -50,11 +50,14 @@ function Filters({params}:{params:URLSearchParams}){
  </div>;
 }
 
+// Sponsored jobs are paid per click; the server charges each visitor once a day.
+function trackSponsoredClick(id:string){try{if(!navigator.sendBeacon?.(`/api/jobs/${id}/click`))void fetch(`/api/jobs/${id}/click`,{method:'POST',keepalive:true});}catch{}}
+
 function JobCard({job:j,selected,onSelect,query}:{job:Job;selected:boolean;onSelect:()=>void;query:string}){
  const href=`/jobs/${j.id}${query?`?${query}`:''}`;
  return <li className={`jr-card ${selected?'selected':''}`}>
   {j.sponsored&&<p className="jr-sponsored">Sponsored</p>}
-  <h2 className="jr-card-title"><a href={href} onClick={e=>{if(window.matchMedia('(min-width: 900px)').matches){e.preventDefault();onSelect();}}} aria-current={selected||undefined}>{j.title}</a></h2>
+  <h2 className="jr-card-title"><a href={href} onClick={e=>{if(j.sponsored)trackSponsoredClick(j.id);if(window.matchMedia('(min-width: 900px)').matches){e.preventDefault();onSelect();}}} aria-current={selected||undefined}>{j.title}</a></h2>
   <p className="jr-company"><Link href={`/companies/${j.companies.id}`}>{j.companies.name}</Link><span className="jr-verified" title="ABN-verified employer">Verified</span></p>
   <p className="jr-location">{where(j)}{typeof j.distance_km==='number'?` · ${j.distance_km} km away`:''}</p>
   <ul className="jr-tags"><li className="jr-pay">{pay(j)}</li><li>{j.employment_type}</li><li>{ARRANGEMENT[j.arrangement]??j.arrangement}</li></ul>

@@ -33,3 +33,14 @@ test('a paid checkout stores the hosted invoice link',async()=>{const s=setup();
  const h=makeBillingHandler((_u,key)=>key==='service'?{rpc:async(n,a)=>{s.calls.push([n,a]);return {data:true,error:null};}}:{},n=>({SUPABASE_SERVICE_ROLE_KEY:'service',STRIPE_WEBHOOK_SECRET:'whsec',STRIPE_SECRET_KEY:'sk'})[n],send);
  const raw=event({invoice:'in_123'});const r=await h(hook(raw,sign(raw)));assert.equal(r.status,200);
  assert.deepEqual(s.calls.map(c=>c[0]),['jp_record_sponsorship','stripe-get','jp_set_sponsorship_invoice']);assert.deepEqual(s.calls[2][1],{session:'cs_1',url:'https://invoice.stripe.com/i/abc'});});
+const company='00000000-0000-4000-8000-000000000010';
+const credit=(over={})=>JSON.stringify({type:'checkout.session.completed',data:{object:{id:'cs_c',payment_status:'paid',amount_subtotal:10000,amount_total:11000,currency:'aud',metadata:{purpose:'credit',company_id:company,user_id:'u1'},...over}}});
+test('a paid credit checkout records the amount before GST',async()=>{const s=setup();const raw=credit();assert.equal((await s.handler(hook(raw,sign(raw)))).status,200);assert.deepEqual(s.calls,[['jp_record_ad_credit',{session:'cs_c',company,buyer:'u1',amount:10000}]]);});
+test('credit checkout accepts only the listed packs and needs permission',async()=>{
+ const req=body=>new Request('https://fn/billing/credit',{method:'POST',headers:{Authorization:'Bearer t'},body:JSON.stringify(body)});
+ const s=setup();assert.equal((await s.handler(req({companyId:company,amount:1}))).status,400);assert.equal(s.calls.length,0);
+ assert.equal((await setup({canSponsor:false}).handler(req({companyId:company,amount:10000}))).status,403);
+ assert.equal((await s.handler(new Request('https://fn/billing/credit',{method:'POST',body:'{}'}))).status,401);
+ const r=await s.handler(req({companyId:company,amount:25000}));assert.deepEqual(await r.json(),{url:'https://checkout.stripe.com/c/1'});
+ const form=s.calls[0][2];assert.equal(form['line_items[0][price_data][unit_amount]'],'25000');assert.equal(form['metadata[purpose]'],'credit');assert.equal(form['metadata[company_id]'],company);assert.equal(form['invoice_creation[enabled]'],'true');
+});

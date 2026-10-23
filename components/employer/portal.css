@@ -179,3 +179,4 @@ a.ep-stat:hover{border-color:#b9d8d1}
  .ep-q{grid-template-columns:1fr auto}
  .ep-bell-menu{left:8px;right:8px;width:auto}
 }
+.ep-money{display:inline-flex;align-items:center;gap:4px}.ep-money input{width:90px;min-height:36px;padding:6px 8px}
