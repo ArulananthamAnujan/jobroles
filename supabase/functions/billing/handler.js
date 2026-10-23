@@ -39,7 +39,7 @@ export function makeBillingHandler(createClient,env,send=fetch){
    const {data:allowed,error:permissionError}=await user.rpc('jp_can_sponsor',{target:jobId});
    if(permissionError)return reply(permissionError.code==='22023'?409:403,{error:permissionError.code==='22023'?permissionError.message:'Only owners and recruiters can sponsor this role.'});
    const days=String(Number(env('SPONSOR_DAYS'))||30);
-   const form=new URLSearchParams({mode:'payment','line_items[0][price]':price,'line_items[0][quantity]':'1',success_url:`${origin}/employer?view=hiring&sponsored=1`,cancel_url:`${origin}/employer?view=hiring`,customer_email:identity.user.email,client_reference_id:jobId,'invoice_creation[enabled]':'true','tax_id_collection[enabled]':'true',
+   const form=new URLSearchParams({mode:'payment','line_items[0][price]':price,'line_items[0][quantity]':'1',success_url:`${origin}/employer?view=analytics&sponsored=1`,cancel_url:`${origin}/employer?view=analytics`,customer_email:identity.user.email,client_reference_id:jobId,'invoice_creation[enabled]':'true','tax_id_collection[enabled]':'true',
     'metadata[purpose]':'sponsor','metadata[job_id]':jobId,'metadata[user_id]':identity.user.id,'metadata[days]':days,'payment_intent_data[description]':`Sponsored listing: ${String(allowed.title).slice(0,80)}`});
    const r=await send('https://api.stripe.com/v1/checkout/sessions',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/x-www-form-urlencoded','Idempotency-Key':`sponsor-${jobId}-${identity.user.id}-${Math.floor(Date.now()/600000)}`},body:form,signal:AbortSignal.timeout(15000)});
    const session=await r.json();

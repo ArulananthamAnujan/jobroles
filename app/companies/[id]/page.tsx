@@ -7,7 +7,9 @@ import {backendConfigured} from '@/lib/backend/server';
 import {salaryLabel} from '@/lib/salary';
 import {payStats} from '@/lib/company';
 import {siteOrigin} from '@/lib/job-posting';
-import {Brand,Badge,Mark,ActionLink} from '@/components/market-ui';
+import {Badge,Mark} from '@/components/market-ui';
+import {SiteHeader,SiteFooter} from '@/components/site-chrome';
+import '@/components/job-page.css';
 export const dynamic='force-dynamic';
 type Company={id:string;name:string;about:string;verified_at:string};
 type Job={id:string;title:string;employment_type:string;arrangement:string;salary_min:number|null;salary_max:number|null;salary_period:string;currency:string;published_at:string;job_locations:{label:string}[]};
@@ -29,12 +31,12 @@ export async function generateMetadata({params}:{params:Promise<{id:string}>}):P
 export default async function CompanyPage({params}:{params:Promise<{id:string}>}){
  const found=await load((await params).id);if(!found)notFound();
  const {company,jobs,responsiveness}=found,stats=payStats(jobs);
- return <><header className="topbar"><Brand/><nav className="top-nav"><Link href="/search">Find jobs</Link><Link href="/market-guide">Sectors & salaries</Link></nav><ActionLink secondary href="/job-seeker">Sign in / account</ActionLink></header>
-  <main id="main" className="main live-shell">
+ return <div className="jp-page"><SiteHeader/>
+  <main id="main" className="jp-main co-main">
    <div className="company-row"><Mark initials={company.name.split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase()}/><div><h1>{company.name}</h1><Badge>Verified employer since {new Date(company.verified_at).toLocaleDateString('en-AU',{month:'long',year:'numeric'})}</Badge></div></div>
    {responsiveness&&<section className="panel"><h2>How this employer responds</h2><p>Over the last six months, {company.name} acted on {responsiveness.respondedShare}% of {responsiveness.applications} applications{responsiveness.medianDays!==null?`, usually within ${responsiveness.medianDays} days`:''}. Measured from JobRoles application records.</p></section>}
    <section className="panel"><h2>About</h2><p>{company.about||'This employer has not added a company introduction yet.'}</p></section>
    {stats.length>0&&<section className="panel"><h2>Advertised pay on JobRoles</h2><p className="muted">From this employer’s live listings. Ranges are as advertised, grouped by pay period.</p><dl className="job-facts">{stats.map(s=><div key={s.period}><dt>{s.count} {s.count===1?'role':'roles'} paid per {s.period}</dt><dd>{s.label}</dd></div>)}</dl></section>}
    <section><h2 className="section-title">{jobs.length} live {jobs.length===1?'role':'roles'}</h2>{jobs.length?<ul className="company-jobs">{jobs.map(j=><li key={j.id} className="panel"><h3><Link className="job-title" href={`/jobs/${j.id}`}>{j.title}</Link></h3><p>{j.job_locations.map(l=>l.label).join(' · ')} · {j.employment_type} · {j.arrangement.replace('_',' ')}</p><p className="salary-highlight">{salaryLabel(j)}</p></li>)}</ul>:<p>No live roles right now. <Link className="text-link" href="/search">Search all jobs</Link></p>}</section>
-  </main></>;
+  </main><SiteFooter/></div>;
 }

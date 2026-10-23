@@ -12,6 +12,8 @@ export async function GET(request:Request){try{
  const query=buildQuery(filters.q,filters.sector),client=publicJobsClient();
  const run=(page:number)=>client.rpc('jp_search_jobs',{p_query:query?.text??null,p_query_mode:query?.mode??'websearch',p_location:filters.location||null,p_company:filters.company||null,p_arrangement:filters.arrangement||null,p_type:filters.type||null,p_salary_min:salary.minimum,p_salary_max:salary.maximum,p_period:salary.period,p_posted_days:filters.posted,p_near:filters.near||null,p_radius_km:filters.near?filters.radius:null,p_sort:filters.sort,p_limit:PAGE,p_offset:(page-1)*PAGE});
  let {data:hits,error}=await run(filters.page);
+ // "Where" accepts any text: if it is not a place we can measure distance from, match it against listing locations instead.
+ if(error?.code==='22023'&&filters.near&&!filters.location){filters.location=filters.near;filters.near='';({data:hits,error}=await run(filters.page));}
  if(error?.code==='22023')throw new ApiError(400,error.message);
  if(error)throw error;
  // Results may shrink between page requests (closed roles or changed filters).

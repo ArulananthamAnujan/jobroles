@@ -5,7 +5,7 @@ export function salaryOptions(params:URLSearchParams){
  return {minimum,maximum,period};
 }
 export function salaryLabel(j:{salary_min:number|null;salary_max:number|null;currency:string;salary_period:string}){
- const money=(n:number)=>new Intl.NumberFormat('en-AU',{style:'currency',currency:j.currency||'AUD',minimumFractionDigits:0,maximumFractionDigits:2}).format(n);
+ const money=(n:number)=>new Intl.NumberFormat('en-AU',{style:'currency',currency:j.currency||'AUD',minimumFractionDigits:Number.isInteger(Number(n))?0:2,maximumFractionDigits:2}).format(n);
  const a=j.salary_min,b=j.salary_max;if(a===null&&b===null)return 'Salary not supplied';
  const range=a===null?`Up to ${money(b!)}`:b===null?`From ${money(a)}`:a===b?money(a):`${money(a)}–${money(b)}`;
  return `${j.currency||'AUD'} ${range} per ${j.salary_period}`;

@@ -1,0 +1,25 @@
+/* Site header and footer shared by the public pages. */
+.jr-chrome{--ink:#1f2b33;--soft:#5b6b75;--line:#dfe3e6;--teal:#076d65}
+.jr-header{--ink:#1f2b33;--soft:#5b6b75;--line:#dfe3e6;--teal:#076d65;display:flex;align-items:center;gap:28px;padding:0 24px;height:64px;border-bottom:1px solid var(--line);background:#fff;position:sticky;top:0;z-index:30}
+.jr-header .brand{font-size:21px}
+.jr-nav{display:flex;gap:22px;height:100%}
+.jr-nav a,.jr-header-end a{display:flex;align-items:center;font-weight:600;font-size:15px;color:var(--ink);border-bottom:3px solid transparent;height:100%}
+.jr-nav a:hover,.jr-header-end a:hover{border-bottom-color:var(--teal);color:var(--teal)}
+.jr-header-end{display:flex;align-items:center;gap:18px;margin-left:auto;height:100%}
+.jr-divider{width:1px;height:28px;background:var(--line)}
+.jr-employers{color:var(--teal)!important}
+
+.jr-footer{--ink:#1f2b33;--soft:#5b6b75;--line:#dfe3e6;--teal:#076d65;display:flex;flex-wrap:wrap;align-items:center;gap:16px 28px;padding:24px;border-top:1px solid var(--line);font-size:14px;color:var(--soft);background:#fff}
+.jr-footer nav{display:flex;flex-wrap:wrap;gap:18px}
+.jr-footer nav a{color:var(--ink)}
+.jr-footer nav a:hover{text-decoration:underline}
+.jr-footer p{margin-left:auto}
+
+@media(max-width:680px){
+ .jr-header{padding:0 16px;gap:12px}
+ .jr-nav,.jr-divider{display:none}
+ .jr-header-end{gap:14px}
+ .jr-employers{font-size:14px!important}
+ .jr-footer p{margin-left:0}
+}
+.jr-footer a{text-decoration:none}.jr-footer nav a:hover{text-decoration:underline}

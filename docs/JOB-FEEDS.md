@@ -1,6 +1,6 @@
 # Job feed format
 
-Company owners add a feed under **Employer portal → Hiring → Import jobs from your ATS**. The `job-feed-import`
+Company owners add a feed under **Employer portal → Import jobs (ATS)**. The `job-feed-import`
 Edge Function checks every active feed about once an hour.
 
 Every role in a feed must have:

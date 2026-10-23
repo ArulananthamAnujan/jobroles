@@ -47,3 +47,4 @@
 .job-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px 24px;margin:0}.job-facts dt{font-size:14px;color:var(--text-muted)}.job-facts dd{margin:2px 0 0;font-weight:600}
 .company-jobs{list-style:none;padding:0;display:grid;gap:12px}.company-jobs li+li{margin-top:0}
 .sign-in-options{display:flex;flex-direction:column;gap:12px}.sign-in-options form{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+.jr-stats th{text-transform:none;letter-spacing:0;font-size:13px;white-space:nowrap;vertical-align:bottom}.jr-stats td{white-space:nowrap}.jr-stats td:first-child{white-space:normal}.jr-stats{overflow-x:auto}

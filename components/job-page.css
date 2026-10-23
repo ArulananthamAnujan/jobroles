@@ -1,0 +1,36 @@
+/* Single job page, matching the search results pane. */
+.jp-page{--ink:#1f2b33;--soft:#5b6b75;--line:#dfe3e6;--teal:#076d65;--mint:#e5f4ee;background:#fff;color:var(--ink);min-height:100vh}
+.jp-main{max-width:1128px;margin:0 auto;padding:16px 24px 64px}
+.jp-back a{font-size:15px;font-weight:600;color:var(--teal)}
+.jp-grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:32px;margin-top:16px;align-items:start}
+.jp-article{display:grid;gap:8px}
+.jp-article section{border-top:1px solid var(--line);padding-top:20px;margin-top:12px}
+.jp-article h2{font-size:20px;margin-bottom:12px}
+.jp-head h1{font-family:Manrope,'DM Sans',sans-serif;font-size:clamp(26px,3vw,34px);line-height:1.2;letter-spacing:-.01em;margin-bottom:8px}
+.jp-head p{margin:2px 0}
+.jp-company{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:17px}
+.jp-company a{font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.jp-verified{font-size:12px;font-weight:700;color:var(--teal);background:var(--mint);border-radius:4px;padding:1px 6px}
+.jp-pay{font-weight:700;font-size:17px;margin-top:6px!important}
+.jp-actions{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0 8px;align-items:flex-start}
+.jp-actions .jp-btn{min-height:48px;height:48px;padding:0 18px}
+.jp-actions{align-items:center!important}
+.jp-apply{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 28px;border-radius:8px;background:var(--teal);color:#fff;font-weight:700}
+.jp-apply:hover{background:#055b54}
+.jp-note{font-size:14px;color:var(--soft)}
+.jp-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 24px;margin:0}
+.jp-details dt{font-size:14px;color:var(--soft)}
+.jp-details dd{margin:2px 0 0;font-weight:600}
+.jp-aside{position:sticky;top:80px}
+.jp-similar{border:1px solid var(--line);border-radius:10px;padding:18px}
+.jp-similar h2{font-size:18px;margin-bottom:10px}
+.jp-similar ul{list-style:none;padding:0;margin:0;display:grid;gap:4px}
+.jp-similar li+li{margin-top:0;border-top:1px solid var(--line)}
+.jp-similar a{display:grid;gap:2px;padding:10px 0;font-size:14px;color:var(--soft)}
+.jp-similar a strong{font-size:16px;color:var(--ink)}
+.jp-similar a:hover strong{text-decoration:underline}
+.jp-similar-pay{color:var(--teal);font-weight:700}
+.jp-sticky{display:none}
+@media(max-width:900px){.jp-grid{grid-template-columns:1fr}.jp-aside{position:static}}
+@media(max-width:680px){.jp-main{padding:12px 16px 96px}.jp-sticky{display:block;position:fixed;left:0;right:0;bottom:0;padding:12px 16px;background:#fff;border-top:1px solid var(--line);z-index:20}.jp-sticky .jp-apply{width:100%}}
+.co-main{display:grid;gap:20px}.co-main .company-row h1{font-family:Manrope,'DM Sans',sans-serif;font-size:32px;line-height:1.2}

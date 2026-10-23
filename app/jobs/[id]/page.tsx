@@ -8,7 +8,9 @@ import {publicJobsClient,jobFields} from '@/lib/backend/public-jobs';
 import {backendConfigured} from '@/lib/backend/server';
 import {salaryLabel} from '@/lib/salary';
 import {jobPostingJsonLd,serializeJsonLd,siteOrigin} from '@/lib/job-posting';
-import {Brand,Badge,Mark,ActionLink} from '@/components/market-ui';
+import {SiteHeader,SiteFooter} from '@/components/site-chrome';
+import SimilarJobs from '@/components/similar-jobs';
+import '@/components/job-page.css';
 import SaveJob from '@/components/save-job';
 import {ReportJob} from '@/components/launch-tools';
 // Server-rendered so search engines read the full listing and its JobPosting data.
@@ -20,7 +22,6 @@ const loadJob=cache(async(id:string)=>{
  const {data,error}=await publicJobsClient().from('jobs').select(jobFields).eq('id',id).eq('state','live').gt('expires_at',new Date().toISOString()).maybeSingle();
  if(error)throw error;return data as unknown as Job|null;
 });
-const initials=(name:string)=>name.split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();
 const where=(j:Job)=>j.job_locations.map(l=>l.label).join(' · ');
 export async function generateMetadata({params}:{params:Promise<{id:string}>}):Promise<Metadata>{
  const job=await loadJob((await params).id);
@@ -40,22 +41,33 @@ export default async function JobPage({params}:{params:Promise<{id:string}>}){
  if(!job)notFound();
  await countView(job.id);
  const apply=`/job-seeker?job=${job.id}#application`;
- return <>
+ const ARR:Record<string,string>={on_site:'On-site',hybrid:'Hybrid',remote:'Remote'};
+ const date=(d:string)=>new Date(d).toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'});
+ return <div className="jp-page">
   <script type="application/ld+json" dangerouslySetInnerHTML={{__html:serializeJsonLd(jobPostingJsonLd(job,siteOrigin()))}}/>
   <a className="skip-link" href="#main">Skip to content</a>
-  <header className="topbar"><Brand/><nav className="top-nav"><Link href="/search">Find jobs</Link><Link href="/market-guide">Sectors & salaries</Link><Link href="/employer">For employers</Link></nav><ActionLink secondary href="/job-seeker">Sign in / account</ActionLink></header>
-  <main id="main" className="main live-shell">
-   <Link className="text-link" href="/search">← Search all jobs</Link>
-   <div className="live-detail"><article className="panel">
-    <div className="company-row"><Mark initials={initials(job.companies.name)}/><div><Link href={`/companies/${job.companies.id}`}><strong>{job.companies.name}</strong></Link><div><Badge>Verified employer</Badge></div></div></div>
-    <h1>{job.title}</h1>
-    <dl className="job-facts"><div><dt>Pay</dt><dd className="salary-highlight">{salaryLabel(job)}</dd></div><div><dt>Location</dt><dd>{where(job)}</dd></div><div><dt>Work type</dt><dd>{job.employment_type} · {job.arrangement.replace('_',' ')}</dd></div><div><dt>Posted</dt><dd>{new Date(job.published_at).toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'})}</dd></div><div><dt>Closes</dt><dd>{new Date(job.expires_at).toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'})}</dd></div></dl>
-    <ActionLink href={apply}>Apply now</ActionLink><SaveJob id={job.id}/><ReportJob id={job.id}/>
-    <p className="muted">Your resume is shared only when you submit.</p>
-    <h2>About the role</h2><p className="job-description">{job.description}</p>
-    <h2>About {job.companies.name}</h2><p>{job.companies.about||'This employer has not added a company introduction yet.'}</p>
-   </article><div className="sticky-apply"><ActionLink href={apply}>Apply now</ActionLink></div></div>
+  <SiteHeader/>
+  <main id="main" className="jp-main">
+   <p className="jp-back"><Link href="/search">← Back to search</Link></p>
+   <div className="jp-grid">
+    <article className="jp-article">
+     <header className="jp-head">
+      <h1>{job.title}</h1>
+      <p className="jp-company"><Link href={`/companies/${job.companies.id}`}>{job.companies.name}</Link><span className="jp-verified">ABN-verified employer</span></p>
+      <p>{where(job)}</p>
+      <p className="jp-pay">{salaryLabel(job).replace(/^AUD /,'')} · {job.employment_type}</p>
+      <div className="jp-actions"><Link className="jp-apply" href={apply}>Apply now</Link><SaveJob id={job.id}/></div>
+      <p className="jp-note">Your resume is shared only when you submit. Posted {date(job.published_at)} · closes {date(job.expires_at)}.</p>
+     </header>
+     <section><h2>Job details</h2><dl className="jp-details"><div><dt>Pay</dt><dd>{salaryLabel(job).replace(/^AUD /,'')}</dd></div><div><dt>Job type</dt><dd>{job.employment_type}</dd></div><div><dt>Work setting</dt><dd>{ARR[job.arrangement]??job.arrangement}</dd></div><div><dt>Location</dt><dd>{where(job)}</dd></div></dl></section>
+     <section><h2>Full job description</h2><p className="job-description">{job.description}</p></section>
+     <section><h2>About {job.companies.name}</h2><p>{job.companies.about||'This employer has not added a company introduction yet.'}</p><p><Link className="text-link" href={`/companies/${job.companies.id}`}>See all jobs and pay at {job.companies.name}</Link></p></section>
+     <section><ReportJob id={job.id}/></section>
+    </article>
+    <aside className="jp-aside" aria-label="Similar jobs"><SimilarJobs id={job.id} title={job.title}/></aside>
+   </div>
+   <div className="jp-sticky"><Link className="jp-apply" href={apply}>Apply now</Link></div>
   </main>
-  <footer><Brand/><span>Clear salaries. Private applications.</span><Link href="/job-seeker">Your account</Link><Link href="/privacy">Privacy controls</Link><Link href="/terms">Terms</Link></footer>
- </>;
+  <SiteFooter/>
+ </div>;
 }

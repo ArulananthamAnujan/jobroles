@@ -1,4 +1,4 @@
-export const accountViews=['overview','profile','saved','applications','jobs','hiring','privacy','preferences'];
+export const accountViews=['overview','profile','saved','applications','jobs','hiring','analytics','candidates','feeds','privacy','preferences'];
 export function accountView(search:string,hash:string){
  const p=new URLSearchParams(search),requested=p.get('view');
  const mapped:Record<string,string>={activity:'overview',application:'jobs',profile:'profile',saved:'saved',applications:'applications',privacy:'privacy',hiring:'hiring'};
