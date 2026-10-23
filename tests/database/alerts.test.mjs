@@ -39,3 +39,15 @@ test('job alerts',async t=>{
  });
  await db.close();
 });
+test('push subscriptions belong to their owner',async()=>{
+ const {db,rows}=await createDb();const p='B'.repeat(87),a='A'.repeat(22);
+ await assert.rejects(()=>rows(null,'select jp_save_push($1,$2,$3)',['https://push.example/1',p,a]),/permission denied/);
+ await rows(seeker,'select jp_save_push($1,$2,$3)',['https://push.example/1',p,a]);
+ assert.equal((await rows(seeker,'select endpoint from push_subscriptions')).length,1);
+ assert.equal((await rows(other,'select endpoint from push_subscriptions')).length,0);
+ await assert.rejects(()=>rows(seeker,'select auth from push_subscriptions'),/permission denied/);
+ assert.equal((await rows(other,'select jp_delete_push($1) as ok',['https://push.example/1']))[0].ok,null);
+ assert.equal((await rows('service','select count(*)::int n from push_subscriptions'))[0].n,1);
+ const [c]=await rows('service',"select * from jp_claim_job_alerts()");assert.equal(c,undefined);
+ await db.close();
+});

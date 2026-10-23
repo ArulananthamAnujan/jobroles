@@ -1,8 +1,9 @@
 // Sends saved-search alerts. Schedule it (for example every 30 minutes) with the worker secret header.
 // Matching uses the same query builder as the website (kept identical to lib/search.ts by a test).
 import {buildQuery,parseFilters} from '../_shared/search.ts';
+import {sendPush} from '../_shared/webpush.ts';
 type Env=(name:string)=>string|undefined;
-type Claim={id:string;email:string;filters:Record<string,string>;since:string;checked_at:string;lease:string;token:string};
+type Claim={id:string;user_id?:string;email:string;filters:Record<string,string>;since:string;checked_at:string;lease:string;token:string};
 type Job={id:string;title:string;salary_min:number|null;salary_max:number|null;salary_period:string|null;published_at:string;companies:{name:string};job_locations:{label:string}[]};
 const esc=(s:string)=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 const money=(n:number)=>new Intl.NumberFormat('en-AU',{style:'currency',currency:'AUD',maximumFractionDigits:n<1000?2:0}).format(n);
@@ -29,7 +30,7 @@ export function makeAlertWorker(createClient:(url:string,key:string,opts:object)
   const client=createClient(env('SUPABASE_URL')!,env('SUPABASE_SERVICE_ROLE_KEY')!,{auth:{persistSession:false,autoRefreshToken:false}});
   const {data:claims,error}=await client.rpc('jp_claim_job_alerts');
   if(error)return reply(503,{error:'Alert queue unavailable'});
-  let sent=0,empty=0,failed=0;
+  let sent=0,empty=0,failed=0,pushed=0;
   for(const claim of (claims||[]) as Claim[]){
    try{
     const f=parseFilters(new URLSearchParams(claim.filters)),q=buildQuery(f.q,f.sector);
@@ -44,10 +45,19 @@ export function makeAlertWorker(createClient:(url:string,key:string,opts:object)
      const mail=alertEmail(claim,jobs,origin);
      const r=await send('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json','Idempotency-Key':`alert-${claim.id}-${claim.checked_at}`},body:JSON.stringify({from,to:[claim.email],subject:mail.subject,text:mail.text,html:mail.html,headers:{'List-Unsubscribe':`<${mail.unsubscribeApi}>`,'List-Unsubscribe-Post':'List-Unsubscribe=One-Click'}}),signal:AbortSignal.timeout(15000)});
      if(!r.ok)throw Error('provider');sent++;
+     // Also notify the person's browsers and installed apps when push is configured; failures never block email.
+     const vapid={publicKey:env('VAPID_PUBLIC_KEY')??'',privateKey:env('VAPID_PRIVATE_KEY')??'',subject:env('VAPID_SUBJECT')??''};
+     if(claim.user_id&&vapid.publicKey&&vapid.privateKey&&vapid.subject){
+      const {data:subs}=await client.from('push_subscriptions').select('id,endpoint,p256dh,auth').eq('user_id',claim.user_id);
+      for(const sub of (subs||[]) as {id:string;endpoint:string;p256dh:string;auth:string}[]){
+       try{const status=await sendPush(sub,{title:mail.subject,body:`${jobs[0].title} · ${jobs[0].companies.name}${jobs.length>1?` and ${jobs.length-1} more`:''}`,url:`/search?${new URLSearchParams(claim.filters)}`},vapid,send);
+        if(status===404||status===410)await client.from('push_subscriptions').delete().eq('id',sub.id);else if(status<300)pushed++;}catch{}
+      }
+     }
     }else empty++;
     await client.rpc('jp_finish_job_alert',{target:claim.id,lease:claim.lease,checked:claim.checked_at});
    }catch{failed++;}
   }
-  return reply(200,{sent,empty,failed});
+  return reply(200,{sent,empty,failed,pushed});
  };
 }

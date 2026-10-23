@@ -48,3 +48,4 @@
 .company-jobs{list-style:none;padding:0;display:grid;gap:12px}.company-jobs li+li{margin-top:0}
 .sign-in-options{display:flex;flex-direction:column;gap:12px}.sign-in-options form{display:flex;flex-direction:column;gap:12px;margin-top:12px}
 .jr-stats th{text-transform:none;letter-spacing:0;font-size:13px;white-space:nowrap;vertical-align:bottom}.jr-stats td{white-space:nowrap}.jr-stats td:first-child{white-space:normal}.jr-stats{overflow-x:auto}
+.push-toggle{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;justify-content:space-between;background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin-bottom:24px}

@@ -14,7 +14,7 @@ function setup(env:Record<string,string|undefined>={}){
 const call=(secret='s')=>new Request('https://x',{method:'POST',headers:{'x-job-alert-secret':secret}});
 test('the alert worker requires its secret and configuration',async()=>{assert.equal((await setup().worker(call('no'))).status,401);assert.equal((await setup({JOB_ALERTS_ENABLED:undefined}).worker(call())).status,503);});
 test('alerts send only roles posted in the window, expand synonyms, and finish the lease',async()=>{
- const s=setup();const r=await s.worker(call());assert.deepEqual(await r.json(),{sent:1,empty:0,failed:0});
+ const s=setup();const r=await s.worker(call());assert.deepEqual(await r.json(),{sent:1,empty:0,failed:0,pushed:0});
  const search=s.calls.rpc.find(([n])=>n==='jp_search_jobs')![1];assert.equal(search.p_query,'(rn | (registered <-> nurse))');assert.equal(search.p_query_mode,'tsquery');assert.equal(search.p_location,'Frankston');
  const mail=s.calls.mail[0] as {to:string[];text:string;html:string;headers:Record<string,string>};
  assert.deepEqual(mail.to,['sam@example.test']);assert.match(mail.text,/Registered Nurse <ED>/);assert.doesNotMatch(mail.text,/Old role/);
@@ -23,3 +23,17 @@ test('alerts send only roles posted in the window, expand synonyms, and finish t
 });
 test('the email names the sender and carries an unsubscribe link',()=>{const m=alertEmail(claim,[jobs[0]],'https://jobroles.example');assert.match(m.text,/Unsubscribe from this alert: https:\/\/jobroles.example\/alerts\/unsubscribe\?id=s1&token=/);assert.match(m.text,/JobRoles, an Australian job board/);assert.equal(m.subject,'1 new job for RN');});
 test('the worker uses the same query builder as the website',async()=>{assert.equal(await readFile('supabase/functions/_shared/search.ts','utf8'),await readFile('lib/search.ts','utf8'));});
+test('alerts are also pushed to the person’s devices, and dead subscriptions are removed',async()=>{
+ const {generateKeyPairSync,createECDH}=await import('node:crypto');const {b64url}=await import('../supabase/functions/_shared/webpush.ts');
+ const jwk=generateKeyPairSync('ec',{namedCurve:'P-256'}).privateKey.export({format:'jwk'}) as {d:string;x:string;y:string};
+ const pub=b64url.encode(new Uint8Array([4,...b64url.decode(jwk.x),...b64url.decode(jwk.y)]));
+ const ua=createECDH('prime256v1');ua.generateKeys();const key=b64url.encode(new Uint8Array(ua.getPublicKey())),auth=b64url.encode(new Uint8Array(16).fill(1));
+ const subs=[{id:'p1',endpoint:'https://push.example/live',p256dh:key,auth},{id:'p2',endpoint:'https://push.example/gone',p256dh:key,auth}];
+ const deleted:string[]=[],pushedTo:string[]=[];
+ const client=()=>({rpc:async(n:string)=>n==='jp_claim_job_alerts'?{data:[{...claim,user_id:'u1'}],error:null}:n==='jp_search_jobs'?{data:[{job_id:'new'}],error:null}:{data:true,error:null},
+  from:(t:string)=>t==='push_subscriptions'?{select:()=>({eq:async()=>({data:subs,error:null})}),delete:()=>({eq:async(_c:string,id:string)=>{deleted.push(id);return {error:null};}})}:{select:()=>({in:async()=>({data:jobs,error:null})})}});
+ const send=(async(u:string,init:RequestInit)=>{if(u.startsWith('https://push.example')){pushedTo.push(u);assert.match(String((init.headers as Record<string,string>).Authorization),/^vapid t=/);return new Response(null,{status:u.endsWith('gone')?410:201});}return Response.json({id:'m'});}) as typeof fetch;
+ const env:Record<string,string>={JOB_ALERT_WORKER_SECRET:'s',JOB_ALERTS_ENABLED:'true',RESEND_API_KEY:'k',NOTIFICATION_FROM:'a@b',APP_ORIGIN:'https://jobroles.example',VAPID_PUBLIC_KEY:pub,VAPID_PRIVATE_KEY:jwk.d,VAPID_SUBJECT:'mailto:support@jobroles.example'};
+ const r=await makeAlertWorker(client,n=>env[n],send)(call());
+ assert.deepEqual(await r.json(),{sent:1,empty:0,failed:0,pushed:1});assert.deepEqual(pushedTo,['https://push.example/live','https://push.example/gone']);assert.deepEqual(deleted,['p2']);
+});
