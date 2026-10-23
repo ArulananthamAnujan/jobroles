@@ -1,19 +1,22 @@
 'use client';
-import {useState} from 'react';
+import {useCallback,useEffect,useState} from 'react';
 import {Panel,Btn,Field} from './market-ui';
 type Candidate={user_id:string;full_name:string;headline:string;location:string;skills:string[];distance_km:number|null};
 type Job={id:string;title:string;company_id:string;state:string};
 // Verified employers search people who chose to be found, and invite them to apply to a live role.
-export default function CandidateSearch({companies,jobs}:{companies:{id:string;name:string}[];jobs:Job[]}){
+export default function CandidateSearch({companies,jobs,initial}:{companies:{id:string;name:string}[];jobs:Job[];initial?:{q:string;near:string;title?:string}}){
  const [company,C]=useState(companies[0]?.id||''),[results,R]=useState<Candidate[]|null>(null),[total,T]=useState(0),[error,E]=useState(''),[note,N]=useState(''),[busy,B]=useState(false),[inviting,I]=useState('');
  const live=jobs.filter(j=>j.company_id===company&&j.state==='live');
+ const search=useCallback(async(q:string,near:string,radius:string)=>{B(true);E('');N('');try{const r=await fetch(`/api/candidates?${new URLSearchParams({company,q,near,radius})}`,{cache:'no-store'});const d=await r.json() as {candidates?:Candidate[];total?:number;error?:string};if(!r.ok)throw new Error(d.error);R(d.candidates||[]);T(d.total||0);}catch(err){E((err as Error).message);}finally{B(false);}},[company]);
+ // Matched candidates: opening search from a job runs it straight away with that job's title and location.
+ useEffect(()=>{if(!initial?.q||!company)return;let live=true;Promise.resolve().then(()=>{if(live)void search(initial.q,initial.near,'50');});return()=>{live=false;};},[initial?.q,initial?.near,company,search]);
  if(!companies.length)return null;
- return <section aria-labelledby="candidates-title"><h2 id="candidates-title" className="section-title">Find candidates</h2>
+ return <section aria-labelledby="candidates-title"><h2 id="candidates-title" className="section-title">{initial?.title?`Matched candidates for ${initial.title}`:'Find candidates'}</h2>
   <p>Search people who have chosen to be found by employers. You see their name, headline, location and skills; they see your invitation in their account and decide whether to apply.</p>
-  <Panel><form className="advanced-grid" onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);B(true);E('');N('');try{const r=await fetch(`/api/candidates?${new URLSearchParams({company,q:String(f.get('q')||''),near:String(f.get('near')||''),radius:String(f.get('radius')||'50')})}`,{cache:'no-store'});const d=await r.json() as {candidates?:Candidate[];total?:number;error?:string};if(!r.ok)throw new Error(d.error);R(d.candidates||[]);T(d.total||0);}catch(err){E((err as Error).message);}finally{B(false);}}}>
+  <Panel><form className="advanced-grid" onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);void search(String(f.get('q')||''),String(f.get('near')||''),String(f.get('radius')||'50'));}}>
    {companies.length>1&&<Field label="Company"><select value={company} onChange={e=>{C(e.target.value);R(null);}}>{companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>}
-   <Field label="Skills or role"><input name="q" maxLength={200} placeholder="e.g. triage, forklift licence"/></Field>
-   <Field label="Near"><input name="near" maxLength={120} placeholder="e.g. Geelong"/></Field>
+   <Field label="Skills or role"><input name="q" maxLength={200} defaultValue={initial?.q} placeholder="e.g. triage, forklift licence"/></Field>
+   <Field label="Near"><input name="near" maxLength={120} defaultValue={initial?.near} placeholder="e.g. Geelong"/></Field>
    <Field label="Distance"><select name="radius" defaultValue="50">{[10,25,50,100,250].map(r=><option key={r} value={r}>Within {r} km</option>)}</select></Field>
    <Btn disabled={busy}>{busy?'Searching…':'Search candidates'}</Btn></form></Panel>
   {error&&<p role="alert">{error}</p>}{note&&<p role="status">{note}</p>}

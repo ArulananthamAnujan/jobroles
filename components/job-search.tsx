@@ -53,7 +53,7 @@ function Filters({params}:{params:URLSearchParams}){
 // Sponsored jobs are paid per click; the server charges each visitor once a day.
 function trackSponsoredClick(id:string){try{if(!navigator.sendBeacon?.(`/api/jobs/${id}/click`))void fetch(`/api/jobs/${id}/click`,{method:'POST',keepalive:true});}catch{}}
 
-function JobCard({job:j,selected,onSelect,query}:{job:Job;selected:boolean;onSelect:()=>void;query:string}){
+function JobCard({job:j,selected,onSelect,query,onHide}:{job:Job;selected:boolean;onSelect:()=>void;query:string;onHide:(id:string)=>void}){
  const href=`/jobs/${j.id}${query?`?${query}`:''}`;
  return <li className={`jr-card ${selected?'selected':''}`}>
   {j.sponsored&&<p className="jr-sponsored">Sponsored</p>}
@@ -62,7 +62,7 @@ function JobCard({job:j,selected,onSelect,query}:{job:Job;selected:boolean;onSel
   <p className="jr-location">{where(j)}{typeof j.distance_km==='number'?` · ${j.distance_km} km away`:''}</p>
   <ul className="jr-tags"><li className="jr-pay">{pay(j)}</li><li>{j.employment_type}</li><li>{ARRANGEMENT[j.arrangement]??j.arrangement}</li></ul>
   <ul className="jr-snippet">{snippet(j.description).map((s,i)=><li key={i}>{s}</li>)}</ul>
-  <p className="jr-posted">{postedAgo(j.published_at)}</p>
+  <p className="jr-posted">{postedAgo(j.published_at)}<button type="button" className="jr-hide" onClick={()=>onHide(j.id)} aria-label={`Not interested in ${j.title}`}>Not interested</button></p>
  </li>;
 }
 
@@ -106,6 +106,10 @@ export default function JobSearch(){
   return()=>c.abort();
  },[key,query,home,tab]);
  const loading=state.key!==key,results=state.results,error=state.error,signIn=Boolean(state.signIn)&&!loading;
+ const [hidden,H]=useState<Set<string>>(new Set()),[hideNote,HN]=useState<{id:string;text:string}|null>(null);
+ async function hide(id:string,on=true){const r=await fetch('/api/career',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'hide',jobId:id,hide:on})}).catch(()=>null);
+  if(r?.status===401){HN({id:'',text:'Sign in to hide jobs you are not interested in.'});return;}
+  if(!r?.ok)return;const next=new Set(hidden);if(on)next.add(id);else next.delete(id);H(next);HN(on?{id,text:'Job hidden. We will not show it again.'}:null);}
  const chosen=useMemo(()=>results?.jobs.find(j=>j.id===selected),[results,selected]);
  const pageHref=(page:number)=>{const next=new URLSearchParams(query);next.set('page',String(page));return `/search?${next}`;};
  const q=params.get('q')||'',near=params.get('near')||params.get('location')||'';
@@ -129,7 +133,8 @@ export default function JobSearch(){
    {signIn&&<div className="jr-empty"><h2>Sign in to see jobs for you</h2><p>We match roles to the skills, headline and location in your profile.</p><Link className="jr-primary" href="/job-seeker">Sign in</Link></div>}
    {results&&!signIn&&!results.jobs.length&&!error&&<div className="jr-empty"><h2>{home&&tab==='foryou'?'Add skills to your profile to see matches':'No jobs match your search'}</h2><p>{home&&tab==='foryou'?'Your headline, location and skills decide what we suggest.':'Try fewer words, a nearby city, or clear a filter. Save the search to hear when new roles arrive.'}</p>{!home&&<Link className="jr-secondary" href="/search">See all jobs</Link>}</div>}
    {results&&results.jobs.length>0&&<div className="jr-split">
-    <ol className="jr-list" aria-label="Job results">{results.jobs.map(j=><JobCard key={j.id} job={j} query={query} selected={selected===j.id} onSelect={()=>{S(j.id);paneRef.current?.scrollTo({top:0});}}/>)}</ol>
+    {hideNote&&<p className="jr-hidden-note" role="status">{hideNote.text}{hideNote.id&&<button type="button" className="text-link" onClick={()=>void hide(hideNote.id,false)}>Undo</button>}</p>}
+    <ol className="jr-list" aria-label="Job results">{results.jobs.filter(j=>!hidden.has(j.id)).map(j=><JobCard key={j.id} job={j} query={query} selected={selected===j.id} onHide={hide} onSelect={()=>{S(j.id);paneRef.current?.scrollTo({top:0});}}/>)}</ol>
     <div className="jr-pane-wrap" ref={paneRef}>{chosen&&<JobPane job={chosen} query={query}/>}</div>
    </div>}
    {results&&!home&&results.total>results.pageSize&&<nav className="jr-pages" aria-label="Results pages">{results.page>1&&<Link className="jr-secondary" href={pageHref(results.page-1)}>Previous</Link>}<span>Page {results.page} of {Math.ceil(results.total/results.pageSize)}</span>{results.page*results.pageSize<results.total&&<Link className="jr-secondary" href={pageHref(results.page+1)}>Next</Link>}</nav>}

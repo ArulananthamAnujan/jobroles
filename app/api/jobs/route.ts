@@ -1,4 +1,4 @@
-import {failure,response,ApiError} from '@/lib/backend/server';
+import {failure,response,ApiError,authenticatedClient} from '@/lib/backend/server';
 import {rateLimit,clientIp} from '@/lib/backend/guard';
 import {publicJobsClient,jobFields} from '@/lib/backend/public-jobs';
 import {salaryOptions} from '@/lib/salary';
@@ -23,6 +23,9 @@ export async function GET(request:Request){try{
  const {data:rows,error:rowError}=await client.from('jobs').select(jobFields).in('id',ranked.map(h=>h.job_id));
  if(rowError)throw rowError;
  const byId=new Map((rows||[]).map(r=>[(r as {id:string}).id,r]));
- const jobs=ranked.filter(h=>byId.has(h.job_id)).map(h=>({...byId.get(h.job_id)!,distance_km:h.distance_km===null?null:Math.round(h.distance_km),sponsored:Boolean(h.sponsored)}));
+ // Signed-in seekers never see jobs they marked "Not interested".
+ let hidden=new Set<string>();
+ if(/sb-[^=]*auth-token/.test(request.headers.get('cookie')||'')){try{const {client:account}=await authenticatedClient();const {data}=await account.from('hidden_jobs').select('job_id').in('job_id',ranked.map(h=>h.job_id));hidden=new Set((data||[]).map(h=>h.job_id as string));}catch{}}
+ const jobs=ranked.filter(h=>byId.has(h.job_id)&&!hidden.has(h.job_id)).map(h=>({...byId.get(h.job_id)!,distance_km:h.distance_km===null?null:Math.round(h.distance_km),sponsored:Boolean(h.sponsored)}));
  return response({jobs,total:Number(ranked[0].total_count),page:filters.page,pageSize:PAGE,filters:{...filters,salary}});
 }catch(error){return failure(error);}}

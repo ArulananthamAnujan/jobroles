@@ -42,11 +42,12 @@ const load=cache(async(id:string)=>{
   client.rpc('jp_company_responsiveness',{company:id}),client.rpc('jp_company_rating',{company:id}),
   client.from('company_reviews').select('id,kind,job_title,employment_status,work_location,rating_worklife,rating_pay,rating_security,rating_management,rating_culture,recommends,rating,title,pros,cons,employer_response,published_at,rating_communication,rating_fairness,rating_speed,helpful_count').eq('company_id',id).eq('status','published').order('published_at',{ascending:false}).limit(200)]);
  if(jobs.error)throw jobs.error;
- const [{data:workplace},{data:interviews},{data:interviewSummary},{data:reported},{data:questions}]=await Promise.all([client.rpc('jp_workplace_rating',{company:id}),
+ const [{data:workplace},{data:interviews},{data:interviewSummary},{data:reported},{data:questions},{data:events}]=await Promise.all([client.rpc('jp_workplace_rating',{company:id}),
   client.from('company_interviews').select('id,job_title,experience,difficulty,outcome,source,duration,process,questions,interviewed_on,published_at,helpful_count').eq('company_id',id).eq('status','published').order('published_at',{ascending:false}).limit(100),
   client.rpc('jp_interview_summary',{company:id}),client.rpc('jp_company_reported_salaries',{company:id}),
-  client.from('company_questions').select('id,body,published_at,company_answers(id,body,from_employer,published_at)').eq('company_id',id).eq('status','published').order('published_at',{ascending:false}).limit(100)]);
- return {company:company as Company,jobs:(jobs.data||[]) as unknown as Job[],responsiveness:responsiveness as Responsiveness|null,rating:rating as Rating|null,reviews:(reviews||[]) as Review[],
+  client.from('company_questions').select('id,body,published_at,company_answers(id,body,from_employer,published_at)').eq('company_id',id).eq('status','published').order('published_at',{ascending:false}).limit(100),
+  client.from('hiring_events').select('id,title,starts_at,time_zone,mode,location').eq('company_id',id).is('cancelled_at',null).gt('ends_at',new Date().toISOString()).order('starts_at').limit(5)]);
+ return {events:(events||[]) as {id:string;title:string;starts_at:string;time_zone:string;mode:string;location:string|null}[],company:company as Company,jobs:(jobs.data||[]) as unknown as Job[],responsiveness:responsiveness as Responsiveness|null,rating:rating as Rating|null,reviews:(reviews||[]) as Review[],
   workplace:workplace as Rating|null,interviews:(interviews||[]) as Interview[],interviewSummary:interviewSummary as InterviewSummary|null,reported:(reported||[]) as Reported[],questions:(questions||[]) as Question[]};
 });
 export async function generateMetadata({params}:{params:Promise<{id:string}>}):Promise<Metadata>{
@@ -157,6 +158,7 @@ export default async function CompanyPage({params,searchParams}:{params:Promise<
    {questions.length>0&&<section className="co-card"><div className="co-card-head"><h2>Questions and answers</h2><Link className="text-link" href={href('questions')}>See all {questions.length} questions</Link></div><ul className="co-qa">{questions.slice(0,3).map(x=><li key={x.id}><h3>{x.body}</h3><p className="muted small">{x.company_answers.length} {x.company_answers.length===1?'answer':'answers'}</p></li>)}</ul></section>}
   </div>
   <aside className="co-col">
+   {found.events.length>0&&<section className="co-card"><h2>Hiring events</h2><ul className="co-sal">{found.events.map(e=><li key={e.id}><Link className="text-link" href={`/events/${e.id}`}>{e.title}</Link><span className="muted small">{new Date(e.starts_at).toLocaleString('en-AU',{weekday:'short',day:'numeric',month:'short',hour:'numeric',minute:'2-digit',timeZone:e.time_zone})} · {e.mode==='online'?'Online':e.location}</span></li>)}</ul></section>}
    {responds}
    {interviewSummary&&<section className="co-card"><div className="co-card-head"><h2>Interviews</h2><Link className="text-link" href={href('interviews')}>See all {interviewSummary.count}</Link></div>{interviewBox}</section>}
    {benefits.length>0&&<section className="co-card"><div className="co-card-head"><h2>Benefits</h2><Link className="text-link" href={href('benefits')}>See all</Link></div><ul className="co-benefits">{benefits.slice(0,8).map(b=><li key={b}>{b}</li>)}</ul></section>}

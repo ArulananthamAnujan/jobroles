@@ -6,7 +6,7 @@ import ListingAssistant from '../listing-assistant';
 import {employerGet,employerPost,command,money,when} from './api';
 import {Button,Drawer,Empty,Field,Notice,Pill,Tabs} from './ui';
 import {Section,type PortalContext} from './portal';
-export type Job={id:string;company_id:string;title:string;state:string;published_at:string|null;expires_at:string|null;created_at:string;description:string;employment_type:string;arrangement:string;salary_min:number|null;salary_max:number|null;salary_period:string|null;visa_sponsorship:boolean;benefits:string[];start_date:string|null;external_apply_url:string|null;job_locations:{label:string}[];screening_questions:{id:string;question:string}[]};
+export type Job={id:string;company_id:string;title:string;state:string;published_at:string|null;expires_at:string|null;created_at:string;description:string;employment_type:string;arrangement:string;salary_min:number|null;salary_max:number|null;salary_period:string|null;visa_sponsorship:boolean;benefits:string[];start_date:string|null;external_apply_url:string|null;assessment_code?:string|null;job_locations:{label:string}[];screening_questions:{id:string;question:string}[]};
 type Stat={job_id:string;views_30d:number;applications:number};
 type Question={question:string;mustHave:boolean;expected:'Yes'|'No'};
 const STATE:Record<string,[string,'teal'|'amber'|'neutral'|'red'|'blue']>={live:['Live','teal'],pending_review:['Awaiting approval','amber'],draft:['Draft','neutral'],paused:['Paused','blue'],closed:['Closed','neutral'],expired:['Expired','neutral']};
@@ -21,6 +21,8 @@ function Editor({ctx,job,copy,applicants,onClose,onSaved}:{ctx:PortalContext;job
  const [benefits,BF]=useState<string[]>(source?.benefits||[]),[benefit,B1]=useState('');
  const [preview,P]=useState<null|Record<string,string>>(null),[busy,B]=useState(false),[error,E]=useState('');
  const locked=Boolean(editing&&applicants>0);
+ const [tests,TS]=useState<{code:string;title:string}[]>([]);
+ useEffect(()=>{const c=new AbortController();employerGet<{assessments:{code:string;title:string}[]}>('assessments',{},c.signal).then(d=>TS(d.assessments)).catch(()=>{});return()=>c.abort();},[]);
  useEffect(()=>{if(!source)return;const c=new AbortController();employerGet<{rules:{id:string;must_have:boolean;expected_answer:string}[]}>('rules',{job:source.id},c.signal).then(r=>{const map=new Map(r.rules.map(x=>[x.id,x]));const qs=source.screening_questions.map(q=>({question:q.question,mustHave:map.get(q.id)?.must_have??false,expected:(map.get(q.id)?.expected_answer==='No'?'No':'Yes') as 'Yes'|'No'}));if(qs.length)Q(qs);}).catch(()=>{});return()=>c.abort();},[source]);
  function values(){const f=new FormData(formRef.current!);return Object.fromEntries([...f.entries()].map(([k,v])=>[k,String(v)]));}
  async function save(submit:boolean){
@@ -29,6 +31,7 @@ function Editor({ctx,job,copy,applicants,onClose,onSaved}:{ctx:PortalContext;job
    const saved=await command('job.save',{id:editing?.id,companyId:ctx.company.id,title:f.title,description:f.description,locations:f.location.split('\n').map(x=>x.trim()).filter(Boolean),type:f.type,arrangement:f.arrangement,min:Number(f.min),max:Number(f.max),period:f.period,sponsorship:f.sponsorship==='on',submit}) as {result:{id:string}};
    const id=saved.result.id;
    await employerPost({action:'extras',jobId:id,benefits,startDate:f.startDate||'',externalApplyUrl:f.externalApplyUrl||''});
+   await employerPost({action:'job.assessment',jobId:id,code:f.assessment||null});
    if(!locked)await employerPost({action:'screening',jobId:id,questions:questions.filter(q=>q.question.trim().length>=5)});
    onSaved(submit?'Sent for approval. Most jobs are reviewed within one business day.':'Draft saved.');
   }catch(e){E((e as Error).message);}finally{B(false);}
@@ -46,6 +49,7 @@ function Editor({ctx,job,copy,applicants,onClose,onSaved}:{ctx:PortalContext;job
    <Field label="Maximum pay (AUD)"><input name="max" type="number" min="0" step="0.01" defaultValue={source?.salary_max??''} required/></Field>
    <Field label="Pay period"><select name="period" defaultValue={source?.salary_period||'year'}>{[['year','Per year'],['month','Per month'],['day','Per day'],['hour','Per hour']].map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></Field>
    <Field label="Start date" hint="Optional"><input name="startDate" type="date" defaultValue={source?.start_date||''}/></Field>
+   <Field label="Ask applicants to take a skills assessment" hint="Optional. Applicants see the request and you see their level."><select key={tests.length} name="assessment" defaultValue={source?.assessment_code||''}><option value="">No assessment</option>{tests.map(t=><option key={t.code} value={t.code}>{t.title}</option>)}</select></Field>
    <Field label="Job description" wide hint="At least 40 characters. Say what the work is, who it suits and what support people get."><textarea name="description" defaultValue={source?.description} required minLength={40} maxLength={30000} rows={10}/></Field>
    <div className="ep-field wide"><span>Benefits</span><div className="ep-chips">{benefits.map(b=><span key={b}>{b}<button type="button" aria-label={`Remove ${b}`} onClick={()=>BF(benefits.filter(x=>x!==b))}>×</button></span>)}</div>
     <div className="ep-actions"><input value={benefit} onChange={e=>B1(e.target.value)} maxLength={80} placeholder="e.g. Salary packaging" onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();if(benefit.trim()&&benefits.length<20){BF([...benefits,benefit.trim()]);B1('');}}}}/><Button type="button" tone="secondary" size="sm" onClick={()=>{if(benefit.trim()&&benefits.length<20){BF([...benefits,benefit.trim()]);B1('');}}}>Add</Button></div></div>
@@ -83,6 +87,7 @@ export default function Jobs({ctx}:{ctx:PortalContext}){
     <td>{payText(j)}</td><td>{j.expires_at?when(j.expires_at):'–'}</td>
     <td><div className="ep-row-actions">
      <Link className="ep-btn secondary sm" href={`/employer?view=applicants&job=${j.id}`}>Applicants</Link>
+     {status(j)==='live'&&<Link className="ep-btn ghost sm" href={`/employer?${new URLSearchParams({view:'candidates',q:j.title,near:j.job_locations[0]?.label||'',title:j.title})}`}>Matches</Link>}
      {canEdit&&(j.state==='closed'||status(j)==='expired'?<Button size="sm" tone="ghost" onClick={()=>ED({job:j,copy:true})}>Repost</Button>:<Button size="sm" tone="ghost" onClick={()=>ED({job:j,copy:false})}>Edit</Button>)}
      {canEdit&&<Button size="sm" tone="ghost" onClick={()=>ED({job:j,copy:true})}>Duplicate</Button>}
      {canEdit&&j.state==='live'&&status(j)!=='expired'&&<Button size="sm" tone="ghost" onClick={()=>setState(j,'paused','Job paused. It no longer appears in search.')}>Pause</Button>}

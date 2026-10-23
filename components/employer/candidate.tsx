@@ -1,6 +1,7 @@
 'use client';
 import {useCallback,useEffect,useState} from 'react';
-import {get,employerPost,command,STAGES,stageLabel,when,ago} from './api';
+import {get,employerGet,employerPost,command,STAGES,stageLabel,when,ago} from './api';
+import {monthLabel} from '@/lib/resume-pdf';
 import {Button,Field,Notice,Pill} from './ui';
 import type {PortalContext} from './portal';
 import {isVideoInterview} from '@/lib/calendar';
@@ -9,12 +10,15 @@ type Detail={userId:string;role:string|null;application:{id:string;job_id:string
  snapshot:{profile:{full_name:string;headline:string;location:string;skills:string[];email?:string};resume_version_id:string;answers:Record<string,string>;cover_letter:string}|null;
  history:{id:string;to_state:string;created_at:string}[];notes:{id:string;body:string;rating:number|null;created_at:string}[];
  interviews:{id:string;starts_at:string;time_zone:string;format:string;cancelled_at:string|null}[];messages:{id:string;sender_id:string;body:string;created_at:string}[]};
+type Extras={summary:string;experience:{title:string;company:string;location?:string|null;start:string;end?:string|null;description?:string|null}[];education:{qualification:string;institution:string;year?:number|null}[];licences:string[];languages:string[];readyToWork:boolean;availability:string;assessments:{title:string;score:number;level:string;completedAt:string}[]}|null;
 const ZONES=['Australia/Melbourne','Australia/Sydney','Australia/Brisbane','Australia/Adelaide','Australia/Perth','Australia/Hobart','Australia/Darwin'];
 // Converts a wall-clock time in an Australian zone to an ISO instant, so the stored time is what the interviewer meant.
 function zonedIso(local:string,zone:string){const guess=new Date(`${local}:00Z`);const parts=new Intl.DateTimeFormat('en-US',{timeZone:zone,hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).formatToParts(guess);const v=(t:string)=>Number(parts.find(p=>p.type===t)?.value);const asZone=Date.UTC(v('year'),v('month')-1,v('day'),v('hour'),v('minute'));return new Date(guess.getTime()-(asZone-guess.getTime())).toISOString();}
 export default function Candidate({id,ctx,templates,onChange}:{id:string;ctx:PortalContext;templates:{id:string;name:string;body:string}[];onChange:()=>void}){
  const [d,D]=useState<Detail|null>(null),[error,E]=useState(''),[note,N]=useState(''),[busy,B]=useState(false),[message,MS]=useState(''),[mode,MO]=useState<'single'|'propose'>('propose'),[slots,SL]=useState(['','','']),[zone,Z]=useState('Australia/Melbourne');
  const canMove=ctx.role==='owner'||ctx.role==='recruiter';
+ const [x,X]=useState<Extras>(null);
+ useEffect(()=>{const c=new AbortController();employerGet<{extras:Extras}>('candidate',{application:id},c.signal).then(d=>X(d.extras)).catch(()=>{});return()=>c.abort();},[id]);
  const load=useCallback(async()=>{const x=await get<Detail>(`/api/applications/${id}`);D(x);employerPost({action:'read',applicationId:id}).catch(()=>{});},[id]);
  useEffect(()=>{Promise.resolve().then(load).catch(e=>E((e as Error).message));},[load]);
  async function act(fn:()=>Promise<unknown>,done:string){B(true);E('');N('');try{await fn();N(done);await load();onChange();}catch(e){E((e as Error).message);}finally{B(false);}}
@@ -34,6 +38,12 @@ export default function Candidate({id,ctx,templates,onChange}:{id:string;ctx:Por
   <section className="ep-section"><h3>Profile</h3><dl className="ep-dl"><div><dt>Name</dt><dd>{p?.full_name}</dd></div><div><dt>Headline</dt><dd>{p?.headline||'–'}</dd></div><div><dt>Location</dt><dd>{p?.location||'–'}</dd></div><div><dt>Email</dt><dd>{p?.email?<a href={`mailto:${p.email}`}>{p.email}</a>:'–'}</dd></div></dl>
    {p?.skills?.length?<div className="ep-chips" style={{marginTop:10}}>{p.skills.map(s=><span key={s}>{s}</span>)}</div>:null}
    {d.snapshot?.resume_version_id&&<p style={{marginTop:12}}><a className="ep-btn secondary sm" href={`/api/resumes/${d.snapshot.resume_version_id}`}>Download resume</a></p>}</section>
+  {x&&(x.readyToWork||x.availability)&&<p className="ep-notice">{x.readyToWork&&<><Pill tone="teal">Ready to work</Pill> </>}{x.availability}</p>}
+  {x?.summary&&<section className="ep-section"><h3>Summary</h3><p className="job-description">{x.summary}</p></section>}
+  {x&&x.experience.length>0&&<section className="ep-section"><h3>Experience</h3><ul className="ep-list">{x.experience.map((e,i)=><li key={i}><div className="ep-grow"><strong>{e.title}</strong> · {e.company}{e.location?`, ${e.location}`:''}<small>{monthLabel(e.start)} – {monthLabel(e.end)}</small>{e.description&&<span className="job-description">{e.description}</span>}</div></li>)}</ul></section>}
+  {x&&x.education.length>0&&<section className="ep-section"><h3>Education</h3><ul className="ep-list">{x.education.map((e,i)=><li key={i}><div className="ep-grow"><strong>{e.qualification}</strong><small>{e.institution}{e.year?` · ${e.year}`:''}</small></div></li>)}</ul></section>}
+  {x&&(x.licences.length>0||x.languages.length>0)&&<section className="ep-section"><h3>Licences and languages</h3><div className="ep-chips">{[...x.licences,...x.languages].map(l=><span key={l}>{l}</span>)}</div></section>}
+  {x&&x.assessments.length>0&&<section className="ep-section"><h3>Skills assessments</h3><ul className="ep-list">{x.assessments.map(a=><li key={a.title}><div className="ep-grow">{a.title}<small>{when(a.completedAt)}</small></div><Pill tone={a.score>=75?'teal':'amber'}>{a.level} · {a.score}%</Pill></li>)}</ul></section>}
   {qs.length>0&&<section className="ep-section"><h3>Screening answers</h3><ul className="ep-list">{qs.map(q=>{const a=d.snapshot?.answers?.[q.id];const miss=q.must_have&&a!==q.expected_answer;return <li key={q.id}><div className="ep-grow">{q.question}</div><strong>{a||'–'}</strong>{q.must_have&&(miss?<Pill tone="amber">Deal-breaker not met</Pill>:<Pill tone="teal">Meets</Pill>)}</li>;})}</ul></section>}
   {d.snapshot?.cover_letter&&<section className="ep-section"><h3>Cover letter</h3><p className="job-description">{d.snapshot.cover_letter}</p></section>}
   <section className="ep-section"><h3>Messages</h3>

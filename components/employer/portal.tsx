@@ -14,6 +14,7 @@ import Interviews from './interviews';
 import Team from './team';
 import Billing from './billing';
 import Advertising from './advertising';
+import EventsView from './events';
 import CompanyProfile from './company-profile';
 import Settings from './settings';
 import CandidateSearch from '../candidate-search';
@@ -27,7 +28,7 @@ export type PortalContext={company:Company;role:string;companies:Company[];membe
 type Account={configured:boolean;user:null|{id:string;email:string;confirmed:boolean}};
 type Data={memberships:Membership[];companies:Company[];isAdmin:boolean;jobs:{id:string;title:string;company_id:string;state:string}[]};
 const NAV:[string,string,string,string][]=[
- ['Hire','dashboard','Dashboard','home'],['Hire','jobs','Jobs','jobs'],['Hire','applicants','Applicants','people'],['Hire','messages','Messages','chat'],['Hire','interviews','Interviews','calendar'],['Hire','candidates','Find candidates','search'],
+ ['Hire','dashboard','Dashboard','home'],['Hire','jobs','Jobs','jobs'],['Hire','applicants','Applicants','people'],['Hire','messages','Messages','chat'],['Hire','interviews','Interviews','calendar'],['Hire','candidates','Find candidates','search'],['Hire','events','Hiring events','calendar'],
  ['Grow','advertising','Sponsored jobs','card'],['Grow','performance','Performance','chart'],['Grow','company','Company page','building'],['Grow','reviews','Reviews','star'],
  ['Manage','team','Team','team'],['Manage','billing','Billing','card'],['Manage','import','Import jobs','upload'],['Manage','settings','Settings','settings'],
 ];
@@ -75,8 +76,9 @@ export default function EmployerPortal(){
   case 'applicants':body=<Applicants ctx={ctx}/>;break;
   case 'messages':body=<Messages ctx={ctx}/>;break;
   case 'interviews':body=<Interviews ctx={ctx}/>;break;
-  case 'candidates':body=<Section title="Find candidates" sub="People who chose to be found by employers. They see your invitation in their account."><CandidateSearch companies={canManage&&ctx.company.verified_at?[ctx.company]:[]} jobs={data.jobs||[]}/>{!ctx.company.verified_at&&<p className="ep-muted">Candidate search opens once your company is verified.</p>}{!canManage&&<p className="ep-muted">Only owners and recruiters can search candidates.</p>}</Section>;break;
+  case 'candidates':body=<Section title="Find candidates" sub="People who chose to be found by employers. They see your invitation in their account."><CandidateSearch companies={canManage&&ctx.company.verified_at?[ctx.company]:[]} jobs={data.jobs||[]} initial={params.get('q')?{q:params.get('q')||'',near:params.get('near')||'',title:params.get('title')||undefined}:undefined}/>{!ctx.company.verified_at&&<p className="ep-muted">Candidate search opens once your company is verified.</p>}{!canManage&&<p className="ep-muted">Only owners and recruiters can search candidates.</p>}</Section>;break;
   case 'performance':body=<Section title="Performance" sub="How each listing performs. Fixed 30-day sponsorship is also available here."><JobStats companies={canManage?[ctx.company]:[]}/></Section>;break;
+  case 'events':body=<EventsView ctx={ctx}/>;break;
   case 'advertising':body=<Advertising ctx={ctx}/>;break;
   case 'company':body=<CompanyProfile ctx={ctx}/>;break;
   case 'reviews':body=<Section title="Reviews" sub="Hiring-experience reviews from people who applied. Owners can reply publicly."><ReviewDesk companies={[ctx.company]} ownerOf={ctx.role==='owner'?[ctx.company.id]:[]}/></Section>;break;

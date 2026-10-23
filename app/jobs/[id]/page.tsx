@@ -15,7 +15,7 @@ import SaveJob from '@/components/save-job';
 import {ReportJob} from '@/components/launch-tools';
 // Server-rendered so search engines read the full listing and its JobPosting data.
 export const dynamic='force-dynamic';
-type Job={id:string;company_id:string;title:string;description:string;employment_type:string;arrangement:string;salary_min:number|null;salary_max:number|null;salary_period:string;currency:string;published_at:string;expires_at:string;benefits:string[];start_date:string|null;external_apply_url:string|null;companies:{id:string;name:string;about:string;verified_at:string};job_locations:{label:string}[]};
+type Job={id:string;company_id:string;title:string;description:string;employment_type:string;arrangement:string;salary_min:number|null;salary_max:number|null;salary_period:string;currency:string;published_at:string;expires_at:string;assessment_code?:string|null;benefits:string[];start_date:string|null;external_apply_url:string|null;companies:{id:string;name:string;about:string;verified_at:string};job_locations:{label:string}[]};
 const UUID=/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const loadJob=cache(async(id:string)=>{
  if(!UUID.test(id)||!backendConfigured())return null;
@@ -61,6 +61,7 @@ export default async function JobPage({params}:{params:Promise<{id:string}>}){
       <p className="jp-note">{external?'You apply on the employer’s own website.':'Your resume is shared only when you submit.'} Posted {date(job.published_at)} · closes {date(job.expires_at)}.</p>
      </header>
      <section><h2>Job details</h2><dl className="jp-details"><div><dt>Pay</dt><dd>{salaryLabel(job).replace(/^AUD /,'')}</dd></div><div><dt>Job type</dt><dd>{job.employment_type}</dd></div><div><dt>Work setting</dt><dd>{ARR[job.arrangement]??job.arrangement}</dd></div><div><dt>Location</dt><dd>{where(job)}</dd></div>{job.start_date&&<div><dt>Start date</dt><dd>{date(job.start_date)}</dd></div>}</dl></section>
+     {job.assessment_code&&<section><h2>Skills assessment</h2><p>{job.companies.name} asks applicants to complete a short skills assessment. Your result is shared with employers you apply to.</p><p><Link className="text-link" href={`/assessments/${job.assessment_code}`}>Take the assessment</Link></p></section>}
      {job.benefits.length>0&&<section><h2>Benefits</h2><ul className="jp-benefits">{job.benefits.map(b=><li key={b}>{b}</li>)}</ul></section>}
      <section><h2>Full job description</h2><p className="job-description">{job.description}</p></section>
      <section><h2>About {job.companies.name}</h2><p>{job.companies.about||'This employer has not added a company introduction yet.'}</p><p><Link className="text-link" href={`/companies/${job.companies.id}`}>See all jobs and pay at {job.companies.name}</Link></p></section>

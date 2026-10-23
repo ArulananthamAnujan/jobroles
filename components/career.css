@@ -1,0 +1,28 @@
+.cr-pad{max-width:760px;margin:32px auto;padding:0 24px}
+.cr-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:24px;display:grid;gap:12px;align-content:start}
+.cr-card h1{font-family:Manrope,sans-serif;font-size:28px}.cr-card .jp-btn{justify-self:start}
+.cr-builder{max-width:1240px;margin:0 auto;padding:24px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,520px);gap:24px;align-items:start}
+.cr-editor{display:grid;gap:16px}.cr-head h1{font-family:Manrope,sans-serif;font-size:30px}
+.cr-box{background:#fff;border:1px solid var(--line);border-radius:12px;padding:20px;margin:0;display:grid;gap:14px;min-width:0}.cr-box legend{font-weight:700;font-size:17px;padding:0 6px}
+.cr-entry{border-bottom:1px solid var(--line);padding-bottom:14px;display:grid;gap:10px}
+.cr-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}.cr-grid.two{grid-template-columns:1fr 1fr}
+.cr-types{display:flex;flex-wrap:wrap;gap:12px 18px}.cr-types .check+.check{margin-top:0}
+.cr-actions{display:flex;flex-wrap:wrap;gap:12px;position:sticky;bottom:0;background:#f3f2f1;padding:12px 0}
+.cr-preview{position:sticky;top:16px}.cr-paper{background:#fff;box-shadow:0 6px 24px #1f2b331f;border-radius:4px;padding:36px 40px;font-size:13px;line-height:1.5;max-height:calc(100vh - 40px);overflow:auto;aspect-ratio:210/297}
+.cr-paper h2{font-size:24px}.cr-paper h3{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--teal);border-bottom:1px solid var(--line);padding-bottom:4px;margin:18px 0 8px}
+.cr-paper .cr-sub{color:#33434d}.cr-paper .cr-contact{color:var(--soft);font-size:12px}.cr-item{margin-bottom:10px}.cr-item p:first-child{display:flex;justify-content:space-between;gap:12px}.cr-item span{color:var(--soft);font-size:12px;white-space:nowrap}.cr-paper ul{padding-left:18px}
+.cr-tests{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}.cr-tests li{margin:0}
+.cr-score{font-size:18px}.cr-score strong{color:var(--teal)}
+.cr-run{gap:18px}.cr-run-top{display:flex;justify-content:space-between;font-weight:600;color:var(--soft)}.cr-run-top .danger{color:#a23535}
+.cr-progress{height:6px;background:#eef0f1;border-radius:999px;overflow:hidden}.cr-progress span{display:block;height:100%;background:var(--teal)}
+.cr-question{border:0;padding:0;margin:0;display:grid;gap:10px}.cr-question legend{font-size:19px;font-weight:700;margin-bottom:12px;line-height:1.4}
+.cr-option{display:flex;gap:12px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:14px 16px;cursor:pointer;font-size:16px}.cr-option:hover{border-color:var(--ink)}.cr-option.on{border-color:var(--teal);background:var(--mint);font-weight:600}
+.cr-option input{width:18px;height:18px;min-height:0;flex:0 0 18px;accent-color:var(--teal)}
+.cr-result{text-align:center;justify-items:center}.cr-result .cr-big{font-size:56px;font-weight:700;color:var(--teal);font-family:Manrope,sans-serif;line-height:1}
+.ev-list{list-style:none;margin:0;padding:0;display:grid;gap:14px}.ev-list li{margin:0}
+.ev-card{display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:16px;align-items:center}
+.ev-date{display:grid;justify-items:center;border:1px solid var(--line);border-radius:10px;padding:8px 0;font-weight:700}.ev-date span:first-child{font-size:12px;color:#a23535;text-transform:uppercase}.ev-date span:last-child{font-size:24px}
+.ca-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.ca-article{max-width:760px;margin:0 auto;padding:32px 24px 56px;display:grid;gap:16px;font-size:17px;line-height:1.7}.ca-article h1{font-family:Manrope,sans-serif;font-size:clamp(28px,4vw,40px);line-height:1.2}.ca-article h2{font-size:22px;margin-top:12px}.ca-article ul,.ca-article ol{padding-left:24px;display:grid;gap:6px}.ca-article li{margin:0}
+@media(max-width:1000px){.cr-builder{grid-template-columns:1fr}.cr-preview{position:static}.cr-paper{aspect-ratio:auto;max-height:none}}
+@media(max-width:560px){.cr-builder{padding:16px}.ev-card{grid-template-columns:56px 1fr}.ev-card>:last-child{grid-column:1/-1}.cr-grid.two{grid-template-columns:1fr}}
