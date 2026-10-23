@@ -44,3 +44,5 @@
 .ai-preview{background:white;border:1px solid #c9dfd9;border-radius:10px;padding:1rem;margin-top:1rem;overflow-wrap:anywhere}
 .ai-preview ul{list-style:disc;padding-left:1.5rem}
 @media(max-width:700px){.topbar{flex-wrap:wrap}.top-nav{flex-wrap:wrap}.guide-salary{font-size:1.35rem}}
+.job-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px 24px;margin:0}.job-facts dt{font-size:14px;color:var(--text-muted)}.job-facts dd{margin:2px 0 0;font-weight:600}
+.company-jobs{list-style:none;padding:0;display:grid;gap:12px}.company-jobs li+li{margin-top:0}

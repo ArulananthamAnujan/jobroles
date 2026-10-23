@@ -4,6 +4,7 @@ import {salaryLabel} from '@/lib/salary';
 import MarketOverview from './market-overview';
 import {resultsHref} from '@/lib/navigation';
 import {SaveSearch,ReportJob} from './launch-tools';
+import SaveJob from './save-job';
 import Link from 'next/link';
 import {usePathname,useSearchParams} from 'next/navigation';
 import {Brand,Panel,Field,Btn,Badge,Mark,Icon,ActionLink} from './market-ui';
@@ -12,7 +13,6 @@ type Results={jobs:Job[];total:number;page:number;pageSize:number};
 const initials=(name:string)=>name.split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();
 const salary=salaryLabel;
 function Facts({job:j}:{job:Job}){return <div className="live-facts"><span><Icon name="pin"/>{j.job_locations.map(l=>l.label).join(' · ')}</span><span className="salary-highlight"><Icon name="money"/>{salary(j)}</span><span><Icon name="briefcase"/>{j.employment_type} · {j.arrangement.replace('_',' ')}</span></div>}
-function SaveJob({id}:{id:string}){const [busy,B]=useState(false),[message,M]=useState(''),[login,L]=useState(false);return <div><Btn secondary disabled={busy} onClick={async()=>{B(true);M('');L(false);try{const r=await fetch('/api/command',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'saved.toggle',payload:{jobId:id,saved:true}})});if(r.status===401){L(true);return;}const d=await r.json() as {error?:string};if(!r.ok)throw new Error(d.error||'Unable to save job.');M('Saved to your account.');}catch(e){M((e as Error).message);}finally{B(false);}}}>{busy?'Saving…':'Save job'}</Btn>{message&&<p role="status">{message}</p>}{login&&<Link className="text-link" href={`/job-seeker?job=${id}`}>Sign in to save this job</Link>}</div>}
 function Detail({job:j,full=false,query=''}:{job:Job;full?:boolean;query?:string}){return <Panel><div className="company-row"><Mark initials={initials(j.companies.name)}/><div><strong>{j.companies.name}</strong><div><Badge>Verified employer</Badge></div></div></div>{full?<h1>{j.title}</h1>:<h2>{j.title}</h2>}<Facts job={j}/><p className="muted">Posted {new Date(j.published_at).toLocaleDateString('en-AU')}</p><ActionLink href={`/job-seeker?job=${j.id}#application`}>Apply now</ActionLink><SaveJob key={j.id} id={j.id}/>{full&&<ReportJob key={j.id} id={j.id}/>}<p className="muted">Your resume is shared only when you submit.</p>{full?<><h2>About the role</h2><p className="job-description">{j.description}</p><h2>About {j.companies.name}</h2><p>{j.companies.about||'This employer has not added a company introduction yet.'}</p></>:<><p>{j.description.slice(0,400)}{j.description.length>400?'…':''}</p><Link className="text-link" href={`/jobs/${j.id}${query?`?${query}`:''}`}>Read full job description</Link></>}</Panel>}
 export default function LiveMarketplace(){
  const path=usePathname(),params=useSearchParams(),query=params.toString(),jobId=path.startsWith('/jobs/')?path.split('/')[2]:null;
