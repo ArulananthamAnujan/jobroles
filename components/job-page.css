@@ -34,3 +34,5 @@
 @media(max-width:900px){.jp-grid{grid-template-columns:1fr}.jp-aside{position:static}}
 @media(max-width:680px){.jp-main{padding:12px 16px 96px}.jp-sticky{display:block;position:fixed;left:0;right:0;bottom:0;padding:12px 16px;background:#fff;border-top:1px solid var(--line);z-index:20}.jp-sticky .jp-apply{width:100%}}
 .co-main{display:grid;gap:20px}.co-main .company-row h1{font-family:Manrope,'DM Sans',sans-serif;font-size:32px;line-height:1.2}
+.co-rating strong{font-size:28px;color:var(--teal);margin-right:4px}.co-review{border-top:1px solid var(--line);padding-top:14px;display:grid;gap:6px}.co-stars{color:#b26b00;font-size:18px;letter-spacing:2px}.co-reply{background:#f3f5f6;border-radius:8px;padding:10px 12px}
+.review-form{display:grid;gap:14px;max-width:640px}.review-form .stars{display:flex;flex-wrap:wrap;gap:12px;border:0;padding:0;margin:0}.review-form .stars legend{font-weight:700;margin-bottom:6px}.review-form .stars label{display:flex;gap:6px;align-items:center}.review-form .stars input{width:auto;min-height:0}

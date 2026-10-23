@@ -10,8 +10,10 @@ import {siteOrigin} from '@/lib/job-posting';
 import {Badge,Mark} from '@/components/market-ui';
 import {SiteHeader,SiteFooter} from '@/components/site-chrome';
 import '@/components/job-page.css';
+import WriteReview from '@/components/write-review';
 export const dynamic='force-dynamic';
 type Company={id:string;name:string;about:string;verified_at:string};
+type Review={id:string;rating:number;title:string;pros:string;cons:string;employer_response:string|null;published_at:string};
 type Job={id:string;title:string;employment_type:string;arrangement:string;salary_min:number|null;salary_max:number|null;salary_period:string;currency:string;published_at:string;job_locations:{label:string}[]};
 const UUID=/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const load=cache(async(id:string)=>{
@@ -22,7 +24,8 @@ const load=cache(async(id:string)=>{
  const {data:jobs,error:jobError}=await client.from('jobs').select('id,title,employment_type,arrangement,salary_min,salary_max,salary_period,currency,published_at,job_locations(label)').eq('company_id',id).eq('state','live').gt('expires_at',new Date().toISOString()).order('published_at',{ascending:false}).limit(200);
  if(jobError)throw jobError;
  const {data:responsiveness}=await client.rpc('jp_company_responsiveness',{company:id});
- return {company:company as Company,jobs:(jobs||[]) as unknown as Job[],responsiveness:responsiveness as {applications:number;respondedShare:number;medianDays:number|null}|null};
+ const [{data:rating},{data:reviews}]=await Promise.all([client.rpc('jp_company_rating',{company:id}),client.from('company_reviews').select('id,rating,title,pros,cons,employer_response,published_at').eq('company_id',id).eq('status','published').order('published_at',{ascending:false}).limit(20)]);
+ return {company:company as Company,jobs:(jobs||[]) as unknown as Job[],responsiveness:responsiveness as {applications:number;respondedShare:number;medianDays:number|null}|null,rating:rating as {average:number;count:number}|null,reviews:(reviews||[]) as Review[]};
 });
 export async function generateMetadata({params}:{params:Promise<{id:string}>}):Promise<Metadata>{
  const found=await load((await params).id);if(!found)return {title:'Employer not available · JobRoles',robots:{index:false}};
@@ -30,11 +33,16 @@ export async function generateMetadata({params}:{params:Promise<{id:string}>}):P
 }
 export default async function CompanyPage({params}:{params:Promise<{id:string}>}){
  const found=await load((await params).id);if(!found)notFound();
- const {company,jobs,responsiveness}=found,stats=payStats(jobs);
+ const {company,jobs,responsiveness,rating,reviews}=found,stats=payStats(jobs);
  return <div className="jp-page"><SiteHeader/>
   <main id="main" className="jp-main co-main">
    <div className="company-row"><Mark initials={company.name.split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase()}/><div><h1>{company.name}</h1><Badge>Verified employer since {new Date(company.verified_at).toLocaleDateString('en-AU',{month:'long',year:'numeric'})}</Badge></div></div>
    {responsiveness&&<section className="panel"><h2>How this employer responds</h2><p>Over the last six months, {company.name} acted on {responsiveness.respondedShare}% of {responsiveness.applications} applications{responsiveness.medianDays!==null?`, usually within ${responsiveness.medianDays} days`:''}. Measured from JobRoles application records.</p></section>}
+   <section className="panel" aria-labelledby="reviews-h"><h2 id="reviews-h">Hiring experience reviews</h2>
+    {rating?<p className="co-rating"><strong>{rating.average.toFixed(1)}</strong> out of 5 from {rating.count} {rating.count===1?'review':'reviews'} by people who applied</p>:<p className="muted">No reviews yet. Reviews come only from people who applied here, and each is checked before it appears.</p>}
+    {reviews.map(r=><article key={r.id} className="co-review"><p aria-label={`${r.rating} out of 5`} className="co-stars">{'★'.repeat(r.rating)}{'☆'.repeat(5-r.rating)}</p><h3>{r.title}</h3><p><strong>Went well:</strong> {r.pros}</p><p><strong>Could be better:</strong> {r.cons}</p>{r.employer_response&&<p className="co-reply"><strong>Response from {company.name}:</strong> {r.employer_response}</p>}<p className="muted">{new Date(r.published_at).toLocaleDateString('en-AU',{month:'long',year:'numeric'})}</p></article>)}
+    <WriteReview companyId={company.id} companyName={company.name}/>
+   </section>
    <section className="panel"><h2>About</h2><p>{company.about||'This employer has not added a company introduction yet.'}</p></section>
    {stats.length>0&&<section className="panel"><h2>Advertised pay on JobRoles</h2><p className="muted">From this employer’s live listings. Ranges are as advertised, grouped by pay period.</p><dl className="job-facts">{stats.map(s=><div key={s.period}><dt>{s.count} {s.count===1?'role':'roles'} paid per {s.period}</dt><dd>{s.label}</dd></div>)}</dl></section>}
    <section><h2 className="section-title">{jobs.length} live {jobs.length===1?'role':'roles'}</h2>{jobs.length?<ul className="company-jobs">{jobs.map(j=><li key={j.id} className="panel"><h3><Link className="job-title" href={`/jobs/${j.id}`}>{j.title}</Link></h3><p>{j.job_locations.map(l=>l.label).join(' · ')} · {j.employment_type} · {j.arrangement.replace('_',' ')}</p><p className="salary-highlight">{salaryLabel(j)}</p></li>)}</ul>:<p>No live roles right now. <Link className="text-link" href="/search">Search all jobs</Link></p>}</section>

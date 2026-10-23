@@ -47,3 +47,13 @@ test('ranked job search',async t=>{
  await t.test('saved searches accept the new filters',async()=>{const r=await rows(seeker,"select jp_launch_command('search.save',$1::jsonb) as r",[JSON.stringify({filters:{q:'nurse',near:'Geelong',radius:'50',posted:'7',sector:'healthcare'}})]);assert.ok(r[0].r.id);});
  await db.close();
 });
+test('full gazetteer resolves suburbs and postcodes',async()=>{
+ const {db,rows}=await createDb();
+ const r=async l=>(await rows(null,'select name,state,round(latitude::numeric,1) lat from jp_find_place($1)',[l]))[0];
+ assert.deepEqual(await r('Frankston South VIC'),{name:'Frankston South',state:'VIC',lat:'-38.2'});
+ assert.equal((await r('3199')).state,'VIC');
+ assert.equal((await r('Toowong QLD 4066')).name,'Toowong');
+ assert.equal((await r('Melbourne')).name,'Melbourne');
+ assert.equal(await r('Atlantis'),undefined);
+ await db.close();
+});
