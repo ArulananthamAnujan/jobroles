@@ -24,7 +24,7 @@ export function resumePdf(r:ResumeData):Uint8Array{
    if(current.length)flush();
   }
  }
- const rightText=(text:string,size=10,ink='#5b6b75')=>{const codes=encode(text);ops.push(`BT /F1 ${size} Tf ${color(ink)} rg ${(right-width(codes,false,size)).toFixed(2)} ${(y+size+4).toFixed(2)} Td (${esc(codes)}) Tj ET`);};
+ const rightText=(text:string,size=10,ink='#5b6b75')=>{const codes=encode(text);ops.push(`BT /F1 ${size} Tf ${color(ink)} rg ${(right-width(codes,false,size)).toFixed(2)} ${(y+2).toFixed(2)} Td (${esc(codes)}) Tj ET`);};
  const heading=(text:string)=>{if(y-60<bottom)newPage();y-=12;line(text.toUpperCase(),{size:10.5,bold:true,ink:'#076d65',gap:4});ops.push(`${color('#cdd8de')} RG 0.8 w ${left} ${y.toFixed(2)} m ${right} ${y.toFixed(2)} l S`);y-=10;};
  line(r.name||'Your name',{size:22,bold:true,gap:6});
  if(r.headline)line(r.headline,{size:12.5,ink:'#33434d',gap:4});

@@ -14,7 +14,11 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // The video interview room needs this site's own camera, microphone and screen sharing. Later entries win.
+      { source: "/interview/:path*", headers: [{ key: "Permissions-Policy", value: "camera=(self), microphone=(self), display-capture=(self), geolocation=(), payment=(), usb=()" }] },
+    ];
   },
 };
 

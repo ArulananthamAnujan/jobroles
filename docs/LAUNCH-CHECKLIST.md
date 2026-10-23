@@ -5,7 +5,7 @@ that only the business owner can create. Work through the steps in order.
 
 ## 1. Database
 
-Apply the twelve new migrations to the production Supabase project. Check the remote history first and never
+Apply the sixteen new migrations to the production Supabase project. Check the remote history first and never
 run `supabase db reset` against production.
 
 ```
@@ -30,12 +30,20 @@ supabase db push --linked
 
 After this migration, check in Supabase Storage that the `company-media` bucket exists and is public. Redeploy `job-alerts` (employer daily digests) and `billing` (Stripe tax invoice links) so they match it. Administrators manage moderation queues at `/admin`.
 
+| Migration | What it adds |
+| --- | --- |
+| `20261025000001_community` | Workplace reviews from employees, interview experiences, self-reported salaries (shown only as groups of three or more) and company questions and answers, with a moderation queue |
+| `20261025000002_pay_per_click` | Prepaid advertising credit, per-job campaigns with daily budget and cost per click, click charging |
+| `20261025000003_video_interviews` | Signalling relay for built-in video interviews |
+| `20261025000004_career_tools` | Career profile for the resume builder, six skills assessments, hiring events and "Not interested" |
+
 ## 2. Edge Functions
 
 ```
 supabase functions deploy resume-scan job-alerts job-feed-import
 supabase functions deploy account-erasure
 supabase functions deploy billing --no-verify-jwt   # Stripe cannot send a Supabase token; the function checks its own
+supabase functions deploy ad-click --no-verify-jwt  # only the web server calls it, with AD_CLICK_SECRET
 ```
 
 Set their secrets with `supabase secrets set NAME=value`:
@@ -46,6 +54,8 @@ Set their secrets with `supabase secrets set NAME=value`:
 | Job alerts | `JOB_ALERT_WORKER_SECRET`, `JOB_ALERTS_ENABLED=true`, `RESEND_API_KEY`, `NOTIFICATION_FROM`, `APP_ORIGIN` |
 | Feed imports | `JOB_FEED_WORKER_SECRET` |
 | Sponsored listings | `STRIPE_SECRET_KEY`, `STRIPE_PRICE_SPONSOR`, `STRIPE_WEBHOOK_SECRET`, `SPONSOR_DAYS` (default 30) |
+| Pay-per-click credit | Same Stripe secrets; optional `STRIPE_AUTOMATIC_TAX=true` if Stripe Tax is set up |
+| Pay-per-click clicks | `AD_CLICK_SECRET` (a long random string; set the same value in Netlify) |
 | Push notifications (job-alerts function) | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT=mailto:you@yourdomain` |
 
 `RESUME_SCANNER_URL` must point to a service that accepts a file in a POST and answers `{"clean": true|false}`.
@@ -84,6 +94,8 @@ call is a POST with its secret header:
 Set these with **Builds and Functions** scope, then redeploy:
 
 - `APP_ORIGIN`: the canonical https origin. Production refuses to send auth emails without it.
+- `AD_CLICK_SECRET`: the same value as the `ad-click` function secret. Without it, sponsored clicks are not charged, so set it before selling credit.
+- `TURN_URL`, `TURN_USERNAME`, `TURN_CREDENTIAL` (optional): a TURN relay for video interviews on strict corporate networks. Without it, calls use direct connections, which work on most home and mobile networks.
 - `SITE_INDEXING=true`: set only when you are ready for Google, because it opens robots.txt and the sitemap.
   Then submit `https://<domain>/sitemap.xml` in Google Search Console.
 - Add an uptime monitor on `https://<domain>/api/health`.
