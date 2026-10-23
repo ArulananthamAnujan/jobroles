@@ -13,7 +13,8 @@ export async function GET(_request:Request,{params}:{params:Promise<{id:string}>
   client.from('application_notes').select('id,body,rating,created_at').eq('application_id',id).order('created_at',{ascending:false}).limit(100),
   client.from('interviews').select('id,starts_at,time_zone,format,cancelled_at').eq('application_id',id).order('starts_at',{ascending:false}).limit(50),
   client.from('application_messages').select('id,sender_id,body,created_at').eq('application_id',id).order('created_at',{ascending:false}).limit(100),
-  client.from('jobs').select('id,title,company_id,screening_questions(id,question,must_have,expected_answer)').eq('id',application.job_id).maybeSingle(),
+  // Expected answers are for the hiring team only; seekers see the questions.
+  client.from('jobs').select(isSeeker?'id,title,company_id,screening_questions(id,question)':'id,title,company_id,screening_questions(id,question,must_have,expected_answer)').eq('id',application.job_id).maybeSingle(),
   isSeeker?client.from('application_drafts').select('*').eq('application_id',id).maybeSingle():Promise.resolve({data:null,error:null}),
  ]);
  if([snapshot,history,notes,interviews,messages,job,draft].some(x=>x.error))throw new ApiError(503,'Application details could not be loaded.');
