@@ -12,7 +12,7 @@ const schema=z.discriminatedUnion('action',[
 // Owners see published reviews of their companies; administrators also get the moderation queue.
 export async function GET(request:Request){try{
  const {client}=await authenticatedClient();const company=new URL(request.url).searchParams.get('company');
- const [{data:isAdmin},published]=await Promise.all([client.rpc('jp_is_admin'),company&&/^[0-9a-f-]{36}$/i.test(company)?client.from('company_reviews').select('id,company_id,rating,title,pros,cons,employer_response,published_at').eq('company_id',company).eq('status','published').order('published_at',{ascending:false}).limit(100):Promise.resolve({data:[],error:null})]);
+ const [{data:isAdmin},published]=await Promise.all([client.rpc('jp_is_admin'),company&&/^[0-9a-f-]{36}$/i.test(company)?client.from('company_reviews').select('id,company_id,kind,job_title,rating,title,pros,cons,employer_response,published_at').eq('company_id',company).eq('status','published').order('published_at',{ascending:false}).limit(100):Promise.resolve({data:[],error:null})]);
  const pending=isAdmin?await client.rpc('jp_pending_reviews'):{data:[]};
  return response({published:published.data||[],pending:pending.data||[]});
 }catch(e){return failure(e);}}

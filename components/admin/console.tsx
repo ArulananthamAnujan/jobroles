@@ -7,13 +7,14 @@ import AccountWorkspace from '../account-workspace';
 import EmailStatus from '../email-status';
 import PrivacyCentre from '../privacy-centre';
 import ReviewDesk from '../review-desk';
+import CommunityDesk from './community-desk';
 import {AccountLaunchTools} from '../launch-tools';
 import {get,command,money,when} from '../employer/api';
 import {Button,Card,Empty,Field,Icon,Notice,Pill} from '../employer/ui';
 import '../employer/portal.css';
 type Queue={jobs:{id:string;title:string;description:string;employment_type:string;arrangement:string;salary_min:number;salary_max:number;salary_period:string;created_at:string;external_apply_url:string|null;companies:{id:string;name:string;verified_at:string|null};job_locations:{label:string}[]}[];
  companies:{id:string;name:string;abn:string|null;about:string;is_agency:boolean;created_at:string;website:string|null}[];audit:{id:string;action:string;entity_type:string;reason:string;created_at:string}[];risks:{job_id:string;flags:string[]}[]};
-const NAV:[string,string,string][]=[['jobs','Job approvals','jobs'],['companies','Employer verification','shield'],['reports','Job reports','bell'],['reviews','Review moderation','star'],['privacy','Privacy requests','people'],['email','Email delivery','chat'],['audit','Audit log','chart']];
+const NAV:[string,string,string][]=[['jobs','Job approvals','jobs'],['companies','Employer verification','shield'],['reports','Job reports','bell'],['reviews','Review moderation','star'],['community','Interviews & Q&A','chat'],['privacy','Privacy requests','people'],['email','Email delivery','chat'],['audit','Audit log','chart']];
 export default function AdminConsole(){
  const params=useSearchParams(),path=usePathname(),view=params.get('view')||'jobs';
  const [state,S]=useState<'loading'|'signin'|'denied'|'ok'>('loading'),[q,Q]=useState<Queue|null>(null),[error,E]=useState(''),[note,N]=useState(''),[busy,B]=useState(false),[version,V]=useState(0);
@@ -42,6 +43,7 @@ export default function AdminConsole(){
     <div className="ep-actions"><Button disabled={busy}>Verify employer</Button></div></form></Card>):<Card><Empty title="No employers awaiting verification"/></Card>}</>;
  else if(view==='reports')body=<AccountLaunchTools isAdmin/>;
  else if(view==='reviews')body=<ReviewDesk companies={[]} ownerOf={[]}/>;
+ else if(view==='community')body=<CommunityDesk/>;
  else if(view==='privacy')body=<PrivacyCentre isAdmin/>;
  else if(view==='email')body=<EmailStatus/>;
  else body=<div className="ep-table-wrap"><table className="ep-table"><thead><tr><th>When</th><th>Action</th><th>Entity</th><th>Reason</th></tr></thead><tbody>{q.audit.map(a=><tr key={a.id}><td>{when(a.created_at,{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'})}</td><td>{a.action}</td><td>{a.entity_type}</td><td>{a.reason}</td></tr>)}</tbody></table></div>;
