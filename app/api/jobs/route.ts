@@ -16,11 +16,11 @@ export async function GET(request:Request){try{
  if(error)throw error;
  // Results may shrink between page requests (closed roles or changed filters).
  if(!hits?.length&&filters.page>1){filters.page=1;({data:hits,error}=await run(1));if(error)throw error;}
- const ranked=(hits||[]) as {job_id:string;distance_km:number|null;total_count:number}[];
+ const ranked=(hits||[]) as {job_id:string;distance_km:number|null;total_count:number;sponsored:boolean}[];
  if(!ranked.length)return response({jobs:[],total:0,page:filters.page,pageSize:PAGE,filters:{...filters,salary}});
  const {data:rows,error:rowError}=await client.from('jobs').select(jobFields).in('id',ranked.map(h=>h.job_id));
  if(rowError)throw rowError;
  const byId=new Map((rows||[]).map(r=>[(r as {id:string}).id,r]));
- const jobs=ranked.filter(h=>byId.has(h.job_id)).map(h=>({...byId.get(h.job_id)!,distance_km:h.distance_km===null?null:Math.round(h.distance_km)}));
+ const jobs=ranked.filter(h=>byId.has(h.job_id)).map(h=>({...byId.get(h.job_id)!,distance_km:h.distance_km===null?null:Math.round(h.distance_km),sponsored:Boolean(h.sponsored)}));
  return response({jobs,total:Number(ranked[0].total_count),page:filters.page,pageSize:PAGE,filters:{...filters,salary}});
 }catch(error){return failure(error);}}

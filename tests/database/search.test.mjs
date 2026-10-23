@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createDb,ids} from './harness.mjs';
-const {company,foreignCompany,job,foreignJob,seeker}=ids;
+const {company,job,foreignJob,seeker}=ids;
 const search=(rows,user,args={})=>rows(user,`select * from jp_search_jobs(p_query=>$1,p_location=>$2,p_company=>$3,p_arrangement=>$4,p_type=>$5,p_salary_min=>$6,p_salary_max=>$7,p_period=>coalesce($8,'year'),p_posted_days=>$9,p_near=>$10,p_radius_km=>$11,p_sort=>coalesce($12,'relevance'),p_limit=>coalesce($13,20),p_offset=>coalesce($14,0))`,
  [args.q??null,args.location??null,args.company??null,args.arrangement??null,args.type??null,args.min??null,args.max??null,args.period??null,args.posted??null,args.near??null,args.radius??null,args.sort??null,args.limit??null,args.offset??null]);
 test('ranked job search',async t=>{

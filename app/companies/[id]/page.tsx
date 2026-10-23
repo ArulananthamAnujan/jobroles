@@ -19,7 +19,8 @@ const load=cache(async(id:string)=>{
  if(error)throw error;if(!company)return null;
  const {data:jobs,error:jobError}=await client.from('jobs').select('id,title,employment_type,arrangement,salary_min,salary_max,salary_period,currency,published_at,job_locations(label)').eq('company_id',id).eq('state','live').gt('expires_at',new Date().toISOString()).order('published_at',{ascending:false}).limit(200);
  if(jobError)throw jobError;
- return {company:company as Company,jobs:(jobs||[]) as unknown as Job[]};
+ const {data:responsiveness}=await client.rpc('jp_company_responsiveness',{company:id});
+ return {company:company as Company,jobs:(jobs||[]) as unknown as Job[],responsiveness:responsiveness as {applications:number;respondedShare:number;medianDays:number|null}|null};
 });
 export async function generateMetadata({params}:{params:Promise<{id:string}>}):Promise<Metadata>{
  const found=await load((await params).id);if(!found)return {title:'Employer not available · JobRoles',robots:{index:false}};
@@ -27,10 +28,11 @@ export async function generateMetadata({params}:{params:Promise<{id:string}>}):P
 }
 export default async function CompanyPage({params}:{params:Promise<{id:string}>}){
  const found=await load((await params).id);if(!found)notFound();
- const {company,jobs}=found,stats=payStats(jobs);
+ const {company,jobs,responsiveness}=found,stats=payStats(jobs);
  return <><header className="topbar"><Brand/><nav className="top-nav"><Link href="/search">Find jobs</Link><Link href="/market-guide">Sectors & salaries</Link></nav><ActionLink secondary href="/job-seeker">Sign in / account</ActionLink></header>
   <main id="main" className="main live-shell">
    <div className="company-row"><Mark initials={company.name.split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase()}/><div><h1>{company.name}</h1><Badge>Verified employer since {new Date(company.verified_at).toLocaleDateString('en-AU',{month:'long',year:'numeric'})}</Badge></div></div>
+   {responsiveness&&<section className="panel"><h2>How this employer responds</h2><p>Over the last six months, {company.name} acted on {responsiveness.respondedShare}% of {responsiveness.applications} applications{responsiveness.medianDays!==null?`, usually within ${responsiveness.medianDays} days`:''}. Measured from JobRoles application records.</p></section>}
    <section className="panel"><h2>About</h2><p>{company.about||'This employer has not added a company introduction yet.'}</p></section>
    {stats.length>0&&<section className="panel"><h2>Advertised pay on JobRoles</h2><p className="muted">From this employer’s live listings. Ranges are as advertised, grouped by pay period.</p><dl className="job-facts">{stats.map(s=><div key={s.period}><dt>{s.count} {s.count===1?'role':'roles'} paid per {s.period}</dt><dd>{s.label}</dd></div>)}</dl></section>}
    <section><h2 className="section-title">{jobs.length} live {jobs.length===1?'role':'roles'}</h2>{jobs.length?<ul className="company-jobs">{jobs.map(j=><li key={j.id} className="panel"><h3><Link className="job-title" href={`/jobs/${j.id}`}>{j.title}</Link></h3><p>{j.job_locations.map(l=>l.label).join(' · ')} · {j.employment_type} · {j.arrangement.replace('_',' ')}</p><p className="salary-highlight">{salaryLabel(j)}</p></li>)}</ul>:<p>No live roles right now. <Link className="text-link" href="/search">Search all jobs</Link></p>}</section>
