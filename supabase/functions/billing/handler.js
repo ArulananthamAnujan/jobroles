@@ -23,9 +23,15 @@ export function makeBillingHandler(createClient,env,send=fetch){
    if(raw.length>256*1024||!(await verifyStripeSignature(raw,request.headers.get('stripe-signature'),env('STRIPE_WEBHOOK_SECRET'))))return reply(400,{error:'Invalid signature.'});
    const event=JSON.parse(raw),session=event.data?.object;
    if(!['checkout.session.completed','checkout.session.async_payment_succeeded'].includes(event.type)||session?.payment_status!=='paid'||session?.metadata?.purpose!=='sponsor')return reply(200,{ignored:true});
-   const {error}=await service().rpc('jp_record_sponsorship',{session:session.id,target:session.metadata.job_id,buyer:session.metadata.user_id,amount:session.amount_total??0,cur:session.currency??'aud',days:Number(session.metadata.days)||30});
+   const client=service();
+   const {error}=await client.rpc('jp_record_sponsorship',{session:session.id,target:session.metadata.job_id,buyer:session.metadata.user_id,amount:session.amount_total??0,cur:session.currency??'aud',days:Number(session.metadata.days)||30});
    // A 5xx makes Stripe retry; recording is idempotent per session.
-   return error?reply(500,{error:'Could not record the sponsorship.'}):reply(200,{recorded:true});
+   if(error)return reply(500,{error:'Could not record the sponsorship.'});
+   // Keep a link to Stripe's hosted tax invoice for the employer's billing page.
+   if(typeof session.invoice==='string'&&env('STRIPE_SECRET_KEY')){
+    try{const r=await send(`https://api.stripe.com/v1/invoices/${encodeURIComponent(session.invoice)}`,{headers:{Authorization:`Bearer ${env('STRIPE_SECRET_KEY')}`},signal:AbortSignal.timeout(10000)});const inv=await r.json();if(r.ok&&typeof inv.hosted_invoice_url==='string')await client.rpc('jp_set_sponsorship_invoice',{session:session.id,url:inv.hosted_invoice_url});}catch{}
+   }
+   return reply(200,{recorded:true});
   }
   if(path.endsWith('/checkout')){
    const key=env('STRIPE_SECRET_KEY'),price=env('STRIPE_PRICE_SPONSOR'),origin=env('APP_ORIGIN')?.replace(/\/$/,'');

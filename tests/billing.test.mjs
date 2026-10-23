@@ -29,3 +29,7 @@ test('checkout requires team permission and sends GST invoice and ABN collection
  const form=s.calls[0][2];assert.equal(form['line_items[0][price]'],'price_1');assert.equal(form['invoice_creation[enabled]'],'true');assert.equal(form['tax_id_collection[enabled]'],'true');assert.equal(form['metadata[job_id]'],job);assert.equal(form['metadata[user_id]'],'u1');
 });
 test('checkout is unavailable until Stripe is configured',async()=>{const s=setup({env:{STRIPE_SECRET_KEY:undefined}});assert.equal((await s.handler(new Request('https://fn/billing/checkout',{method:'POST'}))).status,503);});
+test('a paid checkout stores the hosted invoice link',async()=>{const s=setup();const send=async u=>{s.calls.push(['stripe-get',u]);return Response.json({hosted_invoice_url:'https://invoice.stripe.com/i/abc'});};
+ const h=makeBillingHandler((_u,key)=>key==='service'?{rpc:async(n,a)=>{s.calls.push([n,a]);return {data:true,error:null};}}:{},n=>({SUPABASE_SERVICE_ROLE_KEY:'service',STRIPE_WEBHOOK_SECRET:'whsec',STRIPE_SECRET_KEY:'sk'})[n],send);
+ const raw=event({invoice:'in_123'});const r=await h(hook(raw,sign(raw)));assert.equal(r.status,200);
+ assert.deepEqual(s.calls.map(c=>c[0]),['jp_record_sponsorship','stripe-get','jp_set_sponsorship_invoice']);assert.deepEqual(s.calls[2][1],{session:'cs_1',url:'https://invoice.stripe.com/i/abc'});});

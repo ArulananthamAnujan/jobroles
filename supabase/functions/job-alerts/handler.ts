@@ -58,6 +58,15 @@ export function makeAlertWorker(createClient:(url:string,key:string,opts:object)
     await client.rpc('jp_finish_job_alert',{target:claim.id,lease:claim.lease,checked:claim.checked_at});
    }catch{failed++;}
   }
-  return reply(200,{sent,empty,failed,pushed});
+  // Employers who chose a daily digest get one summary of new applicants instead of an email per application.
+  let digests=0;
+  const {data:due}=await client.rpc('jp_claim_employer_digests');
+  for(const d of (Array.isArray(due)?due:[]) as {email:string;jobs:{jobId:string;title:string;count:number}[]}[]){
+   if(!d.jobs.length)continue;
+   const total=d.jobs.reduce((n,j)=>n+j.count,0);
+   const lines=d.jobs.map(j=>`${j.title}: ${j.count} new ${j.count===1?'applicant':'applicants'}\n${origin}/employer?view=applicants&job=${j.jobId}`);
+   try{const r=await send('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({from,to:[d.email],subject:`${total} new ${total===1?'applicant':'applicants'} on JobRoles`,text:`Your daily applicant summary.\n\n${lines.join('\n\n')}\n\nChange email settings: ${origin}/employer?view=settings\nJobRoles, an Australian job board.`}),signal:AbortSignal.timeout(15000)});if(r.ok)digests++;}catch{}
+  }
+  return reply(200,{sent,empty,failed,pushed,digests});
  };
 }

@@ -14,12 +14,12 @@ function setup(env:Record<string,string|undefined>={}){
 const call=(secret='s')=>new Request('https://x',{method:'POST',headers:{'x-job-alert-secret':secret}});
 test('the alert worker requires its secret and configuration',async()=>{assert.equal((await setup().worker(call('no'))).status,401);assert.equal((await setup({JOB_ALERTS_ENABLED:undefined}).worker(call())).status,503);});
 test('alerts send only roles posted in the window, expand synonyms, and finish the lease',async()=>{
- const s=setup();const r=await s.worker(call());assert.deepEqual(await r.json(),{sent:1,empty:0,failed:0,pushed:0});
+ const s=setup();const r=await s.worker(call());assert.deepEqual(await r.json(),{sent:1,empty:0,failed:0,pushed:0,digests:0});
  const search=s.calls.rpc.find(([n])=>n==='jp_search_jobs')![1];assert.equal(search.p_query,'(rn | (registered <-> nurse))');assert.equal(search.p_query_mode,'tsquery');assert.equal(search.p_location,'Frankston');
  const mail=s.calls.mail[0] as {to:string[];text:string;html:string;headers:Record<string,string>};
  assert.deepEqual(mail.to,['sam@example.test']);assert.match(mail.text,/Registered Nurse <ED>/);assert.doesNotMatch(mail.text,/Old role/);
  assert.match(mail.html,/Registered Nurse &lt;ED&gt;/);assert.match(mail.headers['List-Unsubscribe'],/\/api\/alerts\/unsubscribe\?id=s1&token=t{64}/);
- assert.deepEqual(s.calls.rpc.at(-1),['jp_finish_job_alert',{target:'s1',lease:'l1',checked:claim.checked_at}]);
+ assert.deepEqual(s.calls.rpc.find(([n])=>n==='jp_finish_job_alert'),['jp_finish_job_alert',{target:'s1',lease:'l1',checked:claim.checked_at}]);
 });
 test('the email names the sender and carries an unsubscribe link',()=>{const m=alertEmail(claim,[jobs[0]],'https://jobroles.example');assert.match(m.text,/Unsubscribe from this alert: https:\/\/jobroles.example\/alerts\/unsubscribe\?id=s1&token=/);assert.match(m.text,/JobRoles, an Australian job board/);assert.equal(m.subject,'1 new job for RN');});
 test('the worker uses the same query builder as the website',async()=>{assert.equal(await readFile('supabase/functions/_shared/search.ts','utf8'),await readFile('lib/search.ts','utf8'));});
@@ -35,5 +35,14 @@ test('alerts are also pushed to the person’s devices, and dead subscriptions a
  const send=(async(u:string,init:RequestInit)=>{if(u.startsWith('https://push.example')){pushedTo.push(u);assert.match(String((init.headers as Record<string,string>).Authorization),/^vapid t=/);return new Response(null,{status:u.endsWith('gone')?410:201});}return Response.json({id:'m'});}) as typeof fetch;
  const env:Record<string,string>={JOB_ALERT_WORKER_SECRET:'s',JOB_ALERTS_ENABLED:'true',RESEND_API_KEY:'k',NOTIFICATION_FROM:'a@b',APP_ORIGIN:'https://jobroles.example',VAPID_PUBLIC_KEY:pub,VAPID_PRIVATE_KEY:jwk.d,VAPID_SUBJECT:'mailto:support@jobroles.example'};
  const r=await makeAlertWorker(client,n=>env[n],send)(call());
- assert.deepEqual(await r.json(),{sent:1,empty:0,failed:0,pushed:1});assert.deepEqual(pushedTo,['https://push.example/live','https://push.example/gone']);assert.deepEqual(deleted,['p2']);
+ assert.deepEqual(await r.json(),{sent:1,empty:0,failed:0,pushed:1,digests:0});assert.deepEqual(pushedTo,['https://push.example/live','https://push.example/gone']);assert.deepEqual(deleted,['p2']);
+});
+test('employers on a daily digest get one summary email',async()=>{
+ const mails:Record<string,unknown>[]=[];
+ const client=()=>({rpc:async(n:string)=>n==='jp_claim_employer_digests'?{data:[{email:'boss@bayside.example',jobs:[{jobId:'j1',title:'Registered Nurse',count:3},{jobId:'j2',title:'Chef',count:1}]}],error:null}:{data:[],error:null},from:()=>({select:()=>({in:async()=>({data:[],error:null})})})});
+ const send=(async(_u:string,init:RequestInit)=>{mails.push(JSON.parse(String(init.body)));return Response.json({id:'m'});}) as typeof fetch;
+ const env:Record<string,string>={JOB_ALERT_WORKER_SECRET:'s',JOB_ALERTS_ENABLED:'true',RESEND_API_KEY:'k',NOTIFICATION_FROM:'a@b',APP_ORIGIN:'https://jobroles.example'};
+ const r=await makeAlertWorker(client,n=>env[n],send)(call());
+ assert.deepEqual(await r.json(),{sent:0,empty:0,failed:0,pushed:0,digests:1});
+ assert.equal(mails[0].subject,'4 new applicants on JobRoles');assert.match(String(mails[0].text),/Registered Nurse: 3 new applicants\nhttps:\/\/jobroles.example\/employer\?view=applicants&job=j1/);
 });
