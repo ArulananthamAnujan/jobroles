@@ -11,7 +11,7 @@
     "start": "next start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/domain.test.ts tests/commands.test.ts tests/resume-download.test.mjs tests/resume-scan.test.mjs tests/auth-mail.test.ts tests/notification-mail.test.mjs tests/navigation.test.ts tests/application-preferences.test.ts tests/salary.test.ts tests/listing-ai.test.ts tests/seo.test.ts",
+    "test": "node --experimental-strip-types --test tests/domain.test.ts tests/commands.test.ts tests/resume-download.test.mjs tests/resume-scan.test.mjs tests/auth-mail.test.ts tests/notification-mail.test.mjs tests/navigation.test.ts tests/application-preferences.test.ts tests/salary.test.ts tests/listing-ai.test.ts tests/seo.test.ts tests/search.test.ts",
     "test:database": "node --test tests/database/*.test.mjs"
   },
   "dependencies": {

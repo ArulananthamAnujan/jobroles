@@ -1,26 +1,26 @@
-import {failure,response} from '@/lib/backend/server';
+import {failure,response,ApiError} from '@/lib/backend/server';
 import {rateLimit,clientIp} from '@/lib/backend/guard';
-import {publicJobsClient,searchOptions,literalPattern,jobFields} from '@/lib/backend/public-jobs';
+import {publicJobsClient,jobFields} from '@/lib/backend/public-jobs';
+import {salaryOptions} from '@/lib/salary';
+import {buildQuery,parseFilters} from '@/lib/search';
 export const dynamic='force-dynamic';
+const PAGE=20;
 export async function GET(request:Request){try{
  rateLimit(`search:${clientIp(request)}`,120,60_000);
- const filters=searchOptions(new URL(request.url));
- let query=publicJobsClient().from('jobs').select(jobFields,{count:'exact'}).eq('state','live').gt('expires_at',new Date().toISOString());
- if(filters.q)query=query.ilike('title',literalPattern(filters.q));
- if(filters.location)query=query.ilike('job_locations.label',literalPattern(filters.location));
- if(filters.company)query=query.ilike('companies.name',literalPattern(filters.company));
- if(filters.arrangement)query=query.eq('arrangement',filters.arrangement);
- if(filters.type)query=query.eq('employment_type',filters.type);
- // Salary bands overlap the requested range, always in the selected pay period.
- const pay=filters.salary;
- if(pay.minimum!==null||pay.maximum!==null||filters.sort==='salary')query=query.eq('salary_period',pay.period).eq('currency','AUD');
- if(pay.minimum!==null)query=query.gte('salary_max',pay.minimum);
- if(pay.maximum!==null)query=query.lte('salary_min',pay.maximum);
- if(filters.sort==='salary')query=query.order('salary_min',{ascending:false,nullsFirst:false});
- query=query.order('published_at',{ascending:false}).order('id');
- let result=await query.range((filters.page-1)*20,filters.page*20-1);
+ const url=new URL(request.url),filters=parseFilters(url.searchParams);
+ let salary;try{salary=salaryOptions(url.searchParams);}catch(e){throw new ApiError(400,(e as Error).message);}
+ const query=buildQuery(filters.q,filters.sector),client=publicJobsClient();
+ const run=(page:number)=>client.rpc('jp_search_jobs',{p_query:query?.text??null,p_query_mode:query?.mode??'websearch',p_location:filters.location||null,p_company:filters.company||null,p_arrangement:filters.arrangement||null,p_type:filters.type||null,p_salary_min:salary.minimum,p_salary_max:salary.maximum,p_period:salary.period,p_posted_days:filters.posted,p_near:filters.near||null,p_radius_km:filters.near?filters.radius:null,p_sort:filters.sort,p_limit:PAGE,p_offset:(page-1)*PAGE});
+ let {data:hits,error}=await run(filters.page);
+ if(error?.code==='22023')throw new ApiError(400,error.message);
+ if(error)throw error;
  // Results may shrink between page requests (closed roles or changed filters).
- if(result.error?.code==='PGRST103'){filters.page=1;result=await query.range(0,19);}
- if(result.error)throw result.error;
- return response({jobs:result.data,total:result.count,page:filters.page,pageSize:20,filters});
+ if(!hits?.length&&filters.page>1){filters.page=1;({data:hits,error}=await run(1));if(error)throw error;}
+ const ranked=(hits||[]) as {job_id:string;distance_km:number|null;total_count:number}[];
+ if(!ranked.length)return response({jobs:[],total:0,page:filters.page,pageSize:PAGE,filters:{...filters,salary}});
+ const {data:rows,error:rowError}=await client.from('jobs').select(jobFields).in('id',ranked.map(h=>h.job_id));
+ if(rowError)throw rowError;
+ const byId=new Map((rows||[]).map(r=>[(r as {id:string}).id,r]));
+ const jobs=ranked.filter(h=>byId.has(h.job_id)).map(h=>({...byId.get(h.job_id)!,distance_km:h.distance_km===null?null:Math.round(h.distance_km)}));
+ return response({jobs,total:Number(ranked[0].total_count),page:filters.page,pageSize:PAGE,filters:{...filters,salary}});
 }catch(error){return failure(error);}}
