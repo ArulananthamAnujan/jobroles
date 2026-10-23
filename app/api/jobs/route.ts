@@ -1,7 +1,9 @@
 import {failure,response} from '@/lib/backend/server';
+import {rateLimit,clientIp} from '@/lib/backend/guard';
 import {publicJobsClient,searchOptions,literalPattern,jobFields} from '@/lib/backend/public-jobs';
 export const dynamic='force-dynamic';
 export async function GET(request:Request){try{
+ rateLimit(`search:${clientIp(request)}`,120,60_000);
  const filters=searchOptions(new URL(request.url));
  let query=publicJobsClient().from('jobs').select(jobFields,{count:'exact'}).eq('state','live').gt('expires_at',new Date().toISOString());
  if(filters.q)query=query.ilike('title',literalPattern(filters.q));

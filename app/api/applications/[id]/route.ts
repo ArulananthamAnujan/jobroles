@@ -13,11 +13,14 @@ export async function GET(_request:Request,{params}:{params:Promise<{id:string}>
   client.from('application_notes').select('id,body,rating,created_at').eq('application_id',id).order('created_at',{ascending:false}).limit(100),
   client.from('interviews').select('id,starts_at,time_zone,format,cancelled_at').eq('application_id',id).order('starts_at',{ascending:false}).limit(50),
   client.from('application_messages').select('id,sender_id,body,created_at').eq('application_id',id).order('created_at',{ascending:false}).limit(100),
-  // Expected answers are for the hiring team only; seekers see the questions.
-  client.from('jobs').select(isSeeker?'id,title,company_id,screening_questions(id,question)':'id,title,company_id,screening_questions(id,question,must_have,expected_answer)').eq('id',application.job_id).maybeSingle(),
+  client.from('jobs').select('id,title,company_id,screening_questions(id,question)').eq('id',application.job_id).maybeSingle(),
   isSeeker?client.from('application_drafts').select('*').eq('application_id',id).maybeSingle():Promise.resolve({data:null,error:null}),
  ]);
  if([snapshot,history,notes,interviews,messages,job,draft].some(x=>x.error))throw new ApiError(503,'Application details could not be loaded.');
+ // Expected answers are for the hiring team only and come from a team-checked function.
+ const rules=isSeeker?{data:[]}:await client.rpc('jp_screening_rules',{target:application.job_id});
+ const ruleById=new Map(((rules.data||[]) as {id:string;must_have:boolean;expected_answer:string|null}[]).map(r=>[r.id,r]));
+ const jobDetail=job.data?{...job.data,screening_questions:(job.data.screening_questions||[]).map((q:{id:string;question:string})=>({...q,must_have:ruleById.get(q.id)?.must_have??false,expected_answer:ruleById.get(q.id)?.expected_answer??null}))}:null;
  const {data:membership}=job.data?await client.from('company_memberships').select('role').eq('company_id',job.data.company_id).eq('user_id',user.id).is('revoked_at',null).maybeSingle():{data:null};
- return response({application,isSeeker,userId:user.id,role:membership?.role||null,snapshot:snapshot.data,history:history.data,notes:notes.data,interviews:interviews.data,messages:messages.data?.reverse(),job:job.data,draft:draft.data});
+ return response({application,isSeeker,userId:user.id,role:membership?.role||null,snapshot:snapshot.data,history:history.data,notes:notes.data,interviews:interviews.data,messages:messages.data?.reverse(),job:jobDetail,draft:draft.data});
 }catch(error){return failure(error);}}

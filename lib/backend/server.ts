@@ -27,7 +27,8 @@ export function failure(error:unknown){
 }
 export function sameOrigin(request:Request){
   const origin=request.headers.get('origin');
-  const expected=process.env.APP_ORIGIN || new URL(request.url).origin;
+  const expected=process.env.APP_ORIGIN?.replace(/\/$/,'') || (process.env.NODE_ENV==='production'?null:new URL(request.url).origin);
+  if(!expected) throw new ApiError(503,'This site is not fully configured. Please contact support.');
   if (!origin || origin !== expected) throw new ApiError(403,'This request must come from the application.');
 }
 export async function jsonBody(request:Request){

@@ -1,9 +1,11 @@
 import OpenAI from 'openai';
 import {authenticatedClient,ApiError,failure,jsonBody,response,sameOrigin} from '@/lib/backend/server';
+import {rateLimit,clientIp} from '@/lib/backend/guard';
 import {listingBriefSchema,listingDraftSchema,listingSystemPrompt} from '@/lib/listing-ai';
 export const runtime='nodejs';
 export async function POST(request:Request){try{
  sameOrigin(request);
+ rateLimit(`ai:${clientIp(request)}`,20,60_000);
  const {client}=await authenticatedClient();
  const parsed=listingBriefSchema.safeParse(await jsonBody(request));
  if(!parsed.success)throw new ApiError(400,'Provide a job title, location and at least 30 characters of role facts, and agree to AI processing.');
