@@ -7,3 +7,5 @@ export function interviewIcs(i:{id:string;startsAt:string;format:string;cancelle
  const start=new Date(i.startsAt),end=new Date(start.getTime()+(i.minutes??60)*60000);
  return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//JobRoles//Interviews//EN','METHOD:PUBLISH','BEGIN:VEVENT',`UID:${i.id}@jobroles`,`DTSTAMP:${stamp(now)}`,`DTSTART:${stamp(start)}`,`DTEND:${stamp(end)}`,`SUMMARY:${text(i.title)}`,`DESCRIPTION:${text(`${i.format}\n\nDetails: ${i.url}`)}`,`URL:${i.url}`,`STATUS:${i.cancelled?'CANCELLED':'CONFIRMED'}`,...(i.cancelled?[]:['BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:Interview tomorrow','TRIGGER:-P1D','END:VALARM','BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:Interview in one hour','TRIGGER:-PT1H','END:VALARM']),'END:VEVENT','END:VCALENDAR'].map(fold).join('\r\n')+'\r\n';
 }
+// Interviews booked as "JobRoles video" run in the built-in video room.
+export const isVideoInterview=(format:string)=>/^jobroles video/i.test(format.trim());

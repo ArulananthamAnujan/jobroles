@@ -3,6 +3,7 @@ import {useCallback,useEffect,useState} from 'react';
 import {get,employerPost,command,STAGES,stageLabel,when,ago} from './api';
 import {Button,Field,Notice,Pill} from './ui';
 import type {PortalContext} from './portal';
+import {isVideoInterview} from '@/lib/calendar';
 type Detail={userId:string;role:string|null;application:{id:string;job_id:string;seeker_id:string;state:string;stage:string;reinstatement_requested_at:string|null;submitted_at?:string};
  job:{title:string;screening_questions:{id:string;question:string;must_have:boolean;expected_answer:string|null}[]}|null;
  snapshot:{profile:{full_name:string;headline:string;location:string;skills:string[];email?:string};resume_version_id:string;answers:Record<string,string>;cover_letter:string}|null;
@@ -42,12 +43,12 @@ export default function Candidate({id,ctx,templates,onChange}:{id:string;ctx:Por
     <textarea value={message} onChange={e=>MS(e.target.value)} maxLength={5000} placeholder={`Write to ${p?.full_name?.split(' ')[0]||'the applicant'}`} aria-label="Message"/><div className="ep-actions"><Button size="sm" disabled={busy||!message.trim()}>Send</Button></div></form>}
   </section>
   <section className="ep-section"><h3>Interview</h3>
-   {upcoming.map(i=><p key={i.id} className="ep-notice">{when(i.starts_at,{weekday:'long',day:'numeric',month:'long',hour:'numeric',minute:'2-digit',timeZone:i.time_zone})} ({i.time_zone.replace('Australia/','')}) · {i.format} <a href={`/api/interviews/${i.id}`}>Add to calendar</a>{canMove&&<> · <button className="ep-btn ghost sm" onClick={()=>act(()=>command('application.interview',{id,cancel:true}),'Interview cancelled.')}>Cancel</button></>}</p>)}
+   {upcoming.map(i=><p key={i.id} className="ep-notice">{when(i.starts_at,{weekday:'long',day:'numeric',month:'long',hour:'numeric',minute:'2-digit',timeZone:i.time_zone})} ({i.time_zone.replace('Australia/','')}) · {i.format} {isVideoInterview(i.format)&&<><a href={`/interview/${i.id}`}>Join video call</a> · </>}<a href={`/api/interviews/${i.id}`}>Add to calendar</a>{canMove&&<> · <button className="ep-btn ghost sm" onClick={()=>act(()=>command('application.interview',{id,cancel:true}),'Interview cancelled.')}>Cancel</button></>}</p>)}
    {canMove&&live&&<form onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);const format=String(f.get('format'));const times=(mode==='single'?[slots[0]]:slots).filter(Boolean).map(s=>zonedIso(s,zone));if(!times.length){E('Choose at least one time.');return;}
      void act(()=>mode==='single'?command('application.interview',{id,at:times[0],timeZone:zone,format}):employerPost({action:'propose',applicationId:id,slots:times,timeZone:zone,format}),mode==='single'?'Interview booked and the applicant notified.':'Times sent. The applicant picks one in their account.');}} style={{display:'grid',gap:8}}>
     <div className="ep-actions"><label className="ep-check"><input type="radio" checked={mode==='propose'} onChange={()=>MO('propose')}/>Offer up to 3 times</label><label className="ep-check"><input type="radio" checked={mode==='single'} onChange={()=>MO('single')}/>Book one time</label></div>
     <div className="ep-actions">{(mode==='single'?[0]:[0,1,2]).map(i=><input key={i} type="datetime-local" aria-label={`Time ${i+1}`} value={slots[i]} onChange={e=>SL(slots.map((s,k)=>k===i?e.target.value:s))}/>)}<select value={zone} onChange={e=>Z(e.target.value)} aria-label="Time zone">{ZONES.map(z=><option key={z} value={z}>{z.replace('Australia/','')}</option>)}</select></div>
-    <Field label="Format and details"><input name="format" required minLength={3} maxLength={500} defaultValue="Video call, link to follow"/></Field>
+    <Field label="Format and details" hint="Start with “JobRoles video” to use the built-in video room, or describe a phone call or in-person meeting."><input name="format" required minLength={3} maxLength={500} defaultValue="JobRoles video call"/></Field>
     <div className="ep-actions"><Button size="sm" disabled={busy}>{mode==='single'?'Book interview':'Send times'}</Button></div></form>}
   </section>
   <section className="ep-section"><h3>Team notes</h3><p className="ep-muted" style={{marginBottom:8}}>Only your hiring team sees notes and ratings.</p>

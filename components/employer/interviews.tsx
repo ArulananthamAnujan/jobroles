@@ -2,6 +2,7 @@
 import {useEffect,useMemo,useState} from 'react';
 import {employerGet,when} from './api';
 import {Button,Drawer,Empty,Notice,Pill,Tabs} from './ui';
+import {isVideoInterview} from '@/lib/calendar';
 import {Section,type PortalContext} from './portal';
 import Candidate from './candidate';
 type Interview={interview_id:string;application_id:string;starts_at:string;time_zone:string;format:string;cancelled:boolean;full_name:string;job_title:string};
@@ -16,7 +17,7 @@ export default function Interviews({ctx}:{ctx:PortalContext}){
   <Tabs value={range} onChange={v=>{I(null);R(v);}} items={[['upcoming','Upcoming'],['past','Past 90 days']]}/>
   {!items?<p role="status">Loading interviews…</p>:days.length?<div className="ep-cal">{days.map(([day,list])=><section key={day} className="ep-day"><h3>{when(`${day}T12:00:00+10:00`,{weekday:'long',day:'numeric',month:'long'})}</h3>
    {list.map(i=><div key={i.interview_id} className="ep-slot"><time dateTime={i.starts_at}>{when(i.starts_at,{hour:'numeric',minute:'2-digit'})}</time><div className="ep-grow" style={{flex:1}}><strong>{i.full_name}</strong><div className="ep-muted">{i.job_title} · {i.format}{i.time_zone!=='Australia/Melbourne'?` · ${when(i.starts_at,{hour:'numeric',minute:'2-digit',timeZone:i.time_zone})} ${i.time_zone.replace('Australia/','')} time`:''}</div></div>
-    {i.cancelled?<Pill tone="red">Cancelled</Pill>:<a className="ep-btn ghost sm" href={`/api/interviews/${i.interview_id}`}>Add to calendar</a>}<Button size="sm" tone="secondary" onClick={()=>O(i.application_id)}>Applicant</Button></div>)}</section>)}</div>
+    {i.cancelled?<Pill tone="red">Cancelled</Pill>:<>{isVideoInterview(i.format)&&<a className="ep-btn primary sm" href={`/interview/${i.interview_id}`}>Join video</a>}<a className="ep-btn ghost sm" href={`/api/interviews/${i.interview_id}`}>Add to calendar</a></>}<Button size="sm" tone="secondary" onClick={()=>O(i.application_id)}>Applicant</Button></div>)}</section>)}</div>
    :<div className="ep-card"><Empty title={range==='upcoming'?'No upcoming interviews':'No interviews in the last 90 days'}>Offer times from an applicant’s profile; they pick one and it appears here.</Empty></div>}
   <Drawer open={Boolean(open)} wide onClose={()=>O('')} title={items?.find(i=>i.application_id===open)?.full_name||'Applicant'}>{open&&<Candidate id={open} ctx={ctx} templates={[]} onChange={()=>{}}/>}</Drawer>
  </Section>;
