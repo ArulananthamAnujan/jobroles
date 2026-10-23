@@ -153,7 +153,8 @@ begin
    case when q is null then 0::real else ts_rank_cd(j.search_vector,q) end as r,
    case when lat0 is null then null else (select min(public.jp_distance_km(lat0,lng0,l.latitude,l.longitude)) from public.job_locations l where l.job_id=j.id and l.latitude is not null) end as d
   from public.jobs j join public.companies c on c.id=j.company_id
-  where j.state='live' and j.expires_at>now()
+  -- Repeats the public-listing rule so service-role callers (job alerts) see only what the public sees.
+  where j.state='live' and j.expires_at>now() and c.verified_at is not null and c.suspended_at is null and not c.is_agency
    and (q is null or j.search_vector@@q or to_tsvector('english',c.name)@@q)
    and (nullif(trim(p_location),'') is null or exists(select 1 from public.job_locations l where l.job_id=j.id and l.label ilike '%'||replace(replace(replace(trim(p_location),esc,esc||esc),'%',esc||'%'),'_',esc||'_')||'%'))
    and (nullif(trim(p_company),'') is null or c.name ilike '%'||replace(replace(replace(trim(p_company),esc,esc||esc),'%',esc||'%'),'_',esc||'_')||'%')
