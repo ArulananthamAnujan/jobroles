@@ -7,16 +7,16 @@ alter table public.push_subscriptions enable row level security;
 revoke all on public.push_subscriptions from anon,authenticated;
 grant select(id,endpoint,created_at) on public.push_subscriptions to authenticated;
 create policy push_self on public.push_subscriptions for select to authenticated using(user_id=(select auth.uid()));
-create function public.jp_save_push(endpoint text,p256dh text,auth text) returns boolean language plpgsql security definer set search_path='' as $$
+create function public.jp_save_push(p_endpoint text,p_p256dh text,p_auth text) returns boolean language plpgsql security definer set search_path='' as $$
 begin
  if auth.uid() is null then raise exception 'Sign in to turn on notifications' using errcode='42501';end if;
  if (select count(*) from public.push_subscriptions where user_id=auth.uid())>=10 then delete from public.push_subscriptions where id=(select id from public.push_subscriptions where user_id=auth.uid() order by created_at limit 1);end if;
- insert into public.push_subscriptions(user_id,endpoint,p256dh,auth) values(auth.uid(),endpoint,p256dh,jp_save_push.auth)
+ insert into public.push_subscriptions(user_id,endpoint,p256dh,auth) values(auth.uid(),p_endpoint,p_p256dh,p_auth)
  on conflict(endpoint) do update set user_id=excluded.user_id,p256dh=excluded.p256dh,auth=excluded.auth,created_at=now();
  return true;
 end $$;
-create function public.jp_delete_push(endpoint text) returns boolean language sql security definer set search_path='' as $$
- delete from public.push_subscriptions where push_subscriptions.endpoint=jp_delete_push.endpoint and user_id=auth.uid() returning true
+create function public.jp_delete_push(p_endpoint text) returns boolean language sql security definer set search_path='' as $$
+ delete from public.push_subscriptions where endpoint=p_endpoint and user_id=auth.uid() returning true
 $$;
 revoke all on function public.jp_save_push(text,text,text),public.jp_delete_push(text) from public,anon;
 grant execute on function public.jp_save_push(text,text,text),public.jp_delete_push(text) to authenticated;
