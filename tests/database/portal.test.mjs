@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createDb,ids} from './harness.mjs';
-const {owner,recruiter,manager,seeker,other,admin:adminId,company,job,resume,question,foreignCompany}=ids;
+const {owner,recruiter,manager,seeker,other,admin:adminId,company,job,resume,foreignCompany}=ids;
 const media=`https://x.supabase.co/storage/v1/object/public/company-media/${company}/logo.png`;
 test('employer portal',async t=>{
  const {db,rows,command,admin}=await createDb();

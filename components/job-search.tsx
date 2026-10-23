@@ -10,7 +10,7 @@ import {SiteHeader,SiteFooter} from './site-chrome';
 import './job-search.css';
 // The home page and /search share one familiar layout: a What/Where bar, filter pills, a result list on the
 // left and the selected job on the right. On a phone the list links straight to each job page.
-type Job={id:string;title:string;description:string;employment_type:string;arrangement:string;salary_min:number|null;salary_max:number|null;salary_period:string;currency:string;published_at:string;companies:{id:string;name:string;about:string;verified_at:string};job_locations:{label:string}[];distance_km?:number|null;sponsored?:boolean};
+type Job={id:string;title:string;description:string;employment_type:string;arrangement:string;salary_min:number|null;salary_max:number|null;salary_period:string;currency:string;published_at:string;benefits?:string[];external_apply_url?:string|null;companies:{id:string;name:string;about:string;verified_at:string};job_locations:{label:string}[];distance_km?:number|null;sponsored?:boolean};
 type Results={jobs:Job[];total:number;page:number;pageSize:number};
 const ARRANGEMENT:Record<string,string>={on_site:'On-site',hybrid:'Hybrid',remote:'Remote'};
 export function postedAgo(iso:string,now=Date.now()){const days=Math.floor((now-new Date(iso).getTime())/86400000);return days<=0?'Posted today':days===1?'Posted 1 day ago':days>=30?'Posted 30+ days ago':`Posted ${days} days ago`;}
@@ -64,17 +64,18 @@ function JobCard({job:j,selected,onSelect,query}:{job:Job;selected:boolean;onSel
 }
 
 function JobPane({job:j,query}:{job:Job;query:string}){
- const apply=`/job-seeker?job=${j.id}#application`;
+ const apply=j.external_apply_url||`/job-seeker?job=${j.id}#application`;
  return <article className="jr-pane" aria-label={`${j.title} at ${j.companies.name}`}>
   <header className="jr-pane-head">
    <h2>{j.title}</h2>
    <p className="jr-company"><Link href={`/companies/${j.companies.id}`}>{j.companies.name}</Link><span className="jr-verified">Verified employer</span></p>
    <p className="jr-location">{where(j)}</p>
    <p className="jr-pane-pay">{pay(j)} · {j.employment_type}</p>
-   <div className="jr-actions"><Link className="jr-primary" href={apply}>Apply now</Link><SaveJob key={j.id} id={j.id}/><Link className="jr-secondary" href={`/jobs/${j.id}${query?`?${query}`:''}`}>Open job page</Link></div>
+   <div className="jr-actions">{j.external_apply_url?<a className="jr-primary" href={apply} target="_blank" rel="noopener noreferrer nofollow">Apply on company site</a>:<Link className="jr-primary" href={apply}>Apply now</Link>}<SaveJob key={j.id} id={j.id}/><Link className="jr-secondary" href={`/jobs/${j.id}${query?`?${query}`:''}`}>Open job page</Link></div>
   </header>
   <div className="jr-pane-body">
    <section><h3>Job details</h3><dl className="jr-details"><div><dt>Pay</dt><dd>{pay(j)}</dd></div><div><dt>Job type</dt><dd>{j.employment_type}</dd></div><div><dt>Work setting</dt><dd>{ARRANGEMENT[j.arrangement]??j.arrangement}</dd></div><div><dt>Location</dt><dd>{where(j)}</dd></div></dl></section>
+   {j.benefits&&j.benefits.length>0&&<section><h3>Benefits</h3><ul className="jr-tags">{j.benefits.map(b=><li key={b}>{b}</li>)}</ul></section>}
    <section><h3>Full job description</h3><p className="job-description">{j.description}</p></section>
    <section><h3>About {j.companies.name}</h3><p>{j.companies.about||'This employer has not added a company introduction yet.'}</p><Link className="text-link" href={`/companies/${j.companies.id}`}>See all jobs and pay at {j.companies.name}</Link></section>
    <p className="jr-private">Your resume is shared only when you submit an application.</p>

@@ -7,3 +7,4 @@ test('interview calendar files use UTC times and escape text',()=>{
  assert.ok(ics.split('\r\n').every(l=>new TextEncoder().encode(l).length<=75));assert.ok(ics.endsWith('END:VCALENDAR\r\n'));
 });
 test('cancelled interviews are marked cancelled',()=>{assert.match(interviewIcs({id:'i',startsAt:'2026-11-03T23:30:00Z',format:'x',cancelled:true,title:'t',url:'u'}),/STATUS:CANCELLED/);});
+test('confirmed interviews remind a day and an hour before',()=>{const ics=interviewIcs({id:'i',startsAt:'2026-11-03T23:30:00Z',format:'x',cancelled:false,title:'t',url:'u'});assert.match(ics,/TRIGGER:-P1D/);assert.match(ics,/TRIGGER:-PT1H/);});

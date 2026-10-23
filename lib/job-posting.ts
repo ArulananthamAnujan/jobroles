@@ -1,5 +1,5 @@
 // schema.org JobPosting for Google for Jobs. Pure functions so they can be unit tested.
-type Job={id:string;title:string;description:string;employment_type:string;arrangement:string;salary_min:number|null;salary_max:number|null;salary_period:string|null;currency:string;published_at:string;expires_at:string;companies:{name:string};job_locations:{label:string}[]};
+type Job={id:string;title:string;description:string;employment_type:string;arrangement:string;salary_min:number|null;salary_max:number|null;salary_period:string|null;currency:string;published_at:string;expires_at:string;companies:{name:string};job_locations:{label:string}[];benefits?:string[];external_apply_url?:string|null};
 const TYPES:Record<string,string[]>={'Full-time':['FULL_TIME'],'Part-time':['PART_TIME'],Casual:['PART_TIME','TEMPORARY'],Contract:['CONTRACTOR'],Temporary:['TEMPORARY'],Internship:['INTERN']};
 const UNITS:Record<string,string>={hour:'HOUR',day:'DAY',month:'MONTH',year:'YEAR'};
 const STATES=['VIC','NSW','QLD','WA','SA','TAS','ACT','NT'];
@@ -13,7 +13,7 @@ export function placeFromLabel(label:string){
 }
 export function jobPostingJsonLd(job:Job,origin:string){
  const remote=job.arrangement==='remote';
- const data:Record<string,unknown>={'@context':'https://schema.org','@type':'JobPosting',title:job.title,description:descriptionHtml(job.description),identifier:{'@type':'PropertyValue',name:job.companies.name,value:job.id},datePosted:job.published_at,validThrough:job.expires_at,employmentType:TYPES[job.employment_type]??['OTHER'],hiringOrganization:{'@type':'Organization',name:job.companies.name},directApply:true,url:`${origin}/jobs/${job.id}`};
+ const data:Record<string,unknown>={'@context':'https://schema.org','@type':'JobPosting',title:job.title,description:descriptionHtml(job.description),identifier:{'@type':'PropertyValue',name:job.companies.name,value:job.id},datePosted:job.published_at,validThrough:job.expires_at,employmentType:TYPES[job.employment_type]??['OTHER'],hiringOrganization:{'@type':'Organization',name:job.companies.name},directApply:!job.external_apply_url,...(job.benefits?.length?{jobBenefits:job.benefits.join(', ')}:{}),url:`${origin}/jobs/${job.id}`};
  if(remote){data.jobLocationType='TELECOMMUTE';data.applicantLocationRequirements={'@type':'Country',name:'Australia'};}
  const places=job.job_locations.filter(l=>!/remote/i.test(l.label)).map(l=>placeFromLabel(l.label));
  if(places.length)data.jobLocation=places.length===1?places[0]:places;
