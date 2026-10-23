@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {jobPostingJsonLd,serializeJsonLd,placeFromLabel,descriptionHtml} from '../lib/job-posting.ts';
-import {payStats} from '../lib/company.ts';
+import {payStats,payByTitle} from '../lib/company.ts';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- JSON-LD is deeply nested; tests read it loosely.
 type Loose=Record<string,any>;
 const job={id:'j1',title:'Registered Nurse',description:'Line one\nline two\n\n<b>Second</b> paragraph',employment_type:'Casual',arrangement:'on_site',salary_min:38.5,salary_max:44,salary_period:'hour',currency:'AUD',published_at:'2026-10-01T00:00:00Z',expires_at:'2026-11-01T00:00:00Z',companies:{name:'Bayside Health'},job_locations:[{label:'Frankston VIC 3199'}]};
@@ -23,4 +23,9 @@ test('place parsing tolerates labels without a state',()=>{assert.deepEqual(plac
 test('company pay stats group by period with a median midpoint',()=>{
  const s=payStats([{salary_min:90000,salary_max:100000,salary_period:'year'},{salary_min:100000,salary_max:140000,salary_period:'year'},{salary_min:30,salary_max:40,salary_period:'hour'},{salary_min:null,salary_max:null,salary_period:null}]);
  assert.deepEqual(s.map(x=>[x.period,x.count,x.low,x.high,x.median]),[['year',2,90000,140000,107500],['hour',1,30,40,35]]);
+});
+test('pay is grouped by title and period for the salaries table',()=>{
+ const s=payByTitle([{title:'Nurse',salary_min:38,salary_max:44,salary_period:'hour'},{title:' nurse ',salary_min:40,salary_max:48,salary_period:'hour'},{title:'Manager',salary_min:120000,salary_max:120000,salary_period:'year'},{title:'Cleaner',salary_min:null,salary_max:null,salary_period:null}]);
+ assert.deepEqual(s.map(x=>[x.title,x.period,x.low,x.high,x.count]),[['Nurse','hour',38,48,2],['Manager','year',120000,120000,1]]);
+ assert.equal(s[1].label,'$120,000');
 });

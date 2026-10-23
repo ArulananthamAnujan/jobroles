@@ -5,7 +5,7 @@ that only the business owner can create. Work through the steps in order.
 
 ## 1. Database
 
-Apply the eleven new migrations to the production Supabase project. Check the remote history first and never
+Apply the twelve new migrations to the production Supabase project. Check the remote history first and never
 run `supabase db reset` against production.
 
 ```
@@ -26,6 +26,9 @@ supabase db push --linked
 | `20261024000002_company_reviews` | Moderated hiring-experience reviews from applicants |
 | `20261024000003_push_notifications` | Phone and browser push subscriptions for job alerts |
 | `20261024000004_ats_formats` | Greenhouse and Lever feed formats |
+| `20261024000005_employer_portal` | Employer portal: company profiles, the public `company-media` storage bucket, screening rules, bulk moves, message templates, interview time proposals, notification settings, team, dashboard, follow a company, company directory, review categories and helpful votes |
+
+After this migration, check in Supabase Storage that the `company-media` bucket exists and is public. Redeploy `job-alerts` (employer daily digests) and `billing` (Stripe tax invoice links) so they match it. Administrators manage moderation queues at `/admin`.
 
 ## 2. Edge Functions
 

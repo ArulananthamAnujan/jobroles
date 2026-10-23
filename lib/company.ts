@@ -11,3 +11,10 @@ export function payStats(jobs:Pay[]){
   return {period,count:g.length,low,high,median,label:`${money(low)}–${money(high)}, median midpoint ${money(median)}`};
  });
 }
+// Groups advertised pay by job title and period, so a salaries table can show the range for each role.
+export function payByTitle(jobs:(Pay&{title:string})[]){
+ const groups=new Map<string,{title:string;period:string;low:number;high:number;count:number}>();
+ for(const j of jobs){if(j.salary_min===null||j.salary_max===null||!j.salary_period)continue;const title=j.title.trim().replace(/\s+/g,' ');const key=`${title.toLowerCase()}|${j.salary_period}`;const g=groups.get(key);
+  if(g){g.low=Math.min(g.low,Number(j.salary_min));g.high=Math.max(g.high,Number(j.salary_max));g.count++;}else groups.set(key,{title,period:j.salary_period,low:Number(j.salary_min),high:Number(j.salary_max),count:1});}
+ return [...groups.values()].sort((a,b)=>b.count-a.count||a.title.localeCompare(b.title)).map(g=>({...g,label:g.low===g.high?money(g.low):`${money(g.low)}–${money(g.high)}`}));
+}
