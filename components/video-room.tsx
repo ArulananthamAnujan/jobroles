@@ -11,7 +11,7 @@ const time=(iso:string,zone:string)=>new Intl.DateTimeFormat('en-AU',{weekday:'l
 // whenever an applicant joins; setup messages go through JobRoles, audio and video go directly between browsers.
 export default function VideoRoom({id}:{id:string}){
  const [room,R]=useState<Room|null>(null),[ice,I]=useState<RTCIceServer[]>([]),[error,E]=useState(''),[phase,P]=useState<'lobby'|'joined'|'left'>('lobby');
- const [local,L]=useState<MediaStream|null>(null),[remote,RM]=useState<MediaStream|null>(null),[mic,M]=useState(true),[cam,C]=useState(true),[sharing,SH]=useState(false),[status,ST]=useState('');
+ const [local,L]=useState<MediaStream|null>(null),[remote,RM]=useState<MediaStream|null>(null),[mic,M]=useState(true),[cam,C]=useState(true),[sharing,SH]=useState(false),[status,ST]=useState(''),[trouble,TR]=useState(false),[audioOnly,AO]=useState(false);
  const peer=useRef(''),pc=useRef<RTCPeerConnection|null>(null),other=useRef(''),after=useRef(0),pending=useRef<RTCIceCandidateInit[]>([]),greeted=useRef(new Set<string>()),localRef=useRef<MediaStream|null>(null);
  const mine=useRef<HTMLVideoElement>(null),theirs=useRef<HTMLVideoElement>(null);
  useEffect(()=>{let live=true;call<{room:Room;iceServers:RTCIceServer[]}>(id).then(d=>{if(live){R(d.room);I(d.iceServers);}}).catch(e=>{if(live)E(e.message);});
@@ -30,7 +30,9 @@ export default function VideoRoom({id}:{id:string}){
   localRef.current?.getTracks().forEach(t=>c.addTrack(t,localRef.current!));
   c.onicecandidate=e=>{if(e.candidate)void send('candidate',{to,candidate:e.candidate.toJSON()}).catch(()=>{});};
   c.ontrack=e=>{RM(e.streams[0]||new MediaStream([e.track]));};
-  c.onconnectionstatechange=()=>{const s=c.connectionState;ST(s==='connected'?'':s==='connecting'||s==='new'?'Connecting…':s==='disconnected'?'Connection unstable. Reconnecting…':s==='failed'?'The connection failed. Trying again…':'');
+  // If the call has not connected within 20 seconds, offer help instead of an endless spinner.
+  const watchdog=setTimeout(()=>{if(pc.current===c&&c.connectionState!=='connected')TR(true);},20000);
+  c.onconnectionstatechange=()=>{const s=c.connectionState;if(s==='connected'){clearTimeout(watchdog);TR(false);}if(s==='failed'){TR(true);if(room?.side==='candidate')void send('hello').catch(()=>{});}ST(s==='connected'?'':s==='connecting'||s==='new'?'Connecting…':s==='disconnected'?'Connection unstable. Reconnecting…':s==='failed'?'The connection failed. Trying again…':'');
    if(s==='failed'&&room?.side==='employer')void c.createOffer({iceRestart:true}).then(o=>c.setLocalDescription(o)).then(()=>send('offer',{to,sdp:c.localDescription?.sdp,type:'offer'})).catch(()=>{});};
   return c;},[ice,send,room?.side]);
  const handle=useCallback(async(s:Signal)=>{
@@ -53,6 +55,12 @@ export default function VideoRoom({id}:{id:string}){
  useEffect(()=>{if(phase!=='joined')return;const bye=()=>{try{navigator.sendBeacon(`/api/video/${id}`,new Blob([JSON.stringify({action:'signal',peer:peer.current,kind:'bye',payload:{}})],{type:'application/json'}));}catch{}};
   window.addEventListener('pagehide',bye);return()=>window.removeEventListener('pagehide',bye);},[phase,id]);
  async function join(){E('');try{await send('hello');P('joined');ST(room?.side==='employer'?'Waiting for the applicant to join…':'Waiting for the interviewer…');}catch(e){E((e as Error).message);}}
+ // Restart the connection: the interviewer sends a fresh offer, the applicant asks for one.
+ async function retry(){TR(false);ST('Reconnecting…');const c=pc.current;
+  if(room?.side==='employer'&&c&&other.current){try{const o=await c.createOffer({iceRestart:true});await c.setLocalDescription(o);await send('offer',{to:other.current,sdp:o.sdp,type:'offer'});}catch{}}else{try{await send('hello');}catch{}}}
+ // Audio only uses far less bandwidth, which helps on weak mobile or hotel connections.
+ async function audioMode(){const sender=pc.current?.getSenders().find(x=>x.track?.kind==='video'||x.track===null);const camTrack=localRef.current?.getVideoTracks()[0];
+  if(sender)await sender.replaceTrack(audioOnly?camTrack||null:null).catch(()=>{});if(camTrack)camTrack.enabled=audioOnly;C(audioOnly);AO(!audioOnly);}
  async function leave(){try{await send('bye');}catch{}pc.current?.close();pc.current=null;localRef.current?.getTracks().forEach(t=>t.stop());L(null);RM(null);P('left');}
  function toggle(kind:'audio'|'video'){const on=kind==='audio'?!mic:!cam;localRef.current?.getTracks().filter(t=>t.kind===kind).forEach(t=>{t.enabled=on;});if(kind==='audio')M(on);else C(on);}
  async function share(){const sender=pc.current?.getSenders().find(s=>s.track?.kind==='video');const camTrack=localRef.current?.getVideoTracks()[0];
@@ -68,11 +76,14 @@ export default function VideoRoom({id}:{id:string}){
    <div className="vr-remote">{phase==='lobby'?<><video ref={mine} className={`vr-mirror ${cam?'':'hidden'}`} autoPlay playsInline muted/><p className="vr-status">{local?'Check your camera and microphone, then join.':'Waiting for camera access…'}</p></>
     :remote?<video ref={theirs} autoPlay playsInline/>:<div className="vr-wait"><p>{status||'Waiting…'}</p></div>}
     {remote&&status&&<p className="vr-status" role="status">{status}</p>}</div>
+   {phase==='joined'&&trouble&&<div className="vr-help" role="alert"><h2>Having trouble connecting?</h2><ul><li>Turn off any VPN, or switch from office or hotel Wi-Fi to mobile data.</li><li>Close other apps using your camera.</li><li>Try audio only if your connection is weak.</li></ul>
+    <div className="vr-actions"><button className="vr-btn" onClick={retry}>Try again</button><button className="vr-btn ghost" onClick={audioMode}>{audioOnly?'Turn video back on':'Switch to audio only'}</button><Link className="vr-btn ghost" href={back}>Send a message instead</Link></div></div>}
    {phase==='joined'&&<div className={`vr-self ${cam?'':'off'}`}><video ref={mine} autoPlay playsInline muted/>{!cam&&<span>Camera off</span>}</div>}
   </main>}
   {phase!=='left'&&<footer className="vr-bar">
    <button className={`vr-round ${mic?'':'off'}`} onClick={()=>toggle('audio')} aria-pressed={!mic} disabled={!local}>{mic?'Mute':'Unmute'}</button>
    <button className={`vr-round ${cam?'':'off'}`} onClick={()=>toggle('video')} aria-pressed={!cam} disabled={!local}>{cam?'Stop video':'Start video'}</button>
+   {phase==='joined'&&<button className={`vr-round ${audioOnly?'on':''}`} onClick={audioMode} aria-pressed={audioOnly}>{audioOnly?'Video on':'Audio only'}</button>}
    {phase==='joined'&&<button className={`vr-round ${sharing?'on':''}`} onClick={share} aria-pressed={sharing} disabled={!remote}>{sharing?'Stop sharing':'Share screen'}</button>}
    {phase==='lobby'?<button className="vr-btn" onClick={join} disabled={!room||room.cancelled}>Join call</button>:<button className="vr-btn danger" onClick={leave}>Leave</button>}
    {room&&phase==='lobby'&&<p className="vr-note">{room.cancelled?'This interview was cancelled.':`The room opens ${time(room.opensAt,room.timeZone)}. Audio and video go directly between you and the other person and are never recorded.`}</p>}

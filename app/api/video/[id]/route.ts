@@ -1,6 +1,7 @@
 import {z} from 'zod';
 import {authenticatedClient,failure,response,sameOrigin,jsonBody,ApiError} from '@/lib/backend/server';
 import {rateLimit} from '@/lib/backend/guard';
+import {iceServers} from '@/lib/ice';
 export const dynamic='force-dynamic';
 const UUID=/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const peer=z.string().regex(/^[a-z0-9-]{8,64}$/);
@@ -13,9 +14,7 @@ const fail=(error:{code?:string;message:string})=>new ApiError(error.code==='425
 export async function GET(_request:Request,{params}:{params:Promise<{id:string}>}){try{
  const {id}=await params;if(!UUID.test(id))throw new ApiError(404,'Interview unavailable.');
  const {client}=await authenticatedClient();const {data,error}=await client.rpc('jp_video_room',{target:id});if(error)throw fail(error);
- const ice:RTCIceServer[]=[{urls:'stun:stun.l.google.com:19302'}];
- if(process.env.TURN_URL)ice.push({urls:process.env.TURN_URL.split(','),username:process.env.TURN_USERNAME,credential:process.env.TURN_CREDENTIAL});
- return response({room:data,iceServers:ice});
+ return response({room:data,iceServers:await iceServers()});
 }catch(e){return failure(e);}}
 // Relays WebRTC setup messages; media goes directly between the browsers.
 export async function POST(request:Request,{params}:{params:Promise<{id:string}>}){try{

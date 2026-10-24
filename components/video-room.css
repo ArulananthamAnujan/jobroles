@@ -15,3 +15,4 @@
 .vr-note{flex-basis:100%;text-align:center;color:#b0bec5;font-size:14px}
 .vr-end{display:grid;place-content:center;text-align:center;gap:12px}.vr-actions{display:flex;gap:12px;justify-content:center}
 @media(max-width:700px){.vr-self{right:28px;bottom:24px;width:38vw}.vr-top{flex-wrap:wrap}}
+.vr-help{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(520px,calc(100% - 40px));background:#fff;color:#1f2b33;border-radius:14px;padding:22px;display:grid;gap:12px;box-shadow:0 20px 50px #0008;z-index:3}.vr-help h2{font-size:20px}.vr-help ul{padding-left:20px;display:grid;gap:4px}.vr-help .vr-btn.ghost{color:#1f2b33;border-color:#c5ced3}.vr-help .vr-actions{flex-wrap:wrap;justify-content:flex-start}
