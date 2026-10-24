@@ -6,7 +6,7 @@ import {Button,Card,Empty,Notice,Pill,Stat} from './ui';
 import {Section,type PortalContext} from './portal';
 type Campaign={dailyBudget:number;cpc:number;active:boolean};
 type Row={jobId:string;title:string;campaign:Campaign|null;spentToday:number;clicks7:number;spent7:number;applications7:number;showing:boolean};
-type Account={balance:number;jobs:Row[];ledger:{id:string;amount:number;kind:string;createdAt:string;invoiceUrl:string|null}[]};
+type Account={balance:number;invalid7?:number;jobs:Row[];ledger:{id:string;amount:number;kind:string;createdAt:string;invoiceUrl:string|null}[]};
 const PACKS=[5000,10000,25000,50000,100000];
 const dollars=(cents:number)=>money(cents/100);
 // Pay-per-click sponsored jobs: prepaid credit, a daily budget and cost per click for each live job.
@@ -24,7 +24,7 @@ export default function Advertising({ctx}:{ctx:PortalContext}){
  return <Section title="Sponsored jobs" sub="Pay only when someone clicks. Sponsored jobs appear higher in search and are labelled Sponsored. Each person is charged once per job per day.">
   <Notice error={error} message={note||(params.get('credit')?'Payment received. Credit is added as soon as Stripe confirms it, usually within a minute.':undefined)}/>
   {!a?<p role="status">Loading…</p>:<>
-   <div className="ep-stats"><Stat label="Credit balance" value={dollars(a.balance)} hint="Before GST"/><Stat label="Running campaigns" value={running.length}/><Stat label="Clicks, 7 days" value={a.jobs.reduce((n,j)=>n+Number(j.clicks7),0)}/><Stat label="Spent, 7 days" value={dollars(a.jobs.reduce((n,j)=>n+Number(j.spent7),0))}/></div>
+   <div className="ep-stats"><Stat label="Credit balance" value={dollars(a.balance)} hint="Before GST"/><Stat label="Running campaigns" value={running.length}/><Stat label="Clicks, 7 days" value={a.jobs.reduce((n,j)=>n+Number(j.clicks7),0)}/><Stat label="Spent, 7 days" value={dollars(a.jobs.reduce((n,j)=>n+Number(j.spent7),0))} hint={a.invalid7?`${a.invalid7} invalid clicks filtered, not charged`:'Invalid clicks are never charged'}/></div>
    <Card title="Add credit" action={!ctx.company.verified_at?<Pill tone="amber">Available once verified</Pill>:undefined}>
     <p className="ep-muted" style={{marginBottom:12}}>Credit never expires while your account is open. Stripe adds GST and emails a tax invoice with your ABN.</p>
     <div className="ep-actions">{PACKS.map(p=><Button key={p} tone="secondary" disabled={Boolean(busy)||!ctx.company.verified_at} onClick={()=>buy(p)}>{busy===`buy-${p}`?'Opening Stripe…':dollars(p)}</Button>)}</div>

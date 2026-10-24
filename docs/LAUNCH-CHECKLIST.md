@@ -5,7 +5,7 @@ that only the business owner can create. Work through the steps in order.
 
 ## 1. Database
 
-Apply the sixteen new migrations to the production Supabase project. Check the remote history first and never
+Apply the eighteen new migrations to the production Supabase project. Check the remote history first and never
 run `supabase db reset` against production.
 
 ```
@@ -36,6 +36,8 @@ After this migration, check in Supabase Storage that the `company-media` bucket 
 | `20261025000002_pay_per_click` | Prepaid advertising credit, per-job campaigns with daily budget and cost per click, click charging |
 | `20261025000003_video_interviews` | Signalling relay for built-in video interviews |
 | `20261025000004_career_tools` | Career profile for the resume builder, six skills assessments, hiring events and "Not interested" |
+| `20261026000001_launch_fixes` | Saved searches become daily job alerts |
+| `20261026000002_operations` | Automatic content checks, optional auto-publishing, reports on published posts, invalid-click filtering and refunds, support tickets, review prompts |
 
 ## 2. Edge Functions
 
@@ -113,3 +115,15 @@ Set these with **Builds and Functions** scope, then redeploy:
 Locality and postcode coordinates come from Matthew Proctor's Australian Postcodes dataset
 (https://www.matthewproctor.com/australian_postcodes). Confirm its current licence terms before launch and credit it
 on the privacy or terms page if it requires attribution.
+
+## Running the marketplace day to day
+
+All of this is in `/admin`:
+
+- **Job approvals and employer verification**: new employers and their first jobs.
+- **Review moderation** and **Interviews & Q&A**: posts arrive with automatic flags (contact details, links, offensive
+  language, serious allegations, shouting, copied text). Use *Publish all without flags* to clear clean posts in one go,
+  or switch on *Automatic publishing* so clean posts from accounts older than a day go live at once.
+- **Reported posts**: published posts people reported. Keep or take down.
+- **Support requests**: messages from the help centre at `/help`. Reply by email, then mark answered.
+- **Sponsored clicks**: charged and filtered clicks per employer, with refunds.

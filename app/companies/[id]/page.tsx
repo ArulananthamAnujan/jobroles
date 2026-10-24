@@ -13,6 +13,7 @@ import {SiteHeader,SiteFooter} from '@/components/site-chrome';
 import '@/components/job-page.css';
 import WriteReview,{HelpfulButton} from '@/components/write-review';
 import FollowCompany from '@/components/follow-company';
+import ReportContent from '@/components/report-content';
 import {WorkplaceReview,ShareInterview,AddSalary,AskQuestion,AnswerQuestion} from '@/components/company-contribute';
 export const dynamic='force-dynamic';
 type Company={id:string;name:string;about:string;verified_at:string;logo_url:string|null;cover_url:string|null;website:string|null;industry:string|null;size_band:string|null;headquarters:string|null;founded_year:number|null;pitch:string|null;benefits:string[]|null;photos:string[]|null};
@@ -70,7 +71,7 @@ function ReviewCard({r,company}:{r:Review;company:string}){
   {cats.length>0&&<p className="co-cats small">{cats.map(([l,v])=><span key={l}>{l} <strong>{v}</strong>/5</span>)}{work&&r.recommends!==null&&<span>{r.recommends?'✓ Recommends':'✗ Doesn’t recommend'}</span>}</p>}
   <p><strong>{work?'Pros':'Went well'}</strong><br/>{r.pros}</p><p><strong>{work?'Cons':'Could be better'}</strong><br/>{r.cons}</p>
   {r.employer_response&&<p className="co-reply"><strong>Response from {company}</strong><br/>{r.employer_response}</p>}
-  <div className="row"><span className="muted small">Was this review helpful?</span><HelpfulButton id={r.id} count={r.helpful_count}/></div>
+  <div className="row"><span className="muted small">Was this review helpful?</span><HelpfulButton id={r.id} count={r.helpful_count}/><ReportContent kind="review" id={r.id}/></div>
  </article>;
 }
 function InterviewCard({i}:{i:Interview}){
@@ -80,6 +81,7 @@ function InterviewCard({i}:{i:Interview}){
   <p className="co-tags"><span className={`co-tag ${tone}`}>{label}</span><span className="co-tag">Difficulty {i.difficulty}/5</span><span className="co-tag">{OUTCOME[i.outcome]}</span>{i.duration&&<span className="co-tag">Took {i.duration}</span>}</p>
   <p><strong>Process</strong><br/><span className="preserve">{i.process}</span></p>
   {i.questions.length>0&&<div><strong>Interview questions</strong><ul className="co-questions">{i.questions.map(q=><li key={q}>{q}</li>)}</ul></div>}
+  <div className="row"><ReportContent kind="interview" id={i.id}/></div>
  </article>;
 }
 function RatingSummary({rating,cats,who,link}:{rating:Rating;cats:[keyof Rating,string][];who:string;link:(s:string)=>string}){
@@ -115,7 +117,7 @@ export default async function CompanyPage({params,searchParams}:{params:Promise<
  if(tab==='jobs')body=<section className="co-card"><div className="co-card-head"><h2>{jobs.length} open {jobs.length===1?'job':'jobs'}</h2><form className="co-filter" action={`/companies/${company.id}`}><input type="hidden" name="tab" value="jobs"/><input type="search" name="q" defaultValue={one('q')} placeholder="Job title or location" aria-label="Filter jobs"/><button className="jp-btn secondary">Filter</button></form></div>
   {shownJobs.length?<ul className="co-jobs">{shownJobs.map(j=><JobRow key={j.id} j={j}/>)}</ul>:<p className="muted">{jobs.length?'No jobs match that filter.':'No open jobs right now.'} <Link className="text-link" href="/search">Search all jobs</Link></p>}</section>;
  else if(tab==='reviews')body=<>
-  <section className="co-card"><div className="co-card-head"><h2>{type==='workplace'?`Working at ${company.name}`:'Hiring experience'}</h2>{type==='workplace'?<WorkplaceReview companyId={company.id} companyName={company.name} primary/>:<WriteReview companyId={company.id} companyName={company.name}/>}</div>
+  <section className="co-card"><div className="co-card-head"><h2>{type==='workplace'?`Working at ${company.name}`:'Hiring experience'}</h2>{type==='workplace'?<WorkplaceReview companyId={company.id} companyName={company.name} primary autoOpen={one('write')==='1'}/>:<WriteReview companyId={company.id} companyName={company.name} autoOpen={one('write')==='1'}/>}</div>
    <nav className="co-subtabs" aria-label="Review type"><Link href={href('reviews',{type:'workplace'})} aria-current={type==='workplace'?'page':undefined}>From employees{workplace?` (${workplace.count})`:''}</Link><Link href={href('reviews',{type:'hiring'})} aria-current={type==='hiring'?'page':undefined}>From applicants{rating?` (${rating.count})`:''}</Link></nav>
    {summary(current,type)||<p className="muted">{type==='workplace'?`No reviews from employees yet. If you work or worked at ${company.name}, you can share what it’s like.`:'No reviews from applicants yet. Only people who applied here can review the hiring process.'} Every review is checked before it appears.</p>}</section>
   {reviews.length>0&&<section className="co-card"><form className="co-filter" action={`/companies/${company.id}`}><input type="hidden" name="tab" value="reviews"/><input type="hidden" name="type" value={type}/>
@@ -144,7 +146,7 @@ export default async function CompanyPage({params,searchParams}:{params:Promise<
  else if(tab==='questions')body=<section className="co-card"><div className="co-card-head"><h2>Questions and answers</h2><AskQuestion companyId={company.id} companyName={company.name}/></div>
   <p className="muted small">Answers come from {company.name} and from people who work or worked there.</p>
   {questions.length?<ul className="co-qa">{questions.map(x=>{const answers=[...x.company_answers].sort((a,b)=>Number(b.from_employer)-Number(a.from_employer));return <li key={x.id}><h3>{x.body}</h3><p className="muted small">Asked {monthYear(x.published_at)} · {answers.length} {answers.length===1?'answer':'answers'}</p>
-   {answers.map(a=><div key={a.id} className={a.from_employer?'co-reply':'co-answer'}>{a.from_employer&&<strong>Answer from {company.name}<br/></strong>}{a.body}</div>)}<AnswerQuestion questionId={x.id} question={x.body}/></li>;})}</ul>:<p className="muted">No questions yet. Ask about rosters, culture, pay or anything else.</p>}</section>;
+   {answers.map(a=><div key={a.id} className={a.from_employer?'co-reply':'co-answer'}>{a.from_employer&&<strong>Answer from {company.name}<br/></strong>}{a.body}{!a.from_employer&&<div><ReportContent kind="answer" id={a.id}/></div>}</div>)}<AnswerQuestion questionId={x.id} question={x.body}/></li>;})}</ul>:<p className="muted">No questions yet. Ask about rosters, culture, pay or anything else.</p>}</section>;
  else if(tab==='benefits')body=<section className="co-card"><h2>Benefits</h2>
   {benefits.length?<ul className="co-benefits">{benefits.map(b=><li key={b}>{b}</li>)}</ul>:<p className="muted">{company.name} hasn’t listed company-wide benefits yet.</p>}
   {jobBenefits.length>0&&<><h3>Mentioned in current listings</h3><ul className="co-benefits">{jobBenefits.map(([b,n])=><li key={b}>{b} <span className="muted small">· {n} {n===1?'job':'jobs'}</span></li>)}</ul></>}</section>;

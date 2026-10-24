@@ -18,11 +18,11 @@ const schema=z.discriminatedUnion('action',[
 // The signed-in seeker's career profile, assessment results and hidden jobs.
 export async function GET(){try{
  const {client,user}=await authenticatedClient();
- const [{data:profile},{data:attempts},{data:hidden}]=await Promise.all([
+ const [{data:profile},{data:attempts},{data:hidden},{data:prompts}]=await Promise.all([
   client.from('seeker_profiles').select('full_name,email,headline,location,skills,summary,experience,education,licences,languages,desired_titles,desired_pay,desired_period,desired_types,ready_to_work,availability').eq('user_id',user.id).maybeSingle(),
   client.from('assessment_attempts').select('id,code,started_at,completed_at,score,shared').order('started_at',{ascending:false}).limit(100),
-  client.from('hidden_jobs').select('job_id').limit(1000)]);
- return response({profile,attempts:attempts||[],hidden:(hidden||[]).map(h=>h.job_id),email:user.email});
+  client.from('hidden_jobs').select('job_id').limit(1000),client.rpc('jp_review_prompts')]);
+ return response({prompts:prompts||[],profile,attempts:attempts||[],hidden:(hidden||[]).map(h=>h.job_id),email:user.email});
 }catch(e){return failure(e);}}
 export async function POST(request:Request){try{
  sameOrigin(request);const {client,user}=await authenticatedClient();rateLimit(`career:${user.id}`,120,60_000);

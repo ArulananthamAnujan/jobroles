@@ -11,5 +11,5 @@ test('only the web server with the shared secret can record a click',async()=>{
 });
 test('a valid click is passed to the database once',async()=>{
  const s=setup();assert.equal((await s.handler(req({jobId:'nope',visitor}))).status,400);assert.equal((await s.handler(req({jobId:job,visitor:'short'}))).status,400);
- const r=await s.handler(req({jobId:job,visitor}));assert.deepEqual(await r.json(),{charged:true,cost:150});assert.deepEqual(s.calls,[['jp_record_sponsored_click',{target:job,visitor_key:visitor}]]);
+ const r=await s.handler(req({jobId:job,visitor}));assert.deepEqual(await r.json(),{charged:true,cost:150});assert.deepEqual(s.calls,[['jp_record_sponsored_click',{target:job,visitor_key:visitor,network_key:null}]]);
 });

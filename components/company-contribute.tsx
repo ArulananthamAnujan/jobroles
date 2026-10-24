@@ -1,12 +1,13 @@
 'use client';
-import {useRef,useState,type ReactNode} from 'react';
+import {useEffect,useRef,useState,type ReactNode} from 'react';
 import {Btn,Field} from './market-ui';
 async function send(body:object){const r=await fetch('/api/community',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json().catch(()=>({})) as {error?:string;result?:{status?:string}};if(r.status===401)throw new Error('Sign in to JobRoles first.');if(r.status===403&&!d.error)throw new Error('Confirm your email first.');if(!r.ok)throw new Error(d.error||'Something went wrong.');return d.result;}
 const num=(f:FormData,k:string)=>f.get(k)?Number(f.get(k)):undefined;
 const str=(f:FormData,k:string)=>{const v=String(f.get(k)||'').trim();return v||undefined;};
 // A button that opens a modal form; on success it shows the thank-you text instead of the form.
-function Contribute({label,title,done,secondary=true,build,children}:{label:string;title:string;done:string;secondary?:boolean;build:(f:FormData)=>object;children:ReactNode}){
- const dialog=useRef<HTMLDialogElement>(null);const [busy,B]=useState(false),[message,M]=useState(''),[error,E]=useState('');
+function Contribute({label,title,done,secondary=true,autoOpen=false,build,children}:{label:string;title:string;done:string;secondary?:boolean;autoOpen?:boolean;build:(f:FormData)=>object;children:ReactNode}){
+ const dialog=useRef<HTMLDialogElement>(null);
+ useEffect(()=>{if(autoOpen&&!dialog.current?.open)dialog.current?.showModal();},[autoOpen]);const [busy,B]=useState(false),[message,M]=useState(''),[error,E]=useState('');
  const close=()=>dialog.current?.close();
  return <>
   <button type="button" className={`jp-btn ${secondary?'secondary':''}`} onClick={()=>{M('');E('');dialog.current?.showModal();}}>{label}</button>
@@ -24,8 +25,8 @@ function Stars({name,legend,required=false}:{name:string;legend:string;required?
  return <fieldset className="co-stars-input"><legend>{legend}{!required&&<span className="muted small"> (optional)</span>}</legend><div className="co-stars-row">{[5,4,3,2,1].map(n=><label key={n}><input type="radio" name={name} value={n} required={required}/><span aria-hidden="true">★</span><span className="sr-only">{n} {n===1?'star':'stars'}</span></label>)}</div></fieldset>;
 }
 const ANON='Posts are anonymous and checked before they appear. Don’t include names or personal details.';
-export function WorkplaceReview({companyId,companyName,primary=false}:{companyId:string;companyName:string;primary?:boolean}){
- return <Contribute label="Review this company" secondary={!primary} title={`What is it like to work at ${companyName}?`} done="Your review will appear once a moderator has checked it. Your name is never shown."
+export function WorkplaceReview({companyId,companyName,primary=false,autoOpen=false}:{companyId:string;companyName:string;primary?:boolean;autoOpen?:boolean}){
+ return <Contribute label="Review this company" secondary={!primary} autoOpen={autoOpen} title={`What is it like to work at ${companyName}?`} done="Your review will appear once a moderator has checked it. Your name is never shown."
   build={f=>({action:'workplace',companyId,rating:num(f,'rating'),title:str(f,'title'),pros:str(f,'pros'),cons:str(f,'cons'),jobTitle:str(f,'jobTitle'),status:f.get('status'),location:str(f,'location'),worklife:num(f,'worklife'),pay:num(f,'pay'),security:num(f,'security'),management:num(f,'management'),culture:num(f,'culture'),recommends:f.get('recommends')?f.get('recommends')==='yes':undefined})}>
   <Stars name="rating" legend="Overall rating" required/>
   <div className="co-two"><Field label="Your job title"><input name="jobTitle" required minLength={2} maxLength={120}/></Field>

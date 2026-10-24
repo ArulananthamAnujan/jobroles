@@ -21,6 +21,7 @@ import CandidateSearch from '../candidate-search';
 import JobStats from '../job-stats';
 import JobFeeds from '../job-feeds';
 import ReviewDesk from '../review-desk';
+import ReviewInvite from './review-invite';
 import './portal.css';
 export type Company={id:string;name:string;verified_at:string|null};
 export type Membership={company_id:string;role:string};
@@ -81,7 +82,7 @@ export default function EmployerPortal(){
   case 'events':body=<EventsView ctx={ctx}/>;break;
   case 'advertising':body=<Advertising ctx={ctx}/>;break;
   case 'company':body=<CompanyProfile ctx={ctx}/>;break;
-  case 'reviews':body=<Section title="Reviews" sub="Hiring-experience reviews from people who applied. Owners can reply publicly."><ReviewDesk companies={[ctx.company]} ownerOf={ctx.role==='owner'?[ctx.company.id]:[]}/></Section>;break;
+  case 'reviews':body=<Section title="Reviews" sub="Hiring-experience reviews from people who applied. Owners can reply publicly."><ReviewInvite companyId={ctx.company.id}/><ReviewDesk companies={[ctx.company]} ownerOf={ctx.role==='owner'?[ctx.company.id]:[]}/></Section>;break;
   case 'team':body=<Team ctx={ctx}/>;break;
   case 'billing':body=<Billing ctx={ctx}/>;break;
   case 'import':body=<Section title="Import jobs" sub="Connect your ATS or careers page and we keep your roles in sync."><JobFeeds companies={[ctx.company]} ownerOf={ctx.role==='owner'?[ctx.company.id]:[]} isAdmin={false}/></Section>;break;

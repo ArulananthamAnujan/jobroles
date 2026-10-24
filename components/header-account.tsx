@@ -9,6 +9,6 @@ export default function HeaderAccount(){
  if(!email)return <Link href="/job-seeker">Sign in</Link>;
  return <div className="jr-account" ref={ref}><button type="button" aria-expanded={open} aria-haspopup="menu" onClick={()=>O(!open)}><span className="jr-avatar" aria-hidden="true">{email[0]?.toUpperCase()}</span><span className="jr-account-label">My account</span></button>
   {open&&<div className="jr-account-menu" role="menu"><p>{email}</p>
-   {[['/job-seeker?view=profile','Profile'],['/job-seeker?view=applications','My applications'],['/job-seeker?view=saved','Saved jobs and searches'],['/resume','Resume builder'],['/assessments','Skills assessments'],['/events','Hiring events'],['/employer','Employer portal']].map(([h,l])=><Link key={h} role="menuitem" href={h} onClick={()=>O(false)}>{l}</Link>)}
+   {[['/job-seeker?view=profile','Profile'],['/job-seeker?view=applications','My applications'],['/job-seeker?view=saved','Saved jobs and searches'],['/resume','Resume builder'],['/assessments','Skills assessments'],['/events','Hiring events'],['/employer','Employer portal'],['/help','Help centre']].map(([h,l])=><Link key={h} role="menuitem" href={h} onClick={()=>O(false)}>{l}</Link>)}
    <button type="button" role="menuitem" onClick={async()=>{await fetch('/api/account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})});window.location.reload();}}>Sign out</button></div>}</div>;
 }

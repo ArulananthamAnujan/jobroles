@@ -11,6 +11,7 @@ const schema=z.discriminatedUnion('action',[
  z.object({action:z.literal('salary'),companyId:id.optional(),jobTitle:z.string().trim().min(2).max(120),pay:z.number().positive().max(1000000),period:z.enum(['hour','day','month','year']),location:z.string().trim().max(120).optional(),type:z.enum(['Full-time','Part-time','Casual','Contract']).optional(),experience:z.enum(['0-1','1-3','3-5','5-10','10+']).optional()}),
  z.object({action:z.literal('question'),companyId:id,question:z.string().trim().min(10).max(300)}),
  z.object({action:z.literal('answer'),questionId:id,answer:z.string().trim().min(10).max(1500)}),
+ z.object({action:z.literal('report'),kind:z.enum(['review','interview','question','answer']),id,reason:z.enum(['false','personal','offensive','spam','conflict','other']),details:z.string().trim().max(1000).optional()}),
  z.object({action:z.literal('moderate'),kind:z.enum(['interview','question','answer']),id,decision:z.enum(['publish','reject']),reason:z.string().trim().min(3).max(500)}),
 ]);
 // Moderation queue for administrators.
@@ -27,6 +28,7 @@ export async function POST(request:Request){try{
   :action==='interview'?client.rpc('jp_submit_interview',{company:(d as {companyId:string}).companyId,payload:d})
   :action==='salary'?client.rpc('jp_report_salary',{payload:d})
   :action==='question'?client.rpc('jp_ask_question',{company:(d as {companyId:string}).companyId,question:(d as {question:string}).question})
+  :action==='report'?client.rpc('jp_report_content',{kind:(d as {kind:string}).kind,target:(d as {id:string}).id,reason:(d as {reason:string}).reason,details:(d as {details?:string}).details||null})
   :action==='answer'?client.rpc('jp_answer_question',{target:(d as {questionId:string}).questionId,answer:(d as {answer:string}).answer})
   :client.rpc('jp_moderate_community',{kind:(d as {kind:string}).kind,target:(d as {id:string}).id,decision:(d as {decision:string}).decision,reason:(d as {reason:string}).reason});
  const {data,error}=await call;

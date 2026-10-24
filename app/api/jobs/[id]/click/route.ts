@@ -13,6 +13,9 @@ export async function POST(request:Request,{params}:{params:Promise<{id:string}>
  if(!ua||/bot|crawl|spider|slurp|headless|preview/i.test(ua))return done;
  const day=new Date().toLocaleDateString('en-CA',{timeZone:'Australia/Sydney'});
  const visitor=createHash('sha256').update(`${secret}|${ip}|${ua}|${day}`).digest('hex');
- try{await fetch(`${process.env.SUPABASE_URL}/functions/v1/ad-click`,{method:'POST',headers:{'x-worker-secret':secret,apikey:process.env.SUPABASE_PUBLISHABLE_KEY||'','Content-Type':'application/json'},body:JSON.stringify({jobId:id,visitor}),cache:'no-store',signal:AbortSignal.timeout(5000)});}catch{}
+ // The network (IPv4 /24 or IPv6 /48) lets the database spot bursts of clicks from one place.
+ const prefix=ip.includes(':')?ip.split(':').slice(0,3).join(':'):ip.split('.').slice(0,3).join('.');
+ const network=createHash('sha256').update(`${secret}|net|${prefix}|${day}`).digest('hex');
+ try{await fetch(`${process.env.SUPABASE_URL}/functions/v1/ad-click`,{method:'POST',headers:{'x-worker-secret':secret,apikey:process.env.SUPABASE_PUBLISHABLE_KEY||'','Content-Type':'application/json'},body:JSON.stringify({jobId:id,visitor,network}),cache:'no-store',signal:AbortSignal.timeout(5000)});}catch{}
  return done;
 }

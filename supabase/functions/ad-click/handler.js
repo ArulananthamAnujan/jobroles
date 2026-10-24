@@ -11,7 +11,8 @@ export function makeAdClickHandler(createClient,env){
   let body;try{body=JSON.parse(await request.text());}catch{return reply(400,{error:'Invalid request.'});}
   if(typeof body?.jobId!=='string'||!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(body.jobId)||typeof body.visitor!=='string'||!/^[0-9a-f]{32,128}$/.test(body.visitor))return reply(400,{error:'Invalid request.'});
   const client=createClient(env('SUPABASE_URL'),env('SUPABASE_SERVICE_ROLE_KEY'),{auth:{persistSession:false,autoRefreshToken:false}});
-  const {data,error}=await client.rpc('jp_record_sponsored_click',{target:body.jobId,visitor_key:body.visitor});
+  const network=typeof body.network==='string'&&/^[0-9a-f]{32,128}$/.test(body.network)?body.network:null;
+  const {data,error}=await client.rpc('jp_record_sponsored_click',{target:body.jobId,visitor_key:body.visitor,network_key:network});
   if(error)return reply(500,{error:'Could not record the click.'});
   return reply(200,data);
  };

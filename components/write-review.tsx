@@ -1,11 +1,12 @@
 'use client';
-import {useRef,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import {Btn,Field} from './market-ui';
 const CATEGORIES:[string,string][]=[['communication','Communication'],['fairness','Fair process'],['speed','Speed of response']];
 async function post(body:object){const r=await fetch('/api/reviews',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json().catch(()=>({})) as {error?:string;result?:{helpful?:number}};if(r.status===401)throw new Error('Sign in first.');if(!r.ok)throw new Error(d.error||'Something went wrong.');return d.result;}
 // Only people who applied to this employer can submit; the server checks, and every review is moderated.
-export default function WriteReview({companyId,companyName,label='Write a review',secondary=false}:{companyId:string;companyName:string;label?:string;secondary?:boolean}){
+export default function WriteReview({companyId,companyName,label='Write a review',secondary=false,autoOpen=false}:{companyId:string;companyName:string;label?:string;secondary?:boolean;autoOpen?:boolean}){
  const dialog=useRef<HTMLDialogElement>(null);
+ useEffect(()=>{if(autoOpen&&!dialog.current?.open)dialog.current?.showModal();},[autoOpen]);
  const [busy,B]=useState(false),[message,M]=useState(''),[error,E]=useState('');
  return <>
   <button type="button" className={`jp-btn ${secondary?'secondary':''}`} onClick={()=>dialog.current?.showModal()}>{label}</button>
