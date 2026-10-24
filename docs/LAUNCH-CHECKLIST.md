@@ -5,7 +5,7 @@ that only the business owner can create. Work through the steps in order.
 
 ## 1. Database
 
-Apply the eighteen new migrations to the production Supabase project. Check the remote history first and never
+Apply the nineteen new migrations to the production Supabase project. Check the remote history first and never
 run `supabase db reset` against production.
 
 ```
@@ -38,11 +38,13 @@ After this migration, check in Supabase Storage that the `company-media` bucket 
 | `20261025000004_career_tools` | Career profile for the resume builder, six skills assessments, hiring events and "Not interested" |
 | `20261026000001_launch_fixes` | Saved searches become daily job alerts |
 | `20261026000002_operations` | Automatic content checks, optional auto-publishing, reports on published posts, invalid-click filtering and refunds, support tickets, review prompts |
+| `20261026000003_bulk_message_names` | Bulk messages fill in each applicant's first name |
 
 ## 2. Edge Functions
 
 ```
-supabase functions deploy resume-scan job-alerts job-feed-import
+# Each function's entrypoint is supabase/functions/<name>/index.ts.
+supabase functions deploy resume-scan job-alerts job-feed-import notification-mail resume-download
 supabase functions deploy account-erasure
 supabase functions deploy billing --no-verify-jwt   # Stripe cannot send a Supabase token; the function checks its own
 supabase functions deploy ad-click --no-verify-jwt  # only the web server calls it, with AD_CLICK_SECRET

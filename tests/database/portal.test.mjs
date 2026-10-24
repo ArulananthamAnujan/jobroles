@@ -33,9 +33,9 @@ test('employer portal',async t=>{
  await t.test('bulk moves send one message each and respect permissions',async()=>{
   const [app]=await admin('select id from applications where job_id=$1',[job]);
   await assert.rejects(()=>rows(manager,"select jp_bulk_move($1,'rejected')",[[app.id]]),/denied/);
-  await rows(recruiter,"select jp_bulk_move($1,'shortlisted',$2)",[[app.id],'Thanks, we would like to talk further.']);
+  await rows(recruiter,"select jp_bulk_move($1,'shortlisted',$2)",[[app.id],'Hi {name}, we would like to talk further.']);
   assert.equal((await admin('select stage::text from applications where id=$1',[app.id]))[0].stage,'shortlisted');
-  assert.equal((await admin("select count(*)::int n from application_messages where body like 'Thanks, we would%'"))[0].n,1);
+  assert.equal((await admin("select count(*)::int n from application_messages where body='Hi Sam, we would like to talk further.'"))[0].n,1);
  });
  await t.test('templates belong to the company team',async()=>{
   await rows(recruiter,"select jp_template('save',$1::jsonb)",[JSON.stringify({companyId:company,name:'Not progressing',body:'Thank you for applying. We will not progress your application this time.'})]);
