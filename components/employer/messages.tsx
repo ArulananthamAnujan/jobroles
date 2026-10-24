@@ -14,7 +14,7 @@ export default function Messages({ctx}:{ctx:PortalContext}){
  const unread=(threads||[]).reduce((n,t)=>n+Number(t.unread),0);
  return <Section title="Messages" sub="Every conversation with applicants, newest first.">
   <Notice error={error} message={note}/>
-  <Tabs value={tab} onChange={TB} items={[['inbox','Inbox',unread],['templates','Templates',templates.length]]}/>
+  <Tabs value={tab} onChange={TB} items={[['inbox','Inbox',unread||undefined],['templates','Templates',templates.length]]}/>
   {tab==='inbox'?<>
    <div className="ep-toolbar"><Tabs value={filter} onChange={F} items={[['all','All'],['unread','Unread']]}/></div>
    {!threads?<p role="status">Loading messages…</p>:shown.length?<div className="ep-card"><ul className="ep-list">{shown.map(t=><li key={t.application_id}><div className="ep-grow"><strong>{t.full_name}{t.unread>0&&<> <Pill tone="blue">{t.unread} new</Pill></>}</strong><small>{t.job_title} · {t.last_from_candidate?'':'You: '}{t.last_body}</small></div><small>{ago(t.last_at)}</small><Button size="sm" tone="secondary" onClick={()=>O(t.application_id)}>Open</Button></li>)}</ul></div>

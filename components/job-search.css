@@ -108,5 +108,5 @@
  .jr-filters{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;margin:12px -16px 8px;padding-left:16px;padding-right:16px}
 }
 
-.jr-posted{display:flex;justify-content:space-between;align-items:center;gap:12px}.jr-hide{border:0;background:none;color:var(--soft,#5b6b75);font-size:13px;text-decoration:underline;text-underline-offset:3px;padding:4px 0}.jr-hide:hover{color:#1f2b33}
+.jr-posted{display:flex;justify-content:space-between;align-items:center;gap:12px}.jr-hide{position:relative;z-index:2;border:0;background:none;color:var(--soft,#5b6b75);font-size:13px;text-decoration:underline;text-underline-offset:3px;padding:4px 0}.jr-hide:hover{color:#1f2b33}
 .jr-hidden-note{display:flex;gap:12px;align-items:center;background:#e5f4ee;border-radius:8px;padding:10px 14px;font-size:14px;margin:0 0 10px}

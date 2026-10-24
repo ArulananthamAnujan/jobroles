@@ -22,5 +22,6 @@ export async function GET(_request:Request,{params}:{params:Promise<{id:string}>
  const ruleById=new Map(((rules.data||[]) as {id:string;must_have:boolean;expected_answer:string|null}[]).map(r=>[r.id,r]));
  const jobDetail=job.data?{...job.data,screening_questions:(job.data.screening_questions||[]).map((q:{id:string;question:string})=>({...q,must_have:ruleById.get(q.id)?.must_have??false,expected_answer:ruleById.get(q.id)?.expected_answer??null}))}:null;
  const {data:membership}=job.data?await client.from('company_memberships').select('role').eq('company_id',job.data.company_id).eq('user_id',user.id).is('revoked_at',null).maybeSingle():{data:null};
- return response({application,isSeeker,userId:user.id,role:membership?.role||null,snapshot:snapshot.data,history:history.data,notes:notes.data,interviews:interviews.data,messages:messages.data?.reverse(),job:jobDetail,draft:draft.data});
+ const blocked=isSeeker&&job.data?Boolean((await client.from('company_blocks').select('company_id').eq('company_id',job.data.company_id).maybeSingle()).data):false;
+ return response({blocked,application,isSeeker,userId:user.id,role:membership?.role||null,snapshot:snapshot.data,history:history.data,notes:notes.data,interviews:interviews.data,messages:messages.data?.reverse(),job:jobDetail,draft:draft.data});
 }catch(error){return failure(error);}}

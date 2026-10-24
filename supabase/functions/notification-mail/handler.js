@@ -1,3 +1,14 @@
+// Subject and body for an application notification. It names the job and what happened, but never includes
+// message text, resumes or interview details: people sign in to read those.
+export function notificationEmail(d,info,origin){
+ const job=info?.title?`${info.title}${info.company?` at ${info.company}`:''}`:'an application';
+ const who=info?.company||'The employer';
+ const seeker={'message.send':`${who} sent you a message`,'application.interview':`Interview update for ${job}`,'application.move':`Update on your application for ${job}`,'application.reinstate':`Your application for ${job} was reinstated`};
+ const team={'application.submitted':`New applicant for ${info?.title||'your job'}`,'message.send':`New message from an applicant for ${info?.title||'your job'}`,'application.withdraw':`An applicant withdrew from ${info?.title||'your job'}`,'application.request_reinstatement':`An applicant asked to be reconsidered for ${info?.title||'your job'}`,'application.interview':`Interview update for ${info?.title||'your job'}`};
+ const subject=(info?.seeker?seeker:team)[d.event_type]||`Update on ${job}`;
+ const link=`${origin}/account/applications/${d.application_id}`;
+ return {subject,text:`${subject}.\n\nSign in to see the details:\n${link}\n\nJobRoles\nFor your privacy, this email never includes messages, resumes or interview details. Change which emails you get in your account settings.`};
+}
 export function makeMailWorker(createClient,env,send=fetch){
  const reply=(status,body)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
  return async request=>{
@@ -15,7 +26,9 @@ export function makeMailWorker(createClient,env,send=fetch){
    for(const d of deliveries||[]){
     let ok=false,reference=null;
     try{
-     const r=await send('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json','Idempotency-Key':`jobroles-${d.id}`},body:JSON.stringify({from,to:[d.recipient_email],subject:'You have an update on JobRoles',text:`There is an update to an application you are involved in.\n\nSign in to view it securely:\n${base.origin}/account/applications/${d.application_id}\n\nJobRoles\nThis email contains no resume, interview details or private message content.`}),signal:AbortSignal.timeout(15000)});
+     let info=null;try{const {data}=await client.from('applications').select('seeker_id,jobs(title,companies(name))').eq('id',d.application_id).maybeSingle();if(data)info={seeker:data.seeker_id===d.recipient_id,title:data.jobs?.title,company:data.jobs?.companies?.name};}catch{}
+     const mail=notificationEmail(d,info,base.origin);
+     const r=await send('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json','Idempotency-Key':`jobroles-${d.id}`},body:JSON.stringify({from,to:[d.recipient_email],subject:mail.subject,text:mail.text}),signal:AbortSignal.timeout(15000)});
      const result=await r.json();ok=r.ok&&typeof result.id==='string';if(ok)reference=result.id;
     }catch{}
     const done=await client.rpc('jp_finish_notification_mail',{delivery_id:d.id,lease:d.lease_token,accepted:ok,provider_reference:reference});

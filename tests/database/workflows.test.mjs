@@ -70,7 +70,7 @@ test('PostgreSQL workflows and row-level security',async t=>{
   const search=result[0].result.id;
   assert.equal((await rows(seeker,'select * from saved_searches')).length,1);
   assert.equal((await rows(other,'select * from saved_searches')).length,0);
-  assert.equal((await rows(seeker,'select frequency from saved_searches'))[0].frequency,'off');
+  assert.equal((await rows(seeker,'select frequency from saved_searches'))[0].frequency,'daily','saving a search creates a daily alert');
   await rows(other,"select jp_launch_command('search.delete',$1::jsonb)",[JSON.stringify({id:search})]);
   assert.equal((await rows(seeker,'select * from saved_searches')).length,1);
   await assert.rejects(()=>rows(seeker,"select jp_launch_command('search.save',$1::jsonb)",[JSON.stringify({filters:{userId:owner}})]),/Invalid search field/);
