@@ -43,16 +43,23 @@ function Bell(){
   {open&&<div className="ep-pop" role="dialog" aria-label="Notifications"><div className="ep-pop-head">Notifications</div>{items.length?items.slice(0,20).map(i=><Link key={i.id} href={`/employer?view=applicants&application=${i.applicationId}`} onClick={()=>O(false)}><strong>{i.kind}</strong> {i.text}<small>{ago(i.at)}</small></Link>):<p className="ep-muted" style={{padding:12}}>No notifications yet.</p>}</div>}</>;
 }
 
-function Onboarding({onDone}:{onDone:()=>void}){
+function Onboarding({onDone,email}:{onDone:()=>void;email:string}){
  const [busy,B]=useState(false),[error,E]=useState('');
- return <Card title="Register your company to start hiring"><p className="ep-muted" style={{marginBottom:14}}>We check every employer’s ABN before their roles go live. Most checks finish within one business day.</p>
+ return <Section title="Set up your company" sub={`${email} isn’t linked to a company yet. Jobs, applicants and messages appear once it is.`}>
+  <div className="ep-over"><div className="ep-over-main">
+  <Card title="Register your company to start hiring"><p className="ep-muted" style={{marginBottom:14}}>We check every employer’s ABN before their roles go live. Most checks finish within one business day.</p>
   <form className="ep-form" onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);B(true);E('');try{await command('company.create',{name:f.get('name'),about:f.get('about')||'',abn:String(f.get('abn')||'').replace(/\s/g,'')||undefined,agency:f.get('agency')==='on'});onDone();}catch(err){E((err as Error).message);}finally{B(false);}}}>
    <Field label="Company name"><input name="name" required minLength={2} maxLength={160}/></Field>
    <Field label="ABN" hint="11 digits"><input name="abn" inputMode="numeric" pattern="[0-9 ]{11,14}" maxLength={14}/></Field>
    <Field label="About your company" wide><textarea name="about" maxLength={5000}/></Field>
    <label className="ep-check"><input name="agency" type="checkbox"/>We are a recruitment agency</label>
    <div className="ep-actions"><Button disabled={busy}>{busy?'Registering…':'Register company'}</Button></div>
-  </form><Notice error={error}/></Card>;
+  </form><Notice error={error}/></Card></div>
+  <aside className="ep-rail" aria-label="Joining an existing company">
+   <h2>Is your company already on JobRoles?</h2>
+   <Card><div style={{padding:'12px 0',display:'grid',gap:8}}><p>Don’t register it again. Ask the company’s owner to invite you from <strong>Team</strong> in their employer portal, then open the invitation link while signed in as {email}.</p>
+    <p className="ep-muted" style={{fontSize:13}}>Looking for work instead? <Link href="/job-seeker" style={{textDecoration:'underline'}}>Go to the job seeker portal</Link>.</p></div></Card>
+  </aside></div></Section>;
 }
 
 export default function EmployerPortal(){
@@ -71,7 +78,7 @@ export default function EmployerPortal(){
  const ctx:PortalContext|null=company&&membership?{company,role:membership.role,companies,memberships:data.memberships,isAdmin:data.isAdmin,userId:account.user.id,go}:null;
  const canManage=membership?.role==='owner'||membership?.role==='recruiter';
  let body:ReactNode;
- if(!companies.length)body=<Onboarding onDone={()=>V(v=>v+1)}/>;
+ if(!companies.length)body=<Onboarding email={account.user.email} onDone={()=>V(v=>v+1)}/>;
  else if(!ctx)body=<p role="status">Loading…</p>;
  else switch(view){
   case 'jobs':body=<Jobs ctx={ctx}/>;break;
@@ -92,7 +99,7 @@ export default function EmployerPortal(){
  }
  const label=NAV.find(n=>n[1]===view)?.[2]||'Overview';
  const pick=(id:string)=>{C(id);try{localStorage.setItem('ep.company',id);}catch{}};
- return <AppShell nav={nav} current={view} crumb={<>{company?<>{company.name} <span aria-hidden="true">/</span> </>:null}<strong>{label}</strong></>}
+ return <AppShell nav={companies.length?nav:[]} current={view} crumb={companies.length?<>{company?<>{company.name} <span aria-hidden="true">/</span> </>:null}<strong>{label}</strong></>:<strong>Set up your company</strong>}
   search={companies.length?{placeholder:'Search applicants',onSubmit:q=>go('applicants',{q})}:undefined}
   org={companies.length>0&&<div className="ep-org">{companies.length>1?<label><small>Company</small><select value={companyId} onChange={e=>pick(e.target.value)}>{companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>:company&&<><small>Employer</small><strong>{company.name}</strong></>}
    {company&&!company.verified_at&&<span className="ep-pill amber" style={{width:'fit-content',marginTop:4}}>Verification pending</span>}</div>}
