@@ -8,7 +8,7 @@ import {Bars} from './bars';
 type Dash={live:number;drafts:number;pending:number;paused:number;newToday:number;newWeek:number;unreviewed:number;interviewsWeek:number;unread:number;views7:number;
  expiring:{id:string;title:string;expiresAt:string}[];awaiting:{applicationId:string;jobTitle:string;name:string;submittedAt:string}[];upcoming:{applicationId:string;name:string;jobTitle:string;startsAt:string;timeZone:string}[]};
 type Pipe={jobId:string;title:string;location:string|null;publishedAt:string;expiresAt:string;new:number;reviewed:number;shortlisted:number;interview:number;offer:number;total:number;oldestNewDays:number;views7:number};
-type Overview={pipeline:Pipe[];daily:{day:string;count:number}[];waiting:{applicationId:string;name:string;jobTitle:string;submittedAt:string;days:number}[];waitingTotal:number;waitingOver3:number;
+type Overview={partial?:boolean;pipeline:Pipe[];daily:{day:string;count:number}[];waiting:{applicationId:string;name:string;jobTitle:string;submittedAt:string;days:number}[];waitingTotal:number;waitingOver3:number;
  response:{applications:number;responded:number;respondedShare:number|null;medianDays:number|null;public:boolean}};
 // Stages in pipeline order, darkest first: the people nobody has looked at yet carry the strongest colour.
 const STAGE_KEYS=[['new','New','var(--c1)'],['reviewed','Reviewed','var(--c2)'],['shortlisted','Shortlisted','var(--c3)'],['interview','Interview','var(--c4)'],['offer','Offer or hired','var(--c5)']] as const;
@@ -18,7 +18,11 @@ const plural=(n:number,one:string,many=`${one}s`)=>`${n} ${n===1?one:many}`;
 export default function Dashboard({ctx}:{ctx:PortalContext}){
  const [d,D]=useState<Dash|null>(null),[o,O]=useState<Overview|null>(null),[error,E]=useState('');
  useEffect(()=>{const c=new AbortController(),q={company:ctx.company.id};
-  Promise.all([employerGet<Dash>('dashboard',q,c.signal),employerGet<Overview>('overview',q,c.signal)]).then(([a,b])=>{D(a);O(b);}).catch(e=>{if(e.name!=='AbortError')E(e.message);});return()=>c.abort();},[ctx.company.id]);
+  // If the overview is unavailable (for example before its database update is applied), the screen still shows
+  // what the older dashboard data can say, and leaves out the parts it cannot.
+  Promise.all([employerGet<Dash>('dashboard',q,c.signal),employerGet<Overview>('overview',q,c.signal).catch(e=>{if(e.name==='AbortError')throw e;return null;})]).then(([a,b])=>{D(a);
+   O(b??{partial:true,pipeline:[],daily:[],waitingTotal:a.unreviewed,waitingOver3:0,response:{applications:0,responded:0,respondedShare:null,medianDays:null,public:false},
+    waiting:a.awaiting.map(x=>({applicationId:x.applicationId,name:x.name||'Applicant',jobTitle:x.jobTitle,submittedAt:x.submittedAt,days:Math.max(0,Math.floor((Date.now()-new Date(x.submittedAt).getTime())/864e5))}))});}).catch(e=>{if(e.name!=='AbortError')E(e.message);});return()=>c.abort();},[ctx.company.id]);
  const canPost=ctx.role==='owner'||ctx.role==='recruiter';
  if(error)return <Section title={ctx.company.name}><Notice error={error}/></Section>;
  if(!d||!o)return <Section title={ctx.company.name} sub="Loading your hiring overview…"><div className="ep-stats" aria-hidden="true" style={{height:96}}/></Section>;
@@ -35,21 +39,22 @@ export default function Dashboard({ctx}:{ctx:PortalContext}){
   {first?<FirstRun canPost={canPost} go={ctx.go} ctx={ctx}/>:<div className="ep-over">
    <div className="ep-over-main">
     <div className="ep-stats" style={{marginBottom:0}}>
-     <Stat label="Waiting for you" value={o.waitingTotal} hint={o.waitingOver3?`${o.waitingOver3} over 3 days`:'None over 3 days'} warn={o.waitingOver3>0} href="/employer?view=applicants&stage=new"/>
+     <Stat label="Waiting for you" value={o.waitingTotal} hint={o.partial?'Not yet reviewed':o.waitingOver3?`${o.waitingOver3} over 3 days`:'None over 3 days'} warn={o.waitingOver3>0} href="/employer?view=applicants&stage=new"/>
      <Stat label="New applicants" value={d.newWeek} hint={`Last 7 days · ${d.newToday} today`} href="/employer?view=applicants"/>
      <Stat label="Interviews" value={d.interviewsWeek} hint="Next 7 days" href="/employer?view=interviews"/>
      <Stat label="Live jobs" value={d.live} hint={[d.pending&&`${d.pending} awaiting approval`,d.drafts&&plural(d.drafts,'draft')].filter(Boolean).join(' · ')||`${d.views7.toLocaleString('en-AU')} views in 7 days`} href="/employer?view=jobs"/>
     </div>
+    {o.partial?<Card title="Pipeline by job"><p className="ep-muted">The pipeline chart isn’t available right now. Every applicant, by stage, is on the <Link href="/employer?view=applicants" style={{textDecoration:'underline'}}>Applicants</Link> page.</p></Card>:<>
     <Pipeline jobs={o.pipeline} canPost={canPost} go={ctx.go}/>
-    <Bars title="Applications per day" days={o.daily} recent={7}/>
+    <Bars title="Applications per day" days={o.daily} recent={7}/></>}
    </div>
    <aside className="ep-rail" aria-label="Needs attention">
     <h2>Waiting longest{o.waitingTotal>o.waiting.length&&<Link href="/employer?view=applicants&stage=new">All {o.waitingTotal}</Link>}</h2>
     <Card>{o.waiting.length?<ul className="ep-list">{o.waiting.slice(0,5).map(a=><li key={a.applicationId}><div className="ep-grow"><strong>{a.name}</strong><small>{a.jobTitle} · {a.days===0?'today':plural(a.days,'day')}</small></div>
       <Link className="ep-btn secondary sm" href={`/employer?view=applicants&application=${a.applicationId}`}>Review</Link></li>)}</ul>
      :<Empty title="You’re all caught up">New applicants appear here the moment they apply.</Empty>}</Card>
-    <h2>Your response record</h2>
-    <Card><Record r={o.response} companyId={ctx.company.id}/></Card>
+    {!o.partial&&<><h2>Your response record</h2>
+    <Card><Record r={o.response} companyId={ctx.company.id}/></Card></>}
     <h2>Upcoming interviews<Link href="/employer?view=interviews">Calendar</Link></h2>
     <Card>{d.upcoming.length?<ul className="ep-list">{d.upcoming.slice(0,4).map(i=><li key={i.applicationId+i.startsAt}><div className="ep-grow"><strong>{i.name}</strong><small>{i.jobTitle}</small></div>
       <span className="ep-muted" style={{fontVariantNumeric:'tabular-nums',fontSize:13,textAlign:'right'}}>{when(i.startsAt,{weekday:'short',day:'numeric',month:'short'})}<br/>{when(i.startsAt,{hour:'numeric',minute:'2-digit'})}</span></li>)}</ul>

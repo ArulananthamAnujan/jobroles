@@ -68,7 +68,7 @@ const age=(iso:string|null)=>{if(!iso)return '–';const h=(Date.now()-new Date(
 const overDay=(iso:string|null)=>Boolean(iso)&&Date.now()-new Date(iso!).getTime()>864e5;
 // The administrator's question: which queue has people waiting, and for how long?
 function AdminOverview({o}:{o:Overview|null}){
- if(!o)return <Section title="Platform overview" sub="Loading…"><span/></Section>;
+ if(!o)return <Section title="Platform overview" sub="The overview could not be loaded."><p className="ep-notice warn">This usually means the production database is missing migration 20261027000001_dashboards_import. Apply it with <code>supabase db push --linked</code>. Every queue in the menu still works.</p></Section>;
  const waiting=o.queues.reduce((n,x)=>n+x.count,0),oldest=o.queues.filter(x=>x.oldest).sort((a,b)=>a.oldest!.localeCompare(b.oldest!))[0];
  const sub=waiting?`${waiting} ${waiting===1?'item is':'items are'} waiting${o.queues.filter(x=>x.count).length>1?` across ${o.queues.filter(x=>x.count).length} queues`:''}. The oldest has waited ${age(oldest.oldest)} in “${QUEUE_NAMES[oldest.id]}”.`:'Every queue is clear.';
  return <Section title="Platform overview" sub={sub} actions={oldest&&<Link className="ep-btn primary md" href={`/admin?view=${oldest.id}`}>Open oldest queue</Link>}>

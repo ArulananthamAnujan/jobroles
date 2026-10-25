@@ -15,7 +15,7 @@ export async function GET(request:Request){try{
  const {client}=await authenticatedClient();const r=new URL(request.url).searchParams.get('resource');
  const rpc=r==='reports'?'jp_content_reports':r==='clicks'?'jp_click_quality':r==='support'?'jp_support_queue':r==='settings'?'jp_moderation_settings':r==='overview'?'jp_admin_overview':null;
  if(!rpc)throw new ApiError(400,'Unknown resource.');
- const {data,error}=await client.rpc(rpc);if(error)throw fail(error);return response({data});
+ const {data,error}=await client.rpc(rpc);if(error){console.error(`admin ops: ${rpc} failed`,{code:error.code,message:error.message});throw fail(error);}return response({data});
 }catch(e){return failure(e);}}
 export async function POST(request:Request){try{
  sameOrigin(request);const {client}=await authenticatedClient();

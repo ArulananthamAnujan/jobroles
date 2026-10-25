@@ -15,8 +15,8 @@ import {Card,Empty,Icon,Notice,Pill,Stat,Tabs} from '../employer/ui';
 import {get,when,ago} from '../employer/api';
 type Account={configured:boolean;user:null|{id:string;email:string;confirmed:boolean}};
 type App={id:string;jobId:string;title:string;company:string;companyId:string;state:string;stage:string;submittedAt:string;updatedAt:string;unread:number;
- interview:null|{id:string;startsAt:string;timeZone:string;format:string};proposal:boolean;responseShare:string|null};
-type Home={applications:App[];drafts:number;saved:number;alerts:number;invites:number;email:string;
+ interview:null|{id:string;startsAt:string;timeZone:string;format:string};proposal:boolean;responseShare:string|null;unknown?:boolean};
+type Home={partial?:boolean;applications:App[];drafts:number;saved:number;alerts:number;invites:number;email:string;
  profile:null|{name:string;headline:boolean;location:boolean;skills:boolean;experience:boolean;searchable:boolean;resume:boolean;assessment:boolean}};
 type Rec={id:string;title:string;salary_min:number|null;salary_max:number|null;salary_period:string;currency:string;companies:{name:string};job_locations:{label:string}[];distance_km:number|null};
 const VIEWS:[string,string,string,string][]=[['','overview','Home','home'],['','applications','Applications','jobs'],['','profile','Profile and resume','people'],['','preferences','Application preferences','settings'],['','saved','Saved jobs and alerts','star'],['','privacy','Privacy and data','shield']];
@@ -48,6 +48,7 @@ function nextStep(a:App):[string,string,string|null]{
  if(a.state==='withdrawn')return ['Withdrawn','',null];
  if(a.stage==='rejected')return ['Not progressing','The employer has moved on with other applicants.',null];
  if(a.stage==='hired')return ['Hired','Congratulations.',null];
+ if(a.unknown)return ['See messages and interview times','',`/account/applications/${a.id}`];
  if(a.interview)return ['Interview '+when(a.interview.startsAt,{weekday:'short',day:'numeric',month:'short',hour:'numeric',minute:'2-digit',timeZone:a.interview.timeZone}),a.interview.format==='video'?'Join on JobRoles':'',a.interview.format==='video'?`/interview/${a.interview.id}`:`/account/applications/${a.id}`];
  if(a.proposal)return ['Pick an interview time','',`/account/applications/${a.id}`];
  if(a.unread)return [`${a.unread} new ${a.unread===1?'message':'messages'}`,'',`/account/applications/${a.id}`];
@@ -69,7 +70,7 @@ function SeekerHome(){
  const finding=soon?`Your next interview is with ${soon.company} on ${when(soon.interview!.startsAt,{weekday:'long',day:'numeric',month:'long',hour:'numeric',minute:'2-digit',timeZone:soon.interview!.timeZone})}.`
   :proposals.length?`${proposals[0].company} has offered interview times. Pick one so they can lock it in.`
   :unread?`You have ${unread} unread ${unread===1?'message':'messages'} from employers.`
-  :open.length?`${open.length} ${open.length===1?'application is':'applications are'} in progress. Nothing needs you right now.`
+  :open.length?`${open.length} ${open.length===1?'application is':'applications are'} in progress.${h.partial?' Open each one to see messages and interview times.':' Nothing needs you right now.'}`
   :done<3?'Start with your profile: it fills in every application for you, and every job here shows its pay.'
   :'Find a role you like and apply in a few minutes. Every job shows its pay.';
  const action=soon?.interview?.format==='video'?<Link className="ep-btn primary md" href={`/interview/${soon.interview.id}`}>Join interview</Link>
@@ -80,8 +81,8 @@ function SeekerHome(){
    <div className="ep-over-main">
     <div className="ep-stats" style={{marginBottom:0}}>
      <Stat label="In progress" value={open.length} hint={`${h.applications.length} sent in total`} href="/job-seeker?view=applications"/>
-     <Stat label="Interviews" value={interviews.length} hint={proposals.length?`${proposals.length} waiting for you to pick a time`:'Booked and upcoming'} warn={proposals.length>0}/>
-     <Stat label="Unread messages" value={unread} hint="From employers" href="/job-seeker?view=applications"/>
+     <Stat label="Interviews" value={h.partial?'–':interviews.length} hint={h.partial?'Open an application to see times':proposals.length?`${proposals.length} waiting for you to pick a time`:'Booked and upcoming'} warn={proposals.length>0}/>
+     <Stat label="Unread messages" value={h.partial?'–':unread} hint={h.partial?'Open an application to read them':'From employers'} href="/job-seeker?view=applications"/>
      <Stat label="Saved jobs" value={h.saved} hint={h.alerts?`${h.alerts} job ${h.alerts===1?'alert':'alerts'} on`:'No job alerts yet'} href="/job-seeker?view=saved"/>
     </div>
     <Card title="Where your applications stand" action={h.drafts>0&&<Link className="ep-btn ghost sm" href="/job-seeker?view=applications">{h.drafts} unfinished {h.drafts===1?'draft':'drafts'}</Link>}>
