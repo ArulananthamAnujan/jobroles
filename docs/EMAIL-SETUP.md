@@ -10,7 +10,12 @@ JobRoles sends three kinds of email, through two routes:
 
 Both routes use the same Resend account and the same sending domain. Allow about an hour, most of it waiting for DNS.
 
-You need: the site's domain, access to its DNS, the Supabase project, and the Netlify site.
+You need: your own domain with access to its DNS, the Supabase project, and the Netlify site.
+
+**A `netlify.app` address cannot send email.** You do not control its DNS, so no email service will verify it. Buy a
+domain first (a `.com.au` needs your ABN; registrars such as VentraIP or Crazy Domains sell them), then in Netlify go
+to **Domain management > Add a domain** and follow its DNS steps so the site runs on it with HTTPS. Use that domain
+everywhere this guide says `yourdomain.com.au`.
 
 ## 1. Resend: verify the sending domain
 

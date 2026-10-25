@@ -85,7 +85,7 @@ Run [schedules.sql](schedules.sql) in the Supabase SQL editor after filling in i
 - **Email (Resend and Supabase Auth)**: follow [EMAIL-SETUP.md](EMAIL-SETUP.md). It covers the sending domain, the
   Supabase SMTP settings that confirmation and password-reset emails need, the function secrets, the schedules and a
   full delivery check.
-- **Stripe**: create a product such as "Sponsored listing, 30 days" with a one-time **AUD price that includes GST**,
+- **Stripe**: step by step in [STRIPE-SETUP.md](STRIPE-SETUP.md). In short: create a product such as "Sponsored listing, 30 days" with a one-time **AUD price that includes GST**,
   and turn on tax invoices. Add a webhook to `https://<project>.supabase.co/functions/v1/billing/webhook` for
   `checkout.session.completed` and `checkout.session.async_payment_succeeded`.
 - **Cloudflare Turnstile**: create a widget for the site domain. Set `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and
