@@ -2,7 +2,7 @@
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
 import {employerGet,employerPost} from './api';
-import {Button,Card,Field,Notice} from './ui';
+import {Button,Card,Field,Icon,Notice} from './ui';
 import {Section,type PortalContext} from './portal';
 type Profile={id:string;name:string;about:string;abn:string|null;verified_at:string|null;logo_url:string|null;cover_url:string|null;website:string|null;industry:string|null;size_band:string|null;headquarters:string|null;founded_year:number|null;pitch:string|null;benefits:string[];photos:string[]};
 const SIZES=['1-10','11-50','51-200','201-500','501-1000','1001-5000','5000+'];
@@ -20,7 +20,8 @@ export default function CompanyProfile({ctx}:{ctx:PortalContext}){
  return <Section title="Company page" sub="What job seekers see about you. A complete page gets more applications." actions={<><Link className="ep-btn secondary md" href={`/companies/${p.id}`} target="_blank">View public page</Link>{owner&&<Button disabled={busy} onClick={save}>Save changes</Button>}</>}>
   <Notice error={error} message={note}/>
   {!owner&&<p className="ep-notice">Only the company owner can edit this page.</p>}
-  <fieldset disabled={!owner||busy} style={{border:0,padding:0,margin:0,display:'grid',gap:16}}>
+  <div className="ep-over">
+  <fieldset disabled={!owner||busy} style={{border:0,padding:0,margin:0,display:'grid',gap:16,minWidth:0}}>
    <Card title="Branding">
     <div className="ep-cover" style={{backgroundImage:p.cover_url?`url(${p.cover_url})`:undefined}} role="img" aria-label="Cover image"/>
     <div className="ep-actions" style={{marginTop:12}}><div className="ep-logo" style={{backgroundImage:p.logo_url?`url(${p.logo_url})`:undefined}} role="img" aria-label="Logo"/>
@@ -52,7 +53,29 @@ export default function CompanyProfile({ctx}:{ctx:PortalContext}){
      {/* eslint-disable-next-line @next/next/no-img-element */}
      <img src={u} alt="Workplace" loading="lazy"/><Button type="button" size="sm" tone="danger" onClick={()=>set('photos',p.photos.filter(x=>x!==u))}>Remove</Button></figure>)}</div>:<p className="ep-muted">Show your workplace and team. Up to 12 photos. Don’t include people who haven’t agreed to appear.</p>}
    </Card>
+   {owner&&<div className="ep-actions"><Button disabled={busy} onClick={save}>Save changes</Button></div>}
   </fieldset>
-  {owner&&<div className="ep-actions" style={{marginTop:16}}><Button disabled={busy} onClick={save}>Save changes</Button></div>}
+  <Strength p={p}/>
+  </div>
  </Section>;
+}
+
+// What makes a company page convincing, checked as the owner edits, beside a preview of how it shows in search.
+function Strength({p}:{p:Profile}){
+ const checks:[boolean,string][]=[[Boolean(p.logo_url),'Logo'],[Boolean(p.cover_url),'Cover image'],[(p.pitch||'').trim().length>=60,'Why work here, two or three sentences'],[(p.about||'').trim().length>=200,'About the company, 200 characters or more'],
+  [Boolean(p.website),'Website'],[Boolean(p.industry&&p.size_band&&p.headquarters),'Industry, size and headquarters'],[p.benefits.length>=3,'At least 3 benefits'],[p.photos.length>=3,'At least 3 workplace photos']];
+ const done=checks.filter(c=>c[0]).length;
+ return <aside className="ep-rail" aria-label="Page strength">
+  <h2>Page strength<span className="ep-muted" style={{fontSize:13,fontWeight:500}}>{done} of {checks.length}</span></h2>
+  <Card><div className="ep-record" style={{paddingBottom:4}}><div className="ep-record-bar" aria-hidden="true"><i style={{width:`${done/checks.length*100}%`}}/></div>
+   <p>{done===checks.length?'Your page is complete.':'Pages with a logo, photos and benefits get noticeably more applications.'}</p></div>
+   <ul className="sk-checks">{checks.map(([ok,l])=><li key={l} className={ok?'':'todo'}>{ok?<Icon name="check"/>:<i aria-hidden="true"/>}<span>{l}<span className="visually-hidden">{ok?', done':', to do'}</span></span></li>)}</ul></Card>
+  <h2>How you appear in search</h2>
+  <Card><div className="ep-preview-co">
+   <span className="ep-preview-logo" style={{backgroundImage:p.logo_url?`url(${p.logo_url})`:undefined}}>{p.logo_url?'':p.name.slice(0,2).toUpperCase()}</span>
+   <div><strong>{p.name}</strong>{p.verified_at&&<span className="ep-pill teal" style={{marginLeft:6}}>Verified</span>}<small>{[p.industry,p.headquarters,p.size_band&&`${p.size_band} employees`].filter(Boolean).join(' · ')||'Add your industry, size and headquarters'}</small></div></div>
+   <p style={{fontSize:13,margin:'10px 0 4px'}}>{p.pitch||<span className="ep-muted">Your “why work here” appears here.</span>}</p>
+   {p.benefits.length>0&&<div className="ep-chips" style={{margin:'8px 0 12px'}}>{p.benefits.slice(0,4).map(b=><span key={b}>{b}</span>)}{p.benefits.length>4&&<span>+{p.benefits.length-4}</span>}</div>}
+  </Card>
+ </aside>;
 }

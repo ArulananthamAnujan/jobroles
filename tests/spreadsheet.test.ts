@@ -41,3 +41,8 @@ test('reads the first worksheet of an Excel file, with shared strings and dates'
  assert.deepEqual(await readXlsx(buf),[['Job title','','Start date'],['Cook & chef','42','2026-12-01']]);
  await assert.rejects(()=>readXlsx(new ArrayBuffer(40)),/not an Excel/);
 });
+test('flags rows that repeat an open job or an earlier row',async()=>{
+ const {duplicates,jobKeys}=await import('../lib/spreadsheet.ts');
+ const open=new Set(jobKeys('Registered Nurse',['Frankston VIC']));
+ assert.deepEqual(duplicates([{title:'registered nurse!',locations:['frankston vic']},{title:'Cook',locations:['Perth']},{title:'COOK',locations:['Fremantle','perth']},{title:'Cook',locations:['Darwin']}],open),['open',null,'file',null]);
+});

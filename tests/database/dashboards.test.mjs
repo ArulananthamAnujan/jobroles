@@ -29,12 +29,20 @@ test('dashboards and bulk import',async t=>{
  });
  await t.test('bulk import saves good rows and explains bad ones',async()=>{
   await assert.rejects(()=>rows(manager,'select jp_bulk_import_jobs($1,$2)',[company,JSON.stringify([row()])]),/Owners and recruiters/);
-  const r=(await rows(owner,'select jp_bulk_import_jobs($1,$2,true) as r',[company,JSON.stringify([row(),row({description:'Too short'}),row({locations:[]}),row({title:'Cook',benefits:['Free meals'],externalApplyUrl:''})])]))[0].r;
+  const r=(await rows(owner,'select jp_bulk_import_jobs($1,$2,true) as r',[company,JSON.stringify([row(),row({title:'Porter',description:'Too short'}),row({locations:[]}),row({title:'Cook',benefits:['Free meals'],externalApplyUrl:''})])]))[0].r;
   assert.deepEqual([r.saved,r.failed],[2,2]);
   assert.deepEqual(r.results.map(x=>x.ok),[true,false,false,true]);assert.match(r.results[1].error,/description/);assert.match(r.results[2].error,/location/);
   assert.equal(r.results[0].state,'pending_review');
   assert.equal((await admin("select count(*)::int n from jobs where title in ('Enrolled Nurse','Cook')"))[0].n,2);
   assert.deepEqual((await admin("select benefits from jobs where title='Cook'"))[0].benefits,['Free meals']);
   await assert.rejects(()=>rows(owner,'select jp_bulk_import_jobs($1,$2)',[company,JSON.stringify(Array(201).fill(row()))]),/between 1 and 200/);
+ });
+ await t.test('importing the same jobs again skips them unless asked not to',async()=>{
+  const again=(await rows(owner,'select jp_bulk_import_jobs($1,$2) as r',[company,JSON.stringify([row({title:'enrolled nurse!',locations:['mornington vic']}),row({title:'Barista'}),row({title:'Barista'})])]))[0].r;
+  assert.deepEqual([again.saved,again.skipped,again.failed],[1,2,0]);
+  assert.deepEqual(again.results.map(x=>!!x.duplicate),[true,false,true]);
+  const forced=(await rows(owner,'select jp_bulk_import_jobs($1,$2,false,false) as r',[company,JSON.stringify([row()])]))[0].r;
+  assert.deepEqual([forced.saved,forced.skipped],[1,0]);
+  assert.equal((await admin("select count(*)::int n from jobs where title='Enrolled Nurse'"))[0].n,2);
  });
 });

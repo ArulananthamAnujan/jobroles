@@ -2,7 +2,7 @@
 import {useCallback,useEffect,useMemo,useState} from 'react';
 import {useSearchParams} from 'next/navigation';
 import {employerGet,employerPost,command,get,STAGES,stageLabel,ago,when} from './api';
-import {Button,Drawer,Empty,Notice,Pill,Tabs} from './ui';
+import {Avatar,Button,Drawer,Empty,Notice,Pill,Tabs} from './ui';
 import {Section,type PortalContext} from './portal';
 import Candidate from './candidate';
 type JobLite={id:string;title:string;state:string};
@@ -29,12 +29,12 @@ export default function Applicants({ctx}:{ctx:PortalContext}){
  async function move(ids:string[],to:string,message?:string){if(!ids.length)return;B(true);E('');N('');try{if(ids.length===1&&!message)await command('application.move',{id:ids[0],stage:to});else await employerPost({action:'bulk',ids,stage:to,message});N(`${ids.length} ${ids.length===1?'applicant':'applicants'} moved to ${stageLabel(to)}.`);SEL(new Set());V(v=>v+1);}catch(e){E((e as Error).message);}finally{B(false);}}
  const toggle=(id:string)=>{const s=new Set(selected);if(s.has(id))s.delete(id);else s.add(id);SEL(s);};
  const card=(a:Applicant)=><div key={a.application_id} className="ep-cand" draggable={canMove&&a.state==='submitted'} aria-pressed={open===a.application_id} onDragStart={()=>DR(a.application_id)} onDragEnd={()=>{DR('');OV('');}} onClick={()=>O(a.application_id)} onKeyDown={e=>{if(e.key==='Enter')O(a.application_id);}} tabIndex={0} role="button">
-  <div className="ep-cand-row">{canMove&&<input type="checkbox" checked={selected.has(a.application_id)} onClick={e=>e.stopPropagation()} onChange={()=>toggle(a.application_id)} aria-label={`Select ${a.full_name}`}/>}<strong>{a.full_name||'Applicant'}</strong>{a.unread>0&&<Pill tone="blue">{a.unread} new</Pill>}</div>
+  <div className="ep-cand-row">{canMove&&<input type="checkbox" checked={selected.has(a.application_id)} onClick={e=>e.stopPropagation()} onChange={()=>toggle(a.application_id)} aria-label={`Select ${a.full_name}`}/>}<Avatar name={a.full_name||'Applicant'} size={24}/><strong>{a.full_name||'Applicant'}</strong>{a.unread>0&&<Pill tone="blue">{a.unread} new</Pill>}</div>
   <span className="ep-muted">{a.headline||'No headline'}{a.location?` · ${a.location}`:''}</span>
-  <div className="ep-cand-row">{questions.some(x=>x.must_have)&&(a.meets_requirements?<Pill tone="teal">Meets deal-breakers</Pill>:<Pill tone="amber">Missing a deal-breaker</Pill>)}{a.state==='withdrawn'&&<Pill tone="red">Withdrawn</Pill>}{a.reinstatement_requested&&<Pill tone="amber">Asks to reinstate</Pill>}<span className="ep-muted">{ago(a.submitted_at)}</span></div>
+  <div className="ep-cand-row">{questions.some(x=>x.must_have)&&(a.meets_requirements?<Pill tone="teal">Meets deal-breakers</Pill>:<Pill tone="amber">Missing a deal-breaker</Pill>)}{a.state==='withdrawn'&&<Pill tone="red">Withdrawn</Pill>}{a.reinstatement_requested&&<Pill tone="amber">Asks to reinstate</Pill>}<span className={a.state==='submitted'&&a.stage==='new'&&now-new Date(a.submitted_at).getTime()>3*864e5?'ep-late':'ep-muted'}>{ago(a.submitted_at)}</span></div>
  </div>;
  const current=jobs?.find(j=>j.id===job);
- return <Section title="Applicants" sub={current?`${current.title} · ${list?.length??0} applicants`:'Choose a job to see its applicants'} actions={job&&<a className="ep-btn secondary md" href={`/api/employer/export?job=${job}`}>Export CSV</a>}>
+ return <Section title="Applicants" sub={current?`${current.title} · ${list?.length??0} ${list?.length===1?'applicant':'applicants'}`:'Choose a job to see its applicants'} actions={job&&<a className="ep-btn secondary md" href={`/api/employer/export?job=${job}`}>Export CSV</a>}>
   <Notice error={error} message={note}/>
   {jobs&&!jobs.length?<div className="ep-card"><Empty title="No jobs yet" action={<Button onClick={()=>ctx.go('jobs',{new:'1'})}>Post a job</Button>}>Applicants appear here once your first job is live.</Empty></div>:<>
   <div className="ep-toolbar">
@@ -48,7 +48,7 @@ export default function Applicants({ctx}:{ctx:PortalContext}){
   {mode==='list'&&<Tabs value={stage} onChange={ST} items={[['all','All',filtered.length],...STAGES.map(([k,l])=>[k,l,counts[k]] as [string,string,number]),['withdrawn','Withdrawn',filtered.filter(a=>a.state==='withdrawn').length]]}/>}
   {!list?<p role="status">Loading applicants…</p>:!list.length?<div className="ep-card"><Empty title="No applicants yet">Share the job or sponsor it to reach more people.</Empty></div>:mode==='board'?
    <div className="ep-board">{STAGES.map(([k,l])=><section key={k} className={`ep-col ${over===k?'over':''}`} aria-label={l} onDragOver={e=>{if(drag){e.preventDefault();OV(k);}}} onDragLeave={()=>OV('')} onDrop={e=>{e.preventDefault();OV('');const ids=selected.has(drag)?[...selected]:[drag];if(drag)void move(ids,k);}}>
-    <h3>{l}<span className="ep-count">{counts[k]}</span></h3>{filtered.filter(a=>a.state==='submitted'&&a.stage===k).map(card)}</section>)}</div>
+    <h3>{l}<span className="ep-count">{counts[k]}</span></h3>{counts[k]?filtered.filter(a=>a.state==='submitted'&&a.stage===k).map(card):<p className="ep-col-empty">{canMove?'Drag applicants here':'No one at this stage'}</p>}</section>)}</div>
    :<div className="ep-table-wrap"><table className="ep-table"><thead><tr>{canMove&&<th><input type="checkbox" aria-label="Select all" checked={visible.length>0&&visible.every(a=>selected.has(a.application_id))} onChange={e=>SEL(e.target.checked?new Set(visible.map(a=>a.application_id)):new Set())}/></th>}<th>Applicant</th><th>Stage</th><th>Deal-breakers</th><th>Applied</th><th/></tr></thead><tbody>
     {visible.map(a=><tr key={a.application_id}>{canMove&&<td><input type="checkbox" checked={selected.has(a.application_id)} onChange={()=>toggle(a.application_id)} aria-label={`Select ${a.full_name}`}/></td>}<td><div className="ep-row-title">{a.full_name}{a.unread>0&&<> <Pill tone="blue">{a.unread} new</Pill></>}</div><div className="ep-row-sub">{a.headline}{a.location?` · ${a.location}`:''}</div></td><td>{a.state==='withdrawn'?<Pill tone="red">Withdrawn</Pill>:<Pill>{stageLabel(a.stage)}</Pill>}</td><td>{questions.some(x=>x.must_have)?(a.meets_requirements?<Pill tone="teal">Meets all</Pill>:<Pill tone="amber">Missing</Pill>):'–'}</td><td>{when(a.submitted_at)}</td><td><div className="ep-row-actions"><Button size="sm" tone="secondary" onClick={()=>O(a.application_id)}>Open</Button></div></td></tr>)}
    </tbody></table></div>}

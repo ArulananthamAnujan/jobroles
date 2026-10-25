@@ -2,7 +2,7 @@
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
 import {employerGet,when} from './api';
-import {Button,Card,Empty,Notice,Stat} from './ui';
+import {Button,Card,Empty,Icon,Notice,Stat} from './ui';
 import {Section,type PortalContext} from './portal';
 import {Bars} from './bars';
 type Dash={live:number;drafts:number;pending:number;paused:number;newToday:number;newWeek:number;unreviewed:number;interviewsWeek:number;unread:number;views7:number;
@@ -32,7 +32,7 @@ export default function Dashboard({ctx}:{ctx:PortalContext}){
    {canPost&&<Button tone={oldest?'secondary':'primary'} onClick={()=>ctx.go('jobs',{new:'1'})}>Post a job</Button>}
    {oldest&&<Link className="ep-btn primary md" href={`/employer?view=applicants&application=${oldest.applicationId}`}>Review oldest applicant</Link>}</>}>
   {!ctx.company.verified_at&&<p className="ep-notice warn">We’re checking your ABN. You can prepare and import jobs now; they go live once your company is verified and each job is approved.</p>}
-  {first?<FirstRun canPost={canPost} go={ctx.go}/>:<div className="ep-over">
+  {first?<FirstRun canPost={canPost} go={ctx.go} ctx={ctx}/>:<div className="ep-over">
    <div className="ep-over-main">
     <div className="ep-stats" style={{marginBottom:0}}>
      <Stat label="Waiting for you" value={o.waitingTotal} hint={o.waitingOver3?`${o.waitingOver3} over 3 days`:'None over 3 days'} warn={o.waitingOver3>0} href="/employer?view=applicants&stage=new"/>
@@ -62,12 +62,40 @@ export default function Dashboard({ctx}:{ctx:PortalContext}){
  </Section>;
 }
 
-function FirstRun({canPost,go}:{canPost:boolean;go:PortalContext['go']}){
+function FirstRun({canPost,go,ctx}:{canPost:boolean;go:PortalContext['go'];ctx:PortalContext}){
+ const [setup,SU]=useState<{page:number;team:number;invites:number}|null>(null);
+ useEffect(()=>{const c=new AbortController(),q={company:ctx.company.id};
+  Promise.all([employerGet<{company:{logo_url:string|null;pitch:string|null;about:string|null;benefits:string[];photos:string[]}}>('company',q,c.signal),employerGet<{members:unknown[];invitations:unknown[]|null}>('team',q,c.signal).catch(()=>({members:[],invitations:[]}))])
+   .then(([co,t])=>{const x=co.company;SU({page:[x.logo_url,(x.pitch||'').length>=60,(x.about||'').length>=200,x.benefits.length>=3,x.photos.length>=3].filter(Boolean).length,team:t.members.length,invites:(t.invitations||[]).length});}).catch(()=>{});return()=>c.abort();},[ctx.company.id]);
  const ways:[string,string,string,()=>void][]=[
   ['Post a job','Write one listing with our assistant. It goes live after a quick check.','Post a job',()=>go('jobs',{new:'1'})],
   ['Import a spreadsheet','Upload a CSV or Excel file of up to 200 jobs, match the columns and check every row before it saves.','Import jobs',()=>go('import')],
   ['Connect your ATS','Keep roles in sync with your applicant tracking system or careers page feed.','Connect a feed',()=>go('import',{tab:'feeds'})]];
- return <div className="ep-grid three">{ways.map(([t,s,b,f],i)=><Card key={t} title={t}><p className="ep-muted" style={{minHeight:60}}>{s}</p>{canPost&&<div style={{marginTop:12}}><Button tone={i===0?'primary':'secondary'} onClick={f}>{b}</Button></div>}</Card>)}</div>;
+ // The steps between registering and the first applicant, each with its state and a way to do it.
+ const steps:[boolean,string,string,string|null,string][]=[
+  [true,'Register your company','Done','',''],
+  [Boolean(ctx.company.verified_at),'ABN check',ctx.company.verified_at?'Verified':'We’re checking it, usually within one business day. You don’t need to do anything.',null,''],
+  [false,'Add your first jobs','Post one, import a spreadsheet, or connect your ATS.','/employer?view=import','Add jobs'],
+  [(setup?.page??0)>=4,'Complete your company page',setup?`${setup.page} of 5 done: logo, why work here, about, benefits and photos.`:'Logo, why work here, about, benefits and photos.','/employer?view=company','Edit page'],
+  [(setup?.team??1)>1||(setup?.invites??0)>0,'Invite your team','Recruiters and hiring managers, each with the right access.','/employer?view=team','Invite'],
+  [false,'Choose your notifications','New applicants, messages and a daily summary, by email.','/employer?view=settings','Settings']];
+ const done=steps.filter(s=>s[0]).length;
+ return <div className="ep-over">
+  <div className="ep-over-main">
+   <div className="ep-grid three">{ways.map(([t,s,b,f],i)=><Card key={t} title={t}><p className="ep-muted" style={{minHeight:60}}>{s}</p>{canPost&&<div style={{marginTop:12}}><Button tone={i===0?'primary':'secondary'} onClick={f}>{b}</Button></div>}</Card>)}</div>
+   <Card title="What job seekers see next to your jobs" action={<Link className="ep-btn ghost sm" href={`/companies/${ctx.company.id}`}>Your public page</Link>}>
+    <ul className="ep-list">
+     <li><div className="ep-grow"><strong>Pay on every listing</strong><small>Every job shows its real pay range. Listings without pay can’t be posted.</small></div></li>
+     <li><div className="ep-grow"><strong>Verified employer badge</strong><small>Shown once your ABN check is done.</small></div></li>
+     <li><div className="ep-grow"><strong>Your response record</strong><small>How many applicants hear back from you, and how quickly. Shown after 5 applications.</small></div></li>
+    </ul></Card>
+  </div>
+  <aside className="ep-rail" aria-label="Get set up">
+   <h2>Get set up<span className="ep-muted" style={{fontSize:13,fontWeight:500}}>{done} of {steps.length}</span></h2>
+   <Card><div className="ep-record" style={{paddingBottom:4}}><div className="ep-record-bar" aria-hidden="true"><i style={{width:`${done/steps.length*100}%`}}/></div></div>
+    <ul className="sk-steps">{steps.map(([ok,t,sub,href,label])=><li key={t} className={ok?'ok':''}>{ok?<Icon name="check"/>:<i aria-hidden="true"/>}<div className="ep-grow"><strong>{t}<span className="visually-hidden">{ok?', done':', to do'}</span></strong><small>{sub}</small></div>{!ok&&href&&<Link className="ep-btn secondary sm" href={href}>{label}</Link>}</li>)}</ul></Card>
+  </aside>
+ </div>;
 }
 
 // One strip per live job, scaled to the busiest job so the strips compare; each stage links to its applicants.

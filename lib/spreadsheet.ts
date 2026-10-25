@@ -91,3 +91,11 @@ export function problems(j:JobRow){
 export const TEMPLATE_HEADERS=['Job title','Description','Location','Job type','Work setting','Pay from','Pay to','Pay per','Visa sponsorship','Benefits','Start date','Apply link','Screening question'];
 export const TEMPLATE_EXAMPLE=['Registered Nurse, Emergency','Join our emergency department in Frankston. You will triage and care for patients across all acuity levels with a supportive team, clear rosters and paid professional development.','Frankston VIC 3199','Full-time','On-site','92000','108000','year','No','Salary packaging; Paid parental leave','01/12/2026','','Do you hold current AHPRA registration?'];
 export function templateCsv(){const q=(s:string)=>/[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s;return [TEMPLATE_HEADERS,TEMPLATE_EXAMPLE].map(r=>r.map(q).join(',')).join('\r\n')+'\r\n';}
+// Matching for duplicates: the same title and a shared location, ignoring case and punctuation (as the server does).
+export const matchText=(s:string)=>s.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+export const jobKeys=(title:string,locations:string[])=>locations.map(l=>`${matchText(title)}|${matchText(l)}`);
+// For each row, whether it repeats a job already open ('open') or an earlier row in the same file ('file').
+export function duplicates(rows:{title:string;locations:string[]}[],open:Set<string>):(null|'open'|'file')[]{
+ const seen=new Set<string>();
+ return rows.map(r=>{const keys=jobKeys(r.title,r.locations);const hit=keys.some(k=>open.has(k))?'open':keys.some(k=>seen.has(k))?'file':null;keys.forEach(k=>seen.add(k));return hit;});
+}

@@ -148,7 +148,7 @@ a.ep-stat:hover{background:var(--wash)}
 .ep-bulk{position:sticky;bottom:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--ink);color:#fff;border-radius:10px;padding:10px 14px;margin-top:12px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
 .ep-bulk select{width:auto;min-height:32px;color:var(--ink)}
 
-.ep-board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(230px,1fr);gap:12px;overflow-x:auto;padding-bottom:8px;align-items:start}
+.ep-board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(210px,1fr);gap:12px;overflow-x:auto;padding-bottom:8px;align-items:start}
 .ep-col{background:var(--wash);border-radius:10px;padding:10px;min-height:240px;transition:background .15s}
 .ep-col.over{background:var(--mint)}
 .ep-col h3{font-size:13px;font-weight:600;display:flex;justify-content:space-between;align-items:center;margin:2px 4px 10px}
@@ -357,3 +357,55 @@ a.ep-stat:hover{background:var(--wash)}
 .account-embedded .notice{background:var(--wash);border-radius:8px;padding:12px 14px;margin:0}
 .account-embedded .panel h2{font-size:16px}
 .ep-steps li b .ep-icon{width:12px;height:12px}
+.ep-edit-row td{background:var(--wash)}.ep-edit-row:hover{background:none}.ep-import-table tbody .ep-edit-row:hover{background:none}
+
+/* Avatars and the two-pane inbox */
+.ep-av{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#e4ebea;color:#2c3a3c;font-weight:600;flex-shrink:0;letter-spacing:.02em}
+.ep-inbox{display:grid;grid-template-columns:360px minmax(0,1fr);border:1px solid var(--line);border-radius:10px;min-height:560px;height:calc(100vh - 250px);overflow:hidden}
+.ep-inbox-list{border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.ep-inbox-tools{padding:12px 12px 0;display:grid;gap:8px;border-bottom:1px solid var(--line)}
+.ep-inbox-tools .ep-tabs{margin-bottom:0;border-bottom:0}
+.ep-inbox-list ul{list-style:none;margin:0;padding:0;overflow:auto;flex:1}
+.ep-inbox-list li button{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--rule);padding:12px;cursor:pointer;font:inherit;color:inherit}
+.ep-inbox-list li button:hover{background:var(--wash)}
+.ep-inbox-list li button[aria-current=true]{background:var(--frame);box-shadow:inset 2px 0 0 var(--ink)}
+.ep-inbox-top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.ep-inbox-top strong{font-weight:500}
+.ep-inbox-list .unread .ep-inbox-top strong{font-weight:700}
+.ep-inbox-top small,.ep-inbox-job{font-size:12px;color:var(--soft)}
+.ep-inbox-job{display:block}
+.ep-inbox-last{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:13px;color:var(--soft);margin-top:2px}
+.ep-inbox-list .unread .ep-inbox-last{color:var(--ink)}
+.ep-inbox-dot{min-width:20px;height:20px;border-radius:10px;background:var(--teal);color:#fff;font-size:11px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;padding:0 6px;margin-top:2px}
+.ep-inbox-pane{overflow:auto;padding:16px 20px;display:grid;gap:18px;align-content:start}
+@media(max-width:1000px){.ep-inbox{grid-template-columns:1fr;height:auto;min-height:0}.ep-inbox-list{border-right:0}}
+.ep-late{color:var(--amber);font-weight:600}.ep-cand-row .ep-late{margin-left:auto}.ep-cand-row .ep-muted:last-child{margin-left:auto}.ep-col-empty{color:var(--soft);font-size:12px;text-align:center;padding:24px 8px;border:1px dashed var(--control);border-radius:8px}
+.ep-preview-co{display:flex;gap:10px;align-items:center;padding-top:12px}
+.ep-preview-co small{display:block;color:var(--soft);font-size:12px}
+.ep-preview-co strong{font-weight:600}
+.ep-preview-logo{width:40px;height:40px;border-radius:8px;border:1px solid var(--line);background:#fff center/contain no-repeat;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--soft);flex-shrink:0}
+.sk-checks li span{flex:1}
+/* Older tables shown inside the portals */
+.ep table{table-layout:auto}
+.ep .table-card{border-radius:10px;padding:0;overflow-x:auto}
+.ep .table-card th,.ep th{background:none;text-transform:none;font-size:13px;font-weight:500;color:var(--soft);white-space:nowrap;width:auto;border-bottom:1px solid var(--line)}
+.ep .table-card td{padding:12px 16px;border-bottom:1px solid var(--rule);width:auto}
+.ep .table-card tr:last-child td{border-bottom:0}
+.ep .table-card th:first-child,.ep .table-card td:first-child{width:auto}
+.ep-main>:is(.ep-card,.ep-table-wrap,.ep-stats,.ep-grid)+:is(.ep-card,.ep-table-wrap,.ep-grid){margin-top:16px}
+/* Older sections repeat the screen's own title and intro; the title row above already says it. */
+.ep-main>section>h2.section-title:first-child,.ep-main>section>h2.section-title:first-child+p{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.ep-main>section>.panel:first-of-type{margin-top:0}
+.ep .panel .jp-btn,.ep form .jp-btn{justify-self:start;align-self:end;width:auto}
+.account-embedded>div>.panel:only-child,.account-embedded .application-preferences{max-width:800px}
+.account-embedded>div>section>h2.section-title:first-child{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.ep-inbox-pane>.ep-sec-messages{order:-1;border-bottom:1px solid var(--line);padding-bottom:16px}.ep-inbox-pane .ep-thread{max-height:46vh}
+.sk-steps{list-style:none;margin:0;padding:0 0 4px}
+.sk-steps li{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--rule)}
+.sk-steps li:first-child{border-top:0}
+.sk-steps li>i{width:16px;height:16px;border:1.5px solid var(--control);border-radius:50%;flex-shrink:0;margin-top:2px}
+.sk-steps li>.ep-icon{width:16px;height:16px;color:var(--teal);margin-top:2px}
+.sk-steps strong{display:block;font-weight:600;font-size:14px}
+.sk-steps li.ok strong{color:var(--soft);font-weight:500}
+.sk-steps small{display:block;color:var(--soft);font-size:13px}
+.sk-steps .ep-btn{flex-shrink:0}
