@@ -57,7 +57,8 @@ Set their secrets with `supabase secrets set NAME=value`:
 | Feature | Secrets |
 | --- | --- |
 | Resume malware scanning | `RESUME_SCAN_WORKER_SECRET`, `RESUME_SCANNER_URL`, `RESUME_SCANNER_TOKEN`, then `RESUME_SCAN_REQUIRED=true` once scanning works |
-| Job alerts | `JOB_ALERT_WORKER_SECRET`, `JOB_ALERTS_ENABLED=true`, `RESEND_API_KEY`, `NOTIFICATION_FROM`, `APP_ORIGIN` |
+| Hiring emails (new applicant, messages, interview and stage updates) | `NOTIFICATION_WORKER_SECRET`, `NOTIFICATION_EMAIL_ENABLED=true`, `RESEND_API_KEY`, `NOTIFICATION_FROM`, `APP_ORIGIN` |
+| Job alerts and employer daily summaries | `JOB_ALERT_WORKER_SECRET`, `JOB_ALERTS_ENABLED=true`, `RESEND_API_KEY`, `NOTIFICATION_FROM`, `APP_ORIGIN` |
 | Feed imports | `JOB_FEED_WORKER_SECRET` |
 | Sponsored listings | `STRIPE_SECRET_KEY`, `STRIPE_PRICE_SPONSOR`, `STRIPE_WEBHOOK_SECRET`, `SPONSOR_DAYS` (default 30) |
 | Pay-per-click credit | Same Stripe secrets; optional `STRIPE_AUTOMATIC_TAX=true` if Stripe Tax is set up |
@@ -69,18 +70,21 @@ A small ClamAV container on Cloud Run or Fly.io is enough.
 
 ## 3. Schedules
 
-Call the workers on a schedule, using `pg_cron` with `pg_net`, a GitHub Actions cron or any uptime service. Each
-call is a POST with its secret header:
+Run [schedules.sql](schedules.sql) in the Supabase SQL editor after filling in its values. It uses `pg_cron` and
+`pg_net` to call each worker with the legacy anon key as a bearer token and its secret header:
 
-| Worker | Header | Suggested interval |
+| Worker | Header | Interval |
 | --- | --- | --- |
-| `resume-scan` | `x-resume-scan-secret` | every 5 minutes |
-| `job-alerts` | `x-job-alert-secret` | every 30 minutes |
+| `notification-mail` | `x-notification-worker-secret` | every minute |
+| `job-alerts` | `x-job-alert-secret` | every 15 minutes |
 | `job-feed-import` | `x-job-feed-secret` | every 30 minutes |
+| `resume-scan` | `x-resume-scan-secret` | every 5 minutes, once a scanner is set up |
 
 ## 4. Accounts to create
 
-- **Resend**: verify the sending domain (SPF, DKIM, DMARC) and send yourself a test alert before turning alerts on.
+- **Email (Resend and Supabase Auth)**: follow [EMAIL-SETUP.md](EMAIL-SETUP.md). It covers the sending domain, the
+  Supabase SMTP settings that confirmation and password-reset emails need, the function secrets, the schedules and a
+  full delivery check.
 - **Stripe**: create a product such as "Sponsored listing, 30 days" with a one-time **AUD price that includes GST**,
   and turn on tax invoices. Add a webhook to `https://<project>.supabase.co/functions/v1/billing/webhook` for
   `checkout.session.completed` and `checkout.session.async_payment_succeeded`.

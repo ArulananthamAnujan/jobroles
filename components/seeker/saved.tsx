@@ -3,7 +3,7 @@ import {useEffect,useState} from 'react';
 import Link from 'next/link';
 import {Section} from '../employer/shell';
 import {Button,Card,Empty,Notice,Pill} from '../employer/ui';
-import {get,post,when} from '../employer/api';
+import {get,post,when,employerGet,employerPost} from '../employer/api';
 type Saved={job_id:string;created_at:string;jobs:null|{id:string;title:string;state:string;expires_at:string;companies:null|{name:string}}};
 type Launch={searches:{id:string;filters:Record<string,string>;frequency?:string}[];reports:{id:string;job_id:string;reason:string;state:string;resolution:string|null}[]};
 const FILTER_NAMES:Record<string,string>={on_site:'On-site',hybrid:'Hybrid',remote:'Remote'};
@@ -35,8 +35,25 @@ export default function SavedView(){
        <option value="off">No emails</option><option value="daily">Daily</option><option value="instant">Instantly</option></select>
       <Button size="sm" tone="ghost" disabled={busy} aria-label={`Delete ${s.filters.q||'all jobs'} search`} onClick={()=>act(()=>post('/api/launch',{action:'search.delete',payload:{id:s.id}}),'Search deleted.')}>Delete</Button></li>;})}</ul>
      :<Empty title="No job alerts">Search for jobs and choose “Save search” to get new roles by email.</Empty>}</Card>
+    <h2>Emails about your applications</h2>
+    <Card><AppEmails/></Card>
     {launch&&launch.reports.length>0&&<><h2>Jobs you reported</h2><Card><ul className="ep-list">{launch.reports.map(r=><li key={r.id}><div className="ep-grow"><strong><Link href={`/jobs/${r.job_id}`}>Reported job</Link></strong><small>{r.resolution||r.reason}</small></div><Pill tone={r.state==='open'?'amber':'teal'}>{r.state==='open'?'Under review':'Reviewed'}</Pill></li>)}</ul></Card></>}
    </aside>
   </div>
  </Section>;
+}
+
+type Prefs={new_applicant:boolean;messages:boolean;stage_changes:boolean;daily_digest:boolean};
+// Which application emails this person gets. Saved as soon as a box changes; the same settings employers use.
+function AppEmails(){
+ const [p,P]=useState<Prefs|null>(null),[state,S]=useState('');
+ useEffect(()=>{const c=new AbortController();employerGet<{prefs:Prefs}>('prefs',{},c.signal).then(d=>P(d.prefs)).catch(()=>{});return()=>c.abort();},[]);
+ if(!p)return <p className="ep-muted" style={{padding:'12px 0'}}>Loading…</p>;
+ async function set(next:Prefs){P(next);S('Saving…');try{await employerPost({action:'prefs',newApplicant:next.new_applicant,messages:next.messages,stageChanges:next.stage_changes,dailyDigest:next.daily_digest});S('Saved');}catch(e){S((e as Error).message);}}
+ return <div style={{display:'grid',gap:10,padding:'12px 0'}}>
+  <label className="ep-check"><input type="checkbox" checked={p.messages} onChange={e=>set({...p,messages:e.target.checked})}/>When an employer sends me a message</label>
+  <label className="ep-check"><input type="checkbox" checked={p.stage_changes} onChange={e=>set({...p,stage_changes:e.target.checked})}/>When my application moves forward, or an interview is offered or changed</label>
+  {!p.stage_changes&&<p className="ep-notice warn" style={{margin:0,fontSize:13}}>You won’t be emailed about interview times. Check your applications here so you don’t miss one.</p>}
+  <small className="ep-muted" role="status">{state||'Emails never include the message itself or interview details; you sign in to read them.'}</small>
+ </div>;
 }
