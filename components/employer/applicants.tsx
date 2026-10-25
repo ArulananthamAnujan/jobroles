@@ -13,7 +13,7 @@ const AGE:Record<string,number>={'1':1,'7':7,'30':30};
 export default function Applicants({ctx}:{ctx:PortalContext}){
  const params=useSearchParams();
  const [jobs,J]=useState<JobLite[]|null>(null),[job,SJ]=useState(params.get('job')||''),[list,L]=useState<Applicant[]|null>(null),[questions,QS]=useState<Question[]>([]);
- const [stage,ST]=useState(params.get('stage')||'all'),[mode,M]=useState<'board'|'list'>('board'),[onlyMeets,OM]=useState(false),[q,Q]=useState(''),[age,AG]=useState('');
+ const [stage,ST]=useState(params.get('stage')||'all'),[mode,M]=useState<'board'|'list'>('board'),[onlyMeets,OM]=useState(false),[q,Q]=useState(params.get('q')||''),[age,AG]=useState('');
  const [selected,SEL]=useState<Set<string>>(new Set()),[open,O]=useState(params.get('application')||''),[drag,DR]=useState(''),[over,OV]=useState('');
  const [templates,TP]=useState<Template[]>([]),[bulkStage,BS]=useState('rejected'),[bulkTemplate,BT]=useState(''),[error,E]=useState(''),[note,N]=useState(''),[version,V]=useState(0),[busy,B]=useState(false),[now,NW]=useState(0);
  const canMove=ctx.role==='owner'||ctx.role==='recruiter';

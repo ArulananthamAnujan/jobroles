@@ -33,6 +33,7 @@ async function read(client:Client,userId:string,resource:string,p:URLSearchParam
   case 'templates':{const {data,error}=await client.from('message_templates').select('id,name,body,created_at').eq('company_id',need(company)).order('name');if(error)throw new ApiError(503,'Templates unavailable.');return {templates:data};}
   case 'billing':{const {data,error}=await client.from('job_sponsorships').select('id,job_id,amount_total,currency,starts_at,ends_at,created_at,invoice_url,jobs(title)').eq('company_id',need(company)).order('created_at',{ascending:false}).limit(200);if(error)throw new ApiError(503,'Billing unavailable.');return {orders:data};}
   case 'prefs':{const {data}=await client.from('notification_prefs').select('new_applicant,messages,stage_changes,daily_digest').eq('user_id',userId).maybeSingle();return {prefs:data||{new_applicant:true,messages:true,stage_changes:true,daily_digest:false}};}
+  case 'overview':{const {data,error}=await client.rpc('jp_hiring_overview',{company:need(company)});if(error)denied(error,'Overview unavailable.');return data;}
   case 'events':{const {data,error}=await client.rpc('jp_company_events',{company:need(company)});if(error)denied(error,'Events unavailable.');return {events:data};}
   case 'candidate':{const {data,error}=await client.rpc('jp_candidate_extras',{target:need(p.get('application')||'')});if(error)denied(error,'Applicant unavailable.');return {extras:data};}
   case 'assessments':{const {data}=await client.from('assessments').select('code,title').order('sort');return {assessments:data||[]};}
@@ -56,6 +57,7 @@ const write=z.discriminatedUnion('action',[
  z.object({action:z.literal('prefs'),newApplicant:z.boolean(),messages:z.boolean(),stageChanges:z.boolean(),dailyDigest:z.boolean()}),
  z.object({action:z.literal('invite.revoke'),id}),
  z.object({action:z.literal('read'),applicationId:id}),
+ z.object({action:z.literal('import'),companyId:id,submit:z.boolean(),rows:z.array(z.object({title:z.string().max(160),description:z.string().max(20000),locations:z.array(z.string().max(160)).max(10),type:z.string().max(40),arrangement:z.string().max(40),min:z.number().nullable(),max:z.number().nullable(),period:z.string().max(10),sponsorship:z.boolean().optional(),benefits:z.array(z.string().max(80)).max(20).optional(),startDate:z.string().max(10).optional(),externalApplyUrl:z.string().max(500).optional(),screening:z.string().max(300).optional()})).min(1).max(200)}),
  z.object({action:z.literal('event.save'),event:z.object({id:id.optional(),companyId:id,title:z.string().trim().min(5).max(140),description:z.string().trim().min(20).max(5000),startsAt:z.string().datetime({offset:true}),endsAt:z.string().datetime({offset:true}),timeZone:z.string().max(60),mode:z.enum(['online','in_person']),location:z.string().max(200).optional(),joinUrl:z.string().max(500).optional(),capacity:z.number().int().min(1).max(10000).nullable().optional()})}),
  z.object({action:z.literal('event.cancel'),id}),
  z.object({action:z.literal('job.assessment'),jobId:id,code:z.string().regex(/^[a-z-]{3,40}$/).nullable()}),
@@ -74,6 +76,7 @@ export async function POST(request:Request){try{
   :d.action==='propose'?await client.rpc('jp_propose_interview',{target:d.applicationId,options:d.slots,zone:d.timeZone,details:d.format})
   :d.action==='prefs'?await client.rpc('jp_set_notification_prefs',{payload:{newApplicant:d.newApplicant,messages:d.messages,stageChanges:d.stageChanges,dailyDigest:d.dailyDigest}})
   :d.action==='invite.revoke'?await client.rpc('jp_revoke_invitation',{target:d.id})
+  :d.action==='import'?await client.rpc('jp_bulk_import_jobs',{company:d.companyId,rows:d.rows,submit:d.submit})
   :d.action==='event.save'?await client.rpc('jp_save_event',{payload:d.event})
   :d.action==='event.cancel'?await client.rpc('jp_cancel_event',{target:d.id})
   :d.action==='job.assessment'?await client.rpc('jp_set_job_assessment',{target:d.jobId,assessment:d.code})

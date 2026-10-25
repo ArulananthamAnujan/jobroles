@@ -5,7 +5,7 @@ that only the business owner can create. Work through the steps in order.
 
 ## 1. Database
 
-Apply the nineteen new migrations to the production Supabase project. Check the remote history first and never
+Apply the twenty new migrations to the production Supabase project. Check the remote history first and never
 run `supabase db reset` against production.
 
 ```
@@ -39,6 +39,7 @@ After this migration, check in Supabase Storage that the `company-media` bucket 
 | `20261026000001_launch_fixes` | Saved searches become daily job alerts |
 | `20261026000002_operations` | Automatic content checks, optional auto-publishing, reports on published posts, invalid-click filtering and refunds, support tickets, review prompts |
 | `20261026000003_bulk_message_names` | Bulk messages fill in each applicant's first name |
+| `20261027000001_dashboards_import` | Data for the redesigned employer, job seeker and admin dashboards, and bulk import of up to 200 jobs from a spreadsheet |
 
 ## 2. Edge Functions
 

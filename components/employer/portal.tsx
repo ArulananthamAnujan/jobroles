@@ -3,7 +3,6 @@ import {useCallback,useEffect,useMemo,useState,type ReactNode} from 'react';
 import Link from 'next/link';
 import {usePathname,useRouter,useSearchParams} from 'next/navigation';
 import AccountWorkspace from '../account-workspace';
-import {Brand} from '../market-ui';
 import {get,command,ago} from './api';
 import {Button,Card,Field,Icon,Notice} from './ui';
 import Dashboard from './dashboard';
@@ -22,14 +21,15 @@ import JobStats from '../job-stats';
 import JobFeeds from '../job-feeds';
 import ReviewDesk from '../review-desk';
 import ReviewInvite from './review-invite';
-import './portal.css';
+import {AppShell,AccountMenu,Section} from './shell';
+import BulkImport from './bulk-import';
 export type Company={id:string;name:string;verified_at:string|null};
 export type Membership={company_id:string;role:string};
 export type PortalContext={company:Company;role:string;companies:Company[];memberships:Membership[];isAdmin:boolean;userId:string;go:(view:string,params?:Record<string,string>)=>void};
 type Account={configured:boolean;user:null|{id:string;email:string;confirmed:boolean}};
 type Data={memberships:Membership[];companies:Company[];isAdmin:boolean;jobs:{id:string;title:string;company_id:string;state:string}[]};
 const NAV:[string,string,string,string][]=[
- ['Hire','dashboard','Dashboard','home'],['Hire','jobs','Jobs','jobs'],['Hire','applicants','Applicants','people'],['Hire','messages','Messages','chat'],['Hire','interviews','Interviews','calendar'],['Hire','candidates','Find candidates','search'],['Hire','events','Hiring events','calendar'],
+ ['Hire','dashboard','Overview','home'],['Hire','jobs','Jobs','jobs'],['Hire','applicants','Applicants','people'],['Hire','messages','Messages','chat'],['Hire','interviews','Interviews','calendar'],['Hire','candidates','Find candidates','search'],['Hire','events','Hiring events','calendar'],
  ['Grow','advertising','Sponsored jobs','card'],['Grow','performance','Performance','chart'],['Grow','company','Company page','building'],['Grow','reviews','Reviews','star'],
  ['Manage','team','Team','team'],['Manage','billing','Billing','card'],['Manage','import','Import jobs','upload'],['Manage','settings','Settings','settings'],
 ];
@@ -39,8 +39,8 @@ function Bell(){
  const [open,O]=useState(false),[items,I]=useState<{id:string;applicationId:string;kind:string;text:string;at:string}[]>([]),[seen,S]=useState('');
  useEffect(()=>{let live=true;get<{activity:typeof items}>('/api/activity').then(d=>{if(live)I(d.activity);}).catch(()=>{});Promise.resolve().then(()=>{try{if(live)S(localStorage.getItem('ep.seen')||'');}catch{}});return()=>{live=false;};},[]);
  const unread=items.filter(i=>i.at>seen).length;
- return <><button className="ep-bell" aria-label={`Notifications${unread?`, ${unread} new`:''}`} aria-expanded={open} onClick={()=>{O(!open);if(!open&&items[0]){try{localStorage.setItem('ep.seen',items[0].at);}catch{}S(items[0].at);}}}><Icon name="bell"/>{unread>0&&<span className="ep-dot">{unread>9?'9+':unread}</span>}</button>
-  {open&&<div className="ep-bell-menu" role="dialog" aria-label="Notifications">{items.length?items.slice(0,20).map(i=><Link key={i.id} href={`/employer?view=applicants&application=${i.applicationId}`} onClick={()=>O(false)}><strong>{i.kind}</strong> {i.text}<small>{ago(i.at)}</small></Link>):<p className="ep-muted" style={{padding:12}}>No notifications yet.</p>}</div>}</>;
+ return <><button className="ep-iconbtn" aria-label={`Notifications${unread?`, ${unread} new`:''}`} aria-expanded={open} onClick={()=>{O(!open);if(!open&&items[0]){try{localStorage.setItem('ep.seen',items[0].at);}catch{}S(items[0].at);}}}><Icon name="bell"/>{unread>0&&<span className="ep-dot">{unread>9?'9+':unread}</span>}</button>
+  {open&&<div className="ep-pop" role="dialog" aria-label="Notifications"><div className="ep-pop-head">Notifications</div>{items.length?items.slice(0,20).map(i=><Link key={i.id} href={`/employer?view=applicants&application=${i.applicationId}`} onClick={()=>O(false)}><strong>{i.kind}</strong> {i.text}<small>{ago(i.at)}</small></Link>):<p className="ep-muted" style={{padding:12}}>No notifications yet.</p>}</div>}</>;
 }
 
 function Onboarding({onDone}:{onDone:()=>void}){
@@ -62,9 +62,10 @@ export default function EmployerPortal(){
  useEffect(()=>{let live=true;get<Account>('/api/account').then(async a=>{const d=a.user?.confirmed?await get<Data>('/api/data'):null;if(live){A(a);D(d);}}).catch(e=>{if(live)E((e as Error).message);});return()=>{live=false;};},[version]);
  const companies=useMemo(()=>(data?.companies||[]).filter(c=>data?.memberships.some(m=>m.company_id===c.id)),[data]);
  useEffect(()=>{if(!companies.length)return;const wanted=params.get('company');let saved='';try{saved=localStorage.getItem('ep.company')||'';}catch{}const pick=[wanted,saved].find(x=>x&&companies.some(c=>c.id===x))||companies[0].id;Promise.resolve().then(()=>C(pick));},[companies,params]);
+ const nav=NAV.map(([group,id,label,icon])=>({group,id,label,icon,href:`/employer?view=${id}`}));
  const go=useCallback((next:string,extra:Record<string,string>={})=>{const p=new URLSearchParams({view:next,...extra});router.push(`${path}?${p}`,{scroll:true});},[router,path]);
- if(error)return <div className="ep"><main className="ep-main"><Notice error={error}/></main></div>;
- if(!account)return <div className="ep"><main className="ep-main" style={{gridColumn:'1/-1'}}><p role="status">Loading your employer portal…</p></main></div>;
+ if(error)return <AppShell nav={[]} current="" crumb="Employer"><Notice error={error}/></AppShell>;
+ if(!account)return <AppShell nav={nav} current={view} crumb="Employer"><p role="status" className="ep-muted">Loading your employer portal…</p></AppShell>;
  if(!account.user?.confirmed||!data)return <AccountWorkspace portal="employer"/>;
  const company=companies.find(c=>c.id===companyId),membership=data.memberships.find(m=>m.company_id===companyId);
  const ctx:PortalContext|null=company&&membership?{company,role:membership.role,companies,memberships:data.memberships,isAdmin:data.isAdmin,userId:account.user.id,go}:null;
@@ -85,21 +86,20 @@ export default function EmployerPortal(){
   case 'reviews':body=<Section title="Reviews" sub="Hiring-experience reviews from people who applied. Owners can reply publicly."><ReviewInvite companyId={ctx.company.id}/><ReviewDesk companies={[ctx.company]} ownerOf={ctx.role==='owner'?[ctx.company.id]:[]}/></Section>;break;
   case 'team':body=<Team ctx={ctx}/>;break;
   case 'billing':body=<Billing ctx={ctx}/>;break;
-  case 'import':body=<Section title="Import jobs" sub="Connect your ATS or careers page and we keep your roles in sync."><JobFeeds companies={[ctx.company]} ownerOf={ctx.role==='owner'?[ctx.company.id]:[]} isAdmin={false}/></Section>;break;
+  case 'import':body=<BulkImport ctx={ctx} feeds={<JobFeeds companies={[ctx.company]} ownerOf={ctx.role==='owner'?[ctx.company.id]:[]} isAdmin={false}/>}/>;break;
   case 'settings':body=<Settings ctx={ctx}/>;break;
   default:body=<Dashboard ctx={ctx}/>;
  }
- return <div className="ep">
-  <header className="ep-top"><Brand/><span className="ep-tag">Employer</span>
-   {companies.length>1&&<label className="ep-switch"><span className="visually-hidden">Company</span><select value={companyId} onChange={e=>{C(e.target.value);try{localStorage.setItem('ep.company',e.target.value);}catch{}}}>{companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>}
-   {companies.length===1&&company&&<span className="ep-switch"><strong>{company.name}</strong>{!company.verified_at&&<span className="ep-pill amber">Verification pending</span>}</span>}
-   <div className="ep-top-end">{company&&<Link href={`/companies/${company.id}`}>View company page</Link>}{data.isAdmin&&<Link href="/admin">Admin</Link>}<Bell/><Link href="/job-seeker">Job seeker view</Link><button className="ep-btn ghost sm" onClick={async()=>{await fetch('/api/account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})});router.replace('/');router.refresh();}}>Sign out</button></div>
-  </header>
-  <nav className="ep-nav" aria-label="Employer sections">{['Hire','Grow','Manage'].map(group=><div key={group}><p>{group}</p><ul>{NAV.filter(n=>n[0]===group).map(([,id,label,icon])=><li key={id}><Link href={`/employer?view=${id}`} aria-current={view===id?'page':undefined}><Icon name={icon}/>{label}</Link></li>)}</ul></div>)}</nav>
-  <main className="ep-main" id="main">{body}</main>
- </div>;
+ const label=NAV.find(n=>n[1]===view)?.[2]||'Overview';
+ const pick=(id:string)=>{C(id);try{localStorage.setItem('ep.company',id);}catch{}};
+ return <AppShell nav={nav} current={view} crumb={<>{company?<>{company.name} <span aria-hidden="true">/</span> </>:null}<strong>{label}</strong></>}
+  search={companies.length?{placeholder:'Search applicants',onSubmit:q=>go('applicants',{q})}:undefined}
+  org={companies.length>0&&<div className="ep-org">{companies.length>1?<label><small>Company</small><select value={companyId} onChange={e=>pick(e.target.value)}>{companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>:company&&<><small>Employer</small><strong>{company.name}</strong></>}
+   {company&&!company.verified_at&&<span className="ep-pill amber" style={{width:'fit-content',marginTop:4}}>Verification pending</span>}</div>}
+  end={<><Link className="ep-iconbtn" href="/help" aria-label="Help"><Icon name="help"/></Link><Bell/><AccountMenu email={account.user.email} links={[...(company?[[`/companies/${company.id}`,'View company page'] as [string,string]]:[]),['/job-seeker','Job seeker view'],...(data.isAdmin?[['/admin','Admin console'] as [string,string]]:[]),['/employer?view=settings','Settings']]}/></>}
+  foot={<>{company&&<Link href={`/companies/${company.id}`}>View company page</Link>}<Link href="/job-seeker">Switch to job seeker</Link></>}>
+  {body}
+ </AppShell>;
 }
 
-export function Section({title,sub,actions,children}:{title:string;sub?:string;actions?:ReactNode;children:ReactNode}){
- return <><div className="ep-head"><div><h1>{title}</h1>{sub&&<p>{sub}</p>}</div>{actions&&<div className="ep-head-actions">{actions}</div>}</div>{children}</>;
-}
+export {Section};

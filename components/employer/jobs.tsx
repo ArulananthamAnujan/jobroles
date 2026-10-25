@@ -67,7 +67,7 @@ function Editor({ctx,job,copy,applicants,onClose,onSaved}:{ctx:PortalContext;job
 
 export default function Jobs({ctx}:{ctx:PortalContext}){
  const params=useSearchParams();
- const [jobs,J]=useState<Job[]|null>(null),[stats,S]=useState<Stat[]>([]),[tab,T]=useState('all'),[q,Q]=useState(''),[error,E]=useState(''),[note,N]=useState(''),[version,V]=useState(0);
+ const [jobs,J]=useState<Job[]|null>(null),[stats,S]=useState<Stat[]>([]),[tab,T]=useState(params.get('tab')||'all'),[q,Q]=useState(''),[error,E]=useState(''),[note,N]=useState(''),[version,V]=useState(0);
  const [editor,ED]=useState<null|{job:Job|null;copy:boolean}>(params.get('new')?{job:null,copy:false}:null);
  useEffect(()=>{const c=new AbortController();employerGet<{jobs:Job[];stats:Stat[]}>('jobs',{company:ctx.company.id},c.signal).then(d=>{J(d.jobs);S(d.stats);const edit=params.get('edit');if(edit){const j=d.jobs.find(x=>x.id===edit);if(j)ED({job:j,copy:status(j)==='expired'||j.state==='closed'});}}).catch(e=>{if(e.name!=='AbortError')E(e.message);});return()=>c.abort();},[ctx.company.id,version,params]);
  const canEdit=ctx.role==='owner'||ctx.role==='recruiter';
@@ -75,7 +75,7 @@ export default function Jobs({ctx}:{ctx:PortalContext}){
  const shown=(jobs||[]).filter(j=>(tab==='all'||status(j)===tab||(tab==='closed'&&status(j)==='expired'))&&j.title.toLowerCase().includes(q.toLowerCase()));
  const stat=(id:string)=>stats.find(s=>s.job_id===id);
  async function setState(j:Job,state:string,msg:string){E('');N('');try{await command('job.state',{id:j.id,state});N(msg);V(v=>v+1);}catch(e){E((e as Error).message);}}
- return <Section title="Jobs" sub="Every listing shows its pay range. New and edited jobs are checked before they go live." actions={canEdit&&<Button onClick={()=>ED({job:null,copy:false})}>Post a job</Button>}>
+ return <Section title="Jobs" sub="Every listing shows its pay range. New and edited jobs are checked before they go live." actions={canEdit&&<><Link className="ep-btn secondary md" href="/employer?view=import">Import from spreadsheet</Link><Button onClick={()=>ED({job:null,copy:false})}>Post a job</Button></>}>
   <Notice error={error} message={note}/>
   <Tabs value={tab} onChange={T} items={[['all','All',counts.all],['live','Live',counts.live||0],['pending_review','Awaiting approval',counts.pending_review||0],['draft','Drafts',counts.draft||0],['paused','Paused',counts.paused||0],['closed','Closed',(counts.closed||0)+(counts.expired||0)]]}/>
   <div className="ep-toolbar"><input type="search" placeholder="Search jobs" value={q} onChange={e=>Q(e.target.value)} aria-label="Search jobs"/></div>
@@ -95,7 +95,7 @@ export default function Jobs({ctx}:{ctx:PortalContext}){
      {canEdit&&!['closed','draft'].includes(j.state)&&<Button size="sm" tone="danger" onClick={()=>{if(window.confirm(`Close “${j.title}”? Applicants keep access to their application.`))void setState(j,'closed','Job closed.');}}>Close</Button>}
      {j.state==='live'&&<Link className="ep-btn ghost sm" href={`/jobs/${j.id}`}>View</Link>}
     </div></td></tr>;})}
-  </tbody></table></div>:<div className="ep-card"><Empty title={jobs.length?'No jobs here':'No jobs yet'} action={canEdit&&<Button onClick={()=>ED({job:null,copy:false})}>Post a job</Button>}>{jobs.length?'Try another tab or search.':'Post your first job, or import jobs from your ATS.'}</Empty></div>}
+  </tbody></table></div>:<div className="ep-card"><Empty title={jobs.length?'No jobs here':'No jobs yet'} action={canEdit&&<Button onClick={()=>ED({job:null,copy:false})}>Post a job</Button>}>{jobs.length?'Try another tab or search.':'Post your first job, or import a spreadsheet of jobs at once.'}</Empty></div>}
   {editor&&<Editor ctx={ctx} job={editor.job} copy={editor.copy} applicants={editor.job?stat(editor.job.id)?.applications??0:0} onClose={()=>ED(null)} onSaved={msg=>{ED(null);N(msg);V(v=>v+1);}}/>}
  </Section>;
 }
