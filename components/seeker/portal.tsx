@@ -72,7 +72,7 @@ function SeekerHome(){
   :proposals.length?`${proposals[0].company} has offered interview times. Pick one so they can lock it in.`
   :unread?`You have ${unread} unread ${unread===1?'message':'messages'} from employers.`
   :open.length?`${open.length} ${open.length===1?'application is':'applications are'} in progress.${h.partial?' Open each one to see messages and interview times.':' Nothing needs you right now.'}`
-  :done<3?'Start with your profile: it fills in every application for you, and every job here shows its pay.'
+  :done<3?'Start with your profile: it fills in every application for you, and you can filter to jobs that show their pay.'
   :'Find a role you like and apply in a few minutes. Every job shows its pay.';
  const action=soon?.interview&&isVideoInterview(soon.interview.format)?<Link className="ep-btn primary md" href={`/interview/${soon.interview.id}`}>Join interview</Link>
   :soon?<Link className="ep-btn primary md" href={`/account/applications/${soon.id}`}>View interview details</Link>

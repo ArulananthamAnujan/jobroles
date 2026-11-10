@@ -10,13 +10,14 @@ import {SiteHeader,SiteFooter} from './site-chrome';
 import './job-search.css';
 // The home page and /search share one familiar layout: a What/Where bar, filter pills, a result list on the
 // left and the selected job on the right. On a phone the list links straight to each job page.
-type Job={id:string;title:string;description:string;employment_type:string;arrangement:string;salary_min:number|null;salary_max:number|null;salary_period:string;currency:string;published_at:string;benefits?:string[];external_apply_url?:string|null;companies:{id:string;name:string;about:string;verified_at:string};job_locations:{label:string}[];distance_km?:number|null;sponsored?:boolean};
+type Job={id:string;title:string;description:string;employment_type:string;arrangement:string;salary_min:number|null;salary_max:number|null;salary_period:string;currency:string;published_at:string;benefits?:string[];external_apply_url?:string|null;companies:{id:string;name:string;about:string;verified_at:string;sourced?:boolean};job_locations:{label:string}[];distance_km?:number|null;sponsored?:boolean};
 type Results={jobs:Job[];total:number;page:number;pageSize:number};
 const ARRANGEMENT:Record<string,string>={on_site:'On-site',hybrid:'Hybrid',remote:'Remote'};
 export function postedAgo(iso:string,now=Date.now()){const days=Math.floor((now-new Date(iso).getTime())/86400000);return days<=0?'Posted today':days===1?'Posted 1 day ago':days>=30?'Posted 30+ days ago':`Posted ${days} days ago`;}
 const pay=(j:Job)=>salaryLabel(j).replace(/^AUD /,'');
 const where=(j:Job)=>j.job_locations.map(l=>l.label).join(' · ')||(j.arrangement==='remote'?'Remote':'Australia');
-const snippet=(text:string)=>text.split(/\n+/).map(s=>s.trim()).filter(Boolean).slice(0,2).map(s=>s.length>140?`${s.slice(0,137)}…`:s);
+// Skips heading lines such as "About us" so the card shows what the job involves.
+const snippet=(text:string)=>text.split(/\n+/).map(s=>s.replace(/^•\s*/,'').trim()).filter((s,_,all)=>s.length>=45||all.every(x=>x.trim().length<45)).filter(Boolean).slice(0,2).map(s=>s.length>140?`${s.slice(0,137)}…`:s);
 const POPULAR=['Registered nurse','Disability support worker','Warehouse','Admin assistant','Chef','Software engineer','Electrician','Customer service'];
 const RECENT_KEY='jobroles.recentSearches';
 function readRecent():{q:string;near:string}[]{try{return JSON.parse(localStorage.getItem(RECENT_KEY)||'[]');}catch{return [];}}
@@ -41,12 +42,13 @@ function Filters({params}:{params:URLSearchParams}){
  const pill=(key:string,label:string,options:[string,string][],value=params.get(key)||'')=><label className={`jr-pill ${value?'on':''}`}><span className="visually-hidden">{label}</span><select value={value} onChange={e=>set(key,e.target.value)} aria-label={label}><option value="">{label}</option>{options.map(([v,t])=><option key={v} value={v}>{t}</option>)}</select></label>;
  return <div className="jr-filters" role="group" aria-label="Filters">
   {pill('salaryMin','Pay',[['50000','$50,000+ a year'],['70000','$70,000+'],['90000','$90,000+'],['110000','$110,000+'],['130000','$130,000+'],['160000','$160,000+']])}
+  {pill('pay','Pay shown',[['shown','Only jobs that show pay']])}
   {pill('arrangement','Remote',[['remote','Remote'],['hybrid','Hybrid'],['on_site','On-site']])}
   {pill('type','Job type',['Full-time','Part-time','Casual','Contract','Temporary','Internship'].map(t=>[t,t] as [string,string]))}
   {pill('posted','Date posted',[['1','Last 24 hours'],['3','Last 3 days'],['7','Last 7 days'],['14','Last 14 days']])}
   {params.get('near')&&pill('radius','Distance',[['5','Within 5 km'],['10','Within 10 km'],['50','Within 50 km'],['100','Within 100 km'],['250','Within 250 km']])}
   {pill('sector','Sector',Object.entries(SECTORS).map(([id,s])=>[id,s.label] as [string,string]))}
-  {['salaryMin','arrangement','type','posted','radius','sector','company'].some(k=>params.get(k))&&<Link className="jr-clear" href={`/search?${new URLSearchParams([...params].filter(([k])=>k==='q'||k==='near'))}`}>Clear filters</Link>}
+  {['salaryMin','pay','arrangement','type','posted','radius','sector','company'].some(k=>params.get(k))&&<Link className="jr-clear" href={`/search?${new URLSearchParams([...params].filter(([k])=>k==='q'||k==='near'))}`}>Clear filters</Link>}
  </div>;
 }
 
@@ -58,9 +60,9 @@ function JobCard({job:j,selected,onSelect,query,onHide}:{job:Job;selected:boolea
  return <li className={`jr-card ${selected?'selected':''}`}>
   {j.sponsored&&<p className="jr-sponsored">Sponsored</p>}
   <h2 className="jr-card-title"><a href={href} onClick={e=>{if(j.sponsored)trackSponsoredClick(j.id);if(window.matchMedia('(min-width: 900px)').matches){e.preventDefault();onSelect();}}} aria-current={selected||undefined}>{j.title}</a></h2>
-  <p className="jr-company"><Link href={`/companies/${j.companies.id}`}>{j.companies.name}</Link><span className="jr-verified" title="ABN-verified employer">Verified</span></p>
+  <p className="jr-company"><Link href={`/companies/${j.companies.id}`}>{j.companies.name}</Link>{j.companies.sourced?<span className="jr-sourced" title="Listed from the employer’s own careers site. You apply on their site.">Careers site</span>:<span className="jr-verified" title="ABN-verified employer">Verified</span>}</p>
   <p className="jr-location">{where(j)}{typeof j.distance_km==='number'?` · ${j.distance_km} km away`:''}</p>
-  <ul className="jr-tags"><li className="jr-pay">{pay(j)}</li><li>{j.employment_type}</li><li>{ARRANGEMENT[j.arrangement]??j.arrangement}</li></ul>
+  <ul className="jr-tags"><li className={j.salary_min===null?'jr-nopay':'jr-pay'}>{pay(j)}</li><li>{j.employment_type}</li><li>{ARRANGEMENT[j.arrangement]??j.arrangement}</li></ul>
   <ul className="jr-snippet">{snippet(j.description).map((s,i)=><li key={i}>{s}</li>)}</ul>
   <p className="jr-posted">{postedAgo(j.published_at)}<button type="button" className="jr-hide" onClick={()=>onHide(j.id)} aria-label={`Not interested in ${j.title}`}>Not interested</button></p>
  </li>;
@@ -71,7 +73,7 @@ function JobPane({job:j,query}:{job:Job;query:string}){
  return <article className="jr-pane" aria-label={`${j.title} at ${j.companies.name}`}>
   <header className="jr-pane-head">
    <h2>{j.title}</h2>
-   <p className="jr-company"><Link href={`/companies/${j.companies.id}`}>{j.companies.name}</Link><span className="jr-verified">Verified employer</span></p>
+   <p className="jr-company"><Link href={`/companies/${j.companies.id}`}>{j.companies.name}</Link>{j.companies.sourced?<span className="jr-sourced">From the employer’s careers site</span>:<span className="jr-verified">Verified employer</span>}</p>
    <p className="jr-location">{where(j)}</p>
    <p className="jr-pane-pay">{pay(j)} · {j.employment_type}</p>
    <div className="jr-actions">{j.external_apply_url?<a className="jr-primary" href={apply} target="_blank" rel="noopener noreferrer nofollow">Apply on company site</a>:<Link className="jr-primary" href={apply}>Apply now</Link>}<SaveJob key={j.id} id={j.id}/><Link className="jr-secondary" href={`/jobs/${j.id}${query?`?${query}`:''}`}>Open job page</Link></div>
@@ -113,17 +115,17 @@ export default function JobSearch(){
  const chosen=useMemo(()=>results?.jobs.find(j=>j.id===selected),[results,selected]);
  const pageHref=(page:number)=>{const next=new URLSearchParams(query);next.set('page',String(page));return `/search?${next}`;};
  const q=params.get('q')||'',near=params.get('near')||params.get('location')||'';
- const heading=home?(tab==='foryou'?'Jobs for you':'Latest jobs with the pay shown'):`${results?.total??''} ${q?`${q} `:''}${results?.total===1?'job':'jobs'}${near?` near ${near}`:''}`.trim();
+ const heading=home?(tab==='foryou'?'Jobs for you':'Latest jobs'):`${results?.total??''} ${q?`${q} `:''}${results?.total===1?'job':'jobs'}${near?` near ${near}`:''}`.trim();
  return <div className="jr">
   <a className="skip-link" href="#results">Skip to results</a>
   <SiteHeader/>
   <div className={`jr-hero ${home?'home':''}`}>
-   {home&&<h1 className="jr-home-title">Find a job in Australia, with the pay shown</h1>}
+   {home&&<h1 className="jr-home-title">Find a job in Australia, with pay up front</h1>}
    <SearchBar q={q} near={near} compact={!home}/>
    {home?<div className="jr-under">
     {recent.length>0&&<p className="jr-chips"><span>Recent searches:</span>{recent.map(r=><Link key={`${r.q}|${r.near}`} href={`/search?${new URLSearchParams(Object.entries({q:r.q,near:r.near}).filter(([,v])=>v))}`}>{[r.q,r.near].filter(Boolean).join(' · ')}</Link>)}</p>}
     <p className="jr-chips"><span>Popular:</span>{POPULAR.map(p=><Link key={p} href={`/search?q=${encodeURIComponent(p)}`}>{p}</Link>)}</p>
-    <p className="jr-post"><Link href="/employer">Employers: post a job</Link> · every listing shows its pay range and comes from an ABN-verified employer.</p>
+    <p className="jr-post"><Link href="/employer">Employers: post a job</Link> · jobs posted here always show their pay and come from ABN-verified employers. We also list roles from employers’ own careers sites.</p>
    </div>:<Filters params={params}/>}
   </div>
   <main id="results" className="jr-main">

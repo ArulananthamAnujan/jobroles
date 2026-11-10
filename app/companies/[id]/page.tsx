@@ -16,7 +16,7 @@ import FollowCompany from '@/components/follow-company';
 import ReportContent from '@/components/report-content';
 import {WorkplaceReview,ShareInterview,AddSalary,AskQuestion,AnswerQuestion} from '@/components/company-contribute';
 export const dynamic='force-dynamic';
-type Company={id:string;name:string;about:string;verified_at:string;logo_url:string|null;cover_url:string|null;website:string|null;industry:string|null;size_band:string|null;headquarters:string|null;founded_year:number|null;pitch:string|null;benefits:string[]|null;photos:string[]|null};
+type Company={id:string;name:string;about:string;verified_at:string;sourced?:boolean;logo_url:string|null;cover_url:string|null;website:string|null;industry:string|null;size_band:string|null;headquarters:string|null;founded_year:number|null;pitch:string|null;benefits:string[]|null;photos:string[]|null};
 type Review={id:string;kind:'hiring'|'workplace';job_title:string|null;employment_status:string|null;work_location:string|null;rating_worklife:number|null;rating_pay:number|null;rating_security:number|null;rating_management:number|null;rating_culture:number|null;recommends:boolean|null;rating:number;title:string;pros:string;cons:string;employer_response:string|null;published_at:string;rating_communication:number|null;rating_fairness:number|null;rating_speed:number|null;helpful_count:number};
 type Job={id:string;title:string;employment_type:string;arrangement:string;salary_min:number|null;salary_max:number|null;salary_period:string;currency:string;published_at:string;benefits:string[]|null;job_locations:{label:string}[]};
 type Rating={average:number;count:number;distribution:Record<string,number>;communication?:number|null;fairness?:number|null;speed?:number|null;worklife?:number|null;pay?:number|null;security?:number|null;management?:number|null;culture?:number|null;recommend?:number|null};
@@ -36,7 +36,7 @@ const SORTS:Record<string,string>={recent:'Most recent',helpful:'Most helpful',h
 const load=cache(async(id:string)=>{
  if(!UUID.test(id)||!backendConfigured())return null;
  const client=publicJobsClient();
- const {data:company,error}=await client.from('companies').select('id,name,about,verified_at,logo_url,cover_url,website,industry,size_band,headquarters,founded_year,pitch,benefits,photos').eq('id',id).maybeSingle();
+ const {data:company,error}=await client.from('companies').select('id,name,about,verified_at,sourced,logo_url,cover_url,website,industry,size_band,headquarters,founded_year,pitch,benefits,photos').eq('id',id).maybeSingle();
  if(error)throw error;if(!company)return null;
  const [jobs,{data:responsiveness},{data:rating},{data:reviews}]=await Promise.all([
   client.from('jobs').select('id,title,employment_type,arrangement,salary_min,salary_max,salary_period,currency,published_at,benefits,job_locations(label)').eq('company_id',id).eq('state','live').gt('expires_at',new Date().toISOString()).order('published_at',{ascending:false}).limit(200),
@@ -176,9 +176,10 @@ export default async function CompanyPage({params,searchParams}:{params:Promise<
      <div className="co-logo">{company.logo_url?<img src={company.logo_url} alt={`${company.name} logo`}/>:<Mark initials={initials(company.name)}/>}</div>
      <div className="co-title"><h1>{company.name}</h1>
       <p className="co-meta">{main?<Link href={href('reviews')} className="co-meta-rating"><strong>{main.average.toFixed(1)}</strong><Stars value={main.average}/><span>{(workplace?.count??0)+(rating?.count??0)} reviews</span></Link>:<span className="muted">No reviews yet</span>}
-       <span className="jp-verified">Verified employer since {monthYear(company.verified_at)}</span>{company.industry&&<span className="muted">{company.industry}</span>}{company.headquarters&&<span className="muted">{company.headquarters}</span>}</p></div>
+       {company.sourced?<span className="jp-sourced" title="JobRoles lists these roles from the employer’s public careers site. The employer has not joined or been ABN-checked yet.">Listed from the employer’s careers site</span>:<span className="jp-verified">Verified employer since {monthYear(company.verified_at)}</span>}{company.industry&&<span className="muted">{company.industry}</span>}{company.headquarters&&<span className="muted">{company.headquarters}</span>}</p></div>
      <div className="co-cta"><FollowCompany companyId={company.id} companyName={company.name}/><WorkplaceReview companyId={company.id} companyName={company.name}/></div>
     </header>
+    {company.sourced&&<p className="co-claim">These roles come from {company.name}’s own careers site, and you apply there. Work at {company.name}? <Link className="text-link" href="/help#contact">Claim this page</Link> to manage it, reply to reviews and receive applications here.</p>}
     <nav className="co-tabs" aria-label={`${company.name} sections`}>{tabs.map(([t,l,n])=><Link key={t} href={href(t)} aria-current={tab===t?'page':undefined}>{l}{n!==null&&n>0?<span>{n}</span>:null}</Link>)}</nav>
     {body}
    </div>

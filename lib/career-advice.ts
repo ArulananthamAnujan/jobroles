@@ -63,7 +63,7 @@ export const ARTICLES:Article[]=[
   'If the connection drops, rejoin straight away. Interviewers expect occasional glitches.']},
  {slug:'how-to-negotiate-salary',title:'How to negotiate your salary',category:'Pay and conditions',minutes:5,summary:'Research the market, choose your number and negotiate the whole package with confidence.',body:[
   '## Know the market first',
-  'Check the advertised pay ranges for similar jobs and what employees report on JobRoles salary pages. Every JobRoles listing shows its pay range, so you can compare directly.',
+  'Check the advertised pay ranges for similar jobs and what employees report on JobRoles salary pages. Jobs posted on JobRoles show their pay range, so you can compare directly.',
   '## Choose your numbers',
   'Decide your target and the lowest offer you would accept before you talk money. Base them on the role, your experience and the market, not your current salary.',
   '## Negotiate after the offer',

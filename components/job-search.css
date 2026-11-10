@@ -61,6 +61,8 @@
 .jr-tags li{background:var(--wash);border-radius:6px;padding:3px 8px;font-size:14px;font-weight:600;color:#3c4a53}
 .jr-tags li+li{margin-top:0}
 .jr-tags .jr-pay{background:var(--mint);color:var(--teal)}
+.jr-tags .jr-nopay{background:transparent;border:1px dashed var(--line,#d5dde2);color:var(--text-muted,#5b6b76);font-weight:500}
+.jr-sourced{font-size:12px;font-weight:700;color:#4a5a66;background:#eef1f4;border-radius:4px;padding:1px 6px}
 .jr-snippet{margin:10px 0 0;padding-left:18px;list-style:disc;font-size:14px;color:#3c4a53}
 .jr-snippet li+li{margin-top:2px}
 .jr-posted{font-size:13px;color:var(--soft);margin-top:8px}

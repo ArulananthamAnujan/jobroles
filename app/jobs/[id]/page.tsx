@@ -15,7 +15,7 @@ import SaveJob from '@/components/save-job';
 import {ReportJob} from '@/components/launch-tools';
 // Server-rendered so search engines read the full listing and its JobPosting data.
 export const dynamic='force-dynamic';
-type Job={id:string;company_id:string;title:string;description:string;employment_type:string;arrangement:string;salary_min:number|null;salary_max:number|null;salary_period:string;currency:string;published_at:string;expires_at:string;assessment_code?:string|null;benefits:string[];start_date:string|null;external_apply_url:string|null;companies:{id:string;name:string;about:string;verified_at:string};job_locations:{label:string}[]};
+type Job={id:string;company_id:string;title:string;description:string;employment_type:string;arrangement:string;salary_min:number|null;salary_max:number|null;salary_period:string;currency:string;published_at:string;expires_at:string;assessment_code?:string|null;benefits:string[];start_date:string|null;external_apply_url:string|null;companies:{id:string;name:string;about:string;verified_at:string;sourced?:boolean};job_locations:{label:string}[]};
 const UUID=/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const loadJob=cache(async(id:string)=>{
  if(!UUID.test(id)||!backendConfigured())return null;
@@ -54,7 +54,7 @@ export default async function JobPage({params}:{params:Promise<{id:string}>}){
     <article className="jp-article">
      <header className="jp-head">
       <h1>{job.title}</h1>
-      <p className="jp-company"><Link href={`/companies/${job.companies.id}`}>{job.companies.name}</Link><span className="jp-verified">ABN-verified employer</span></p>
+      <p className="jp-company"><Link href={`/companies/${job.companies.id}`}>{job.companies.name}</Link>{job.companies.sourced?<span className="jp-sourced">From the employer’s careers site</span>:<span className="jp-verified">ABN-verified employer</span>}</p>
       <p>{where(job)}</p>
       <p className="jp-pay">{salaryLabel(job).replace(/^AUD /,'')} · {job.employment_type}</p>
       <div className="jp-actions">{external?<a className="jp-apply" href={external} target="_blank" rel="noopener noreferrer nofollow">Apply on company site</a>:<Link className="jp-apply" href={apply}>Apply now</Link>}<SaveJob id={job.id}/></div>

@@ -41,6 +41,7 @@ After this migration, check in Supabase Storage that the `company-media` bucket 
 | `20261026000003_bulk_message_names` | Bulk messages fill in each applicant's first name |
 | `20261027000001_dashboards_import` | Data for the redesigned employer, job seeker and admin dashboards, and bulk import of up to 200 jobs from a spreadsheet |
 | `20261027000002_import_duplicates` | Bulk import skips jobs the company already has open (same title and location), with an option to import them anyway |
+| `20261110000001_job_sourcing` | Job sourcing: administrators list employers' public careers feeds (Greenhouse, Lever, Ashby, SmartRecruiters, XML, JSON), imported roles may have no stated pay, "Pay shown" search filter. Redeploy `job-feed-import` with it |
 
 ## 2. Edge Functions
 

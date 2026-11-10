@@ -9,6 +9,7 @@ import ReviewDesk from '../review-desk';
 import CommunityDesk from './community-desk';
 import {ReportedPosts,ClickQuality,SupportQueue} from './ops';
 import {AccountLaunchTools} from '../launch-tools';
+import Sourcing from './sourcing';
 import {get,command,money,when} from '../employer/api';
 import {Button,Card,Empty,Field,Icon,Notice,Pill,Stat} from '../employer/ui';
 import {AppShell,AccountMenu,Section} from '../employer/shell';
@@ -16,7 +17,7 @@ import {Bars} from '../employer/bars';
 type Queue={jobs:{id:string;title:string;description:string;employment_type:string;arrangement:string;salary_min:number;salary_max:number;salary_period:string;created_at:string;external_apply_url:string|null;companies:{id:string;name:string;verified_at:string|null};job_locations:{label:string}[]}[];
  companies:{id:string;name:string;abn:string|null;about:string;is_agency:boolean;created_at:string;website:string|null}[];audit:{id:string;action:string;entity_type:string;reason:string;created_at:string}[];risks:{job_id:string;flags:string[]}[]};
 type Overview={queues:{id:string;count:number;oldest:string|null}[];totals:{liveJobs:number;employers:number;seekers:number;applications7:number};daily:{day:string;applications:number;jobs:number}[]};
-const NAV:[string,string,string,string][]=[['','overview','Overview','home'],['Queues','jobs','Job approvals','jobs'],['Queues','companies','Employer verification','shield'],['Queues','reports','Job reports','bell'],['Queues','reviews','Review moderation','star'],['Queues','community','Interviews & Q&A','chat'],['Queues','flagged','Reported posts','bell'],['Queues','support','Support requests','people'],['Platform','clicks','Sponsored clicks','chart'],['Platform','privacy','Privacy requests','people'],['Platform','email','Email delivery','chat'],['Platform','audit','Audit log','chart']];
+const NAV:[string,string,string,string][]=[['','overview','Overview','home'],['Queues','jobs','Job approvals','jobs'],['Queues','companies','Employer verification','shield'],['Queues','reports','Job reports','bell'],['Queues','reviews','Review moderation','star'],['Queues','community','Interviews & Q&A','chat'],['Queues','flagged','Reported posts','bell'],['Queues','support','Support requests','people'],['Platform','sourcing','Job sourcing','upload'],['Platform','clicks','Sponsored clicks','chart'],['Platform','privacy','Privacy requests','people'],['Platform','email','Email delivery','chat'],['Platform','audit','Audit log','chart']];
 export default function AdminConsole(){
  const params=useSearchParams(),router=useRouter(),view=params.get('view')||'overview';
  const [state,S]=useState<'loading'|'signin'|'denied'|'ok'>('loading'),[q,Q]=useState<Queue|null>(null),[error,E]=useState(''),[note,N]=useState(''),[busy,B]=useState(false),[version,V]=useState(0),[o,O]=useState<Overview|null>(null),[email,EM]=useState('');
@@ -50,6 +51,7 @@ export default function AdminConsole(){
  else if(view==='flagged')body=<ReportedPosts/>;
  else if(view==='support')body=<SupportQueue/>;
  else if(view==='clicks')body=<ClickQuality/>;
+ else if(view==='sourcing')body=<Sourcing/>;
  else if(view==='privacy')body=<PrivacyCentre isAdmin/>;
  else if(view==='email')body=<EmailStatus/>;
  else body=<div className="ep-table-wrap"><table className="ep-table"><thead><tr><th>When</th><th>Action</th><th>Entity</th><th>Reason</th></tr></thead><tbody>{q.audit.map(a=><tr key={a.id}><td>{when(a.created_at,{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'})}</td><td>{a.action}</td><td>{a.entity_type}</td><td>{a.reason}</td></tr>)}</tbody></table></div>;

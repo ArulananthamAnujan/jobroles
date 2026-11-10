@@ -10,6 +10,7 @@ const FAQ:[string,[string,string][]][]=[
  ['Job seekers',[
   ['How do I apply for a job?','Open the job and choose Apply now. Sign in or create a free account, choose your resume, answer any screening questions and submit. You can track every application under My applications.'],
   ['Can I see whether an employer read my application?','Yes. Your application page shows each stage, such as Reviewed, Shortlisted or Interviewing, and any messages or interview times from the employer.'],
+  ['Why do some jobs say “From the employer’s careers site”?','We list roles that employers publish on their own careers sites as well as roles posted directly on JobRoles. For those, you apply on the employer’s website, and pay is shown only if the employer states it. Jobs posted on JobRoles always show their pay and come from ABN-verified employers. Use the Pay shown filter to see only jobs that show pay.'],
   ['How do job alerts work?','On any search, choose Save search and get alerts. We email you new matching jobs once a day. Manage or switch off alerts under Saved jobs and searches.'],
   ['How do I withdraw an application?','Open the application and choose Withdraw application. The employer is told, and you can ask to be reinstated later.'],
   ['How do video interviews work?','If an employer books a JobRoles video interview, a Join button appears on your application 30 minutes before the start. It works in your browser with no download.'],
