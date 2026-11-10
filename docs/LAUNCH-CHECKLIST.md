@@ -43,6 +43,7 @@ After this migration, check in Supabase Storage that the `company-media` bucket 
 | `20261027000002_import_duplicates` | Bulk import skips jobs the company already has open (same title and location), with an option to import them anyway |
 | `20261110000001_job_sourcing` | Job sourcing: administrators list employers' public careers feeds (Greenhouse, Lever, Ashby, SmartRecruiters, XML, JSON), imported roles may have no stated pay, "Pay shown" search filter. Redeploy `job-feed-import` with it |
 | `20261110000002_security_fixes` | Fixes from the November 2026 security review: durable daily limit on resume autofill, push subscriptions cannot be taken over, removed team members cannot answer as the employer, company images must be in the company's own storage folder, changed questions or benefits on a live job go back to review, support-request and salary-search corrections. If the Supabase project uses a custom domain, set `media_host` in `private.settings` (see the migration) or logo uploads will be refused |
+| `20261110000003_security_followup` | Withdrawn applications hide the applicant's details from the employer, companies handed over from job sourcing wait for their ABN check before recruiting tools open, hiring managers no longer see colleagues' full emails or event attendee details, counted job views are capped per hour |
 
 ## 2. Edge Functions
 

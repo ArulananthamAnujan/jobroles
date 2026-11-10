@@ -76,3 +76,48 @@ test('security review fixes',async t=>{
   await assert.rejects(()=>rows(adminId,"select jp_source_command('create',$1::jsonb)",[json({name:'Bayside',url:'https://boards-api.greenhouse.io/v1/boards/bayside/jobs',format:'greenhouse'})]),/already has an account/);
  });
 });
+test('security review follow-up',async t=>{
+ const {rows,admin,command}=await createDb();
+ const {manager,resume,question}=ids;
+ await t.test('after a withdrawal the hiring team keeps only the name, headline and location',async()=>{
+  await command(seeker,'application.submit',{jobId:job,resumeId:resume,answers:{[question]:'Yes'},cover:'I would love this role.'});
+  const app=(await admin('select id from applications where job_id=$1 and seeker_id=$2',[job,seeker]))[0].id;
+  assert.equal((await rows(owner,'select application_id from application_snapshots where application_id=$1',[app])).length,1);
+  const before=(await rows(owner,'select * from jp_pipeline($1)',[job]))[0];
+  assert.equal(before.email,'seeker@example.test');assert.equal(before.resume_version_id,resume);
+  await command(seeker,'application.withdraw',{id:app});
+  assert.equal((await rows(owner,'select application_id from application_snapshots where application_id=$1',[app])).length,0);
+  assert.equal((await rows(seeker,'select application_id from application_snapshots where application_id=$1',[app])).length,1);
+  const after=(await rows(owner,'select * from jp_pipeline($1)',[job]))[0];
+  assert.deepEqual([after.full_name,after.state,after.email,after.answers,after.resume_version_id],['Sam Seeker','withdrawn',null,{},null]);
+  assert.equal((await rows(owner,'select jp_candidate_extras($1) as r',[app]))[0].r,null);
+ });
+ await t.test('hiring managers see colleagues’ emails shortened and no event attendee details',async()=>{
+  const emails=async who=>(await rows(who,'select jp_team($1) as r',[company]))[0].r.members.map(m=>m.email).sort();
+  assert.deepEqual(await emails(owner),['manager@example.test','owner@example.test','recruiter@example.test']);
+  assert.deepEqual(await emails(recruiter),['manager@example.test','owner@example.test','recruiter@example.test']);
+  assert.deepEqual(await emails(manager),['manager@example.test','o…@example.test','r…@example.test']);
+  const ev=uid(950);
+  await admin("insert into hiring_events(id,company_id,title,description,starts_at,ends_at,time_zone,mode,created_by) values($1,$2,'Open day','Meet the team and tour the ward on the day.',now()+interval '5 days',now()+interval '5 days 2 hours','Australia/Melbourne','online',$3)",[ev,company,owner]);
+  await admin('insert into event_registrations(event_id,user_id) values($1,$2)',[ev,seeker]);
+  const attendees=async who=>(await rows(who,'select jp_company_events($1) as r',[company]))[0].r[0].attendees;
+  assert.equal((await attendees(owner)).length,1);assert.equal((await attendees(recruiter)).length,1);
+  assert.deepEqual(await attendees(manager),[]);
+ });
+ await t.test('a company handed over from job sourcing waits for its ABN check before recruiting tools open',async()=>{
+  const made=(await rows(adminId,"select jp_source_command('create',$1::jsonb) as r",[json({name:'Harbour Health',url:'https://boards-api.greenhouse.io/v1/boards/harbour/jobs',format:'greenhouse'})]))[0].r;
+  await rows(adminId,"select jp_source_command('claim',$1::jsonb)",[json({companyId:made.companyId,email:'other@example.test'})]);
+  await assert.rejects(()=>rows(other,'select * from jp_search_candidates($1)',[made.companyId]));
+  await assert.rejects(()=>rows(other,'select jp_can_buy_credit($1)',[made.companyId]));
+  await rows(adminId,"select jp_source_command('verify',$1::jsonb)",[json({companyId:made.companyId,abn:'51824753556',reason:'ABR lookup matched'})]);
+  await rows(other,'select * from jp_search_candidates($1)',[made.companyId]);
+  await rows(other,'select jp_can_buy_credit($1)',[made.companyId]);
+ });
+ await t.test('counted views of one job are capped each hour',async()=>{
+  for(let i=0;i<310;i++)await rows(null,'select jp_record_job_view($1)',[job]);
+  assert.equal((await admin('select views from job_view_counts where job_id=$1',[job]))[0].views,300);
+  await admin("update job_view_counts set hour_start=hour_start-interval '1 hour' where job_id=$1",[job]);
+  await rows(null,'select jp_record_job_view($1)',[job]);
+  assert.equal((await admin('select views from job_view_counts where job_id=$1',[job]))[0].views,301);
+ });
+});

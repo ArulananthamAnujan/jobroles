@@ -35,6 +35,7 @@ export default function Candidate({id,ctx,templates,onChange}:{id:string;ctx:Por
     {d.application.stage!=='rejected'&&<Button size="sm" tone="danger" disabled={busy} onClick={()=>act(()=>command('application.move',{id,stage:'rejected'}),'Marked as not progressing.')}>Not progressing</Button>}</>}
    {canMove&&d.application.reinstatement_requested_at&&<Button size="sm" disabled={busy} onClick={()=>act(()=>command('application.reinstate',{id}),'Application reinstated.')}>Reinstate</Button>}
   </div>
+  {d.application.state==='withdrawn'&&!d.snapshot&&<p className="ep-notice">This person withdrew their application, so the details they shared are no longer available. If they ask to be reinstated and you accept, their application comes back.</p>}
   <section className="ep-section"><h3>Profile</h3><dl className="ep-dl"><div><dt>Name</dt><dd>{p?.full_name}</dd></div><div><dt>Headline</dt><dd>{p?.headline||'–'}</dd></div><div><dt>Location</dt><dd>{p?.location||'–'}</dd></div><div><dt>Email</dt><dd>{p?.email?<a href={`mailto:${p.email}`}>{p.email}</a>:'–'}</dd></div></dl>
    {p?.skills?.length?<div className="ep-chips" style={{marginTop:10}}>{p.skills.map(s=><span key={s}>{s}</span>)}</div>:null}
    {d.snapshot?.resume_version_id&&<p style={{marginTop:12}}><a className="ep-btn secondary sm" href={`/api/resumes/${d.snapshot.resume_version_id}`}>Download resume</a></p>}</section>
