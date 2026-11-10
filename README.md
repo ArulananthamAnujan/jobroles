@@ -44,6 +44,15 @@ npm run dev
 ```
 Fill in your project settings and use `APP_ORIGIN=http://localhost:3000` locally.
 
+### Local Supabase stack (optional)
+
+To exercise sign-up, posting, approval and applying end to end without touching the hosted project, run a local stack with Docker:
+```
+npx supabase start
+```
+`supabase/config.toml` applies every migration, turns on email confirmation and uses the templates in `docs/email-templates`. Put the printed API URL and publishable key in `.env.local`, read confirmation emails at http://127.0.0.1:54324, and make an administrator with
+`insert into private.platform_admins(user_id) select id from auth.users where email='you@example.com';`
+
 ## Checks
 ```
 npm run typecheck

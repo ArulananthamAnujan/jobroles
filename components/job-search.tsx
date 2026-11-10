@@ -113,7 +113,7 @@ export default function JobSearch(){
  const chosen=useMemo(()=>results?.jobs.find(j=>j.id===selected),[results,selected]);
  const pageHref=(page:number)=>{const next=new URLSearchParams(query);next.set('page',String(page));return `/search?${next}`;};
  const q=params.get('q')||'',near=params.get('near')||params.get('location')||'';
- const heading=home?(tab==='foryou'?'Jobs for you':'Latest jobs with the pay shown'):`${results?.total??''} ${q?`${q} jobs`:'jobs'}${near?` near ${near}`:''}`.trim();
+ const heading=home?(tab==='foryou'?'Jobs for you':'Latest jobs with the pay shown'):`${results?.total??''} ${q?`${q} `:''}${results?.total===1?'job':'jobs'}${near?` near ${near}`:''}`.trim();
  return <div className="jr">
   <a className="skip-link" href="#results">Skip to results</a>
   <SiteHeader/>

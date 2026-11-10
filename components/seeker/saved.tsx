@@ -14,7 +14,8 @@ export default function SavedView(){
   get<Launch>('/api/launch',c.signal).then(L).catch(e=>{if(e.name!=='AbortError')E(e.message);});return()=>c.abort();},[page,version]);
  async function act(fn:()=>Promise<unknown>,done:string){B(true);E('');N('');try{await fn();N(done);V(v=>v+1);}catch(e){E((e as Error).message);}finally{B(false);}}
  const open=(j:Saved['jobs'])=>j?.state==='live'&&new Date(j.expires_at)>new Date();
- return <Section title="Saved jobs and alerts" sub={`${total} saved ${total===1?'job':'jobs'} · ${launch?.searches.filter(s=>s.frequency&&s.frequency!=='off').length??0} job alerts on`} actions={<Link className="ep-btn primary md" href="/search">Find jobs</Link>}>
+ const alertsOn=launch?.searches.filter(s=>s.frequency&&s.frequency!=='off').length??0;
+ return <Section title="Saved jobs and alerts" sub={`${total} saved ${total===1?'job':'jobs'} · ${alertsOn} job ${alertsOn===1?'alert':'alerts'} on`} actions={<Link className="ep-btn primary md" href="/search">Find jobs</Link>}>
   <Notice error={error} message={note}/>
   <div className="ep-over">
    <div className="ep-over-main">

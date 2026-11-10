@@ -22,7 +22,7 @@ export default function Applicants({ctx}:{ctx:PortalContext}){
   if(app&&!pick){try{const detail=await get<{application:{job_id:string}}>(`/api/applications/${app}`,c.signal);pick=detail.application.job_id;}catch{}}
   SJ(pick&&d.jobs.some(j=>j.id===pick)?pick:d.jobs.find(j=>j.state==='live')?.id||d.jobs[0]?.id||'');}).catch(e=>{if(e.name!=='AbortError')E(e.message);});return()=>c.abort();},[ctx.company.id,params]);
  const load=useCallback(async(signal?:AbortSignal)=>{if(!job)return;const d=await employerGet<{applicants:Applicant[];questions:Question[]}>('pipeline',{job},signal);NW(Date.now());L(d.applicants);QS(d.questions);},[job]);
- useEffect(()=>{const c=new AbortController();Promise.resolve().then(()=>load(c.signal)).catch(e=>{if(e.name!=='AbortError')E(e.message);});return()=>c.abort();},[load,version]);
+ useEffect(()=>{const c=new AbortController();Promise.resolve().then(()=>load(c.signal)).catch(e=>{if(e.name!=='AbortError')E(e.message==='Job access denied'?'You are not assigned to this job yet. Ask your company’s owner to assign you to it from Team.':e.message);});return()=>c.abort();},[load,version]);
  const filtered=useMemo(()=>(list||[]).filter(a=>(!onlyMeets||a.meets_requirements)&&(!q||`${a.full_name} ${a.headline} ${a.location}`.toLowerCase().includes(q.toLowerCase()))&&(!age||now-new Date(a.submitted_at).getTime()<AGE[age]*864e5)),[list,onlyMeets,q,age,now]);
  const counts=useMemo(()=>Object.fromEntries(STAGES.map(([k])=>[k,filtered.filter(a=>a.state==='submitted'&&a.stage===k).length])),[filtered]);
  const visible=filtered.filter(a=>stage==='all'?true:stage==='withdrawn'?a.state==='withdrawn':a.state==='submitted'&&a.stage===stage);
@@ -46,7 +46,7 @@ export default function Applicants({ctx}:{ctx:PortalContext}){
    <Tabs value={mode} onChange={M} items={[['board','Board'],['list','List']]}/>
   </div>
   {mode==='list'&&<Tabs value={stage} onChange={ST} items={[['all','All',filtered.length],...STAGES.map(([k,l])=>[k,l,counts[k]] as [string,string,number]),['withdrawn','Withdrawn',filtered.filter(a=>a.state==='withdrawn').length]]}/>}
-  {!list?<p role="status">Loading applicants…</p>:!list.length?<div className="ep-card"><Empty title="No applicants yet">Share the job or sponsor it to reach more people.</Empty></div>:mode==='board'?
+  {!list?(error?null:<p role="status">Loading applicants…</p>):!list.length?<div className="ep-card"><Empty title="No applicants yet">Share the job or sponsor it to reach more people.</Empty></div>:mode==='board'?
    <div className="ep-board">{STAGES.map(([k,l])=><section key={k} className={`ep-col ${over===k?'over':''}`} aria-label={l} onDragOver={e=>{if(drag){e.preventDefault();OV(k);}}} onDragLeave={()=>OV('')} onDrop={e=>{e.preventDefault();OV('');const ids=selected.has(drag)?[...selected]:[drag];if(drag)void move(ids,k);}}>
     <h3>{l}<span className="ep-count">{counts[k]}</span></h3>{counts[k]?filtered.filter(a=>a.state==='submitted'&&a.stage===k).map(card):<p className="ep-col-empty">{canMove?'Drag applicants here':'No one at this stage'}</p>}</section>)}</div>
    :<div className="ep-table-wrap"><table className="ep-table"><thead><tr>{canMove&&<th><input type="checkbox" aria-label="Select all" checked={visible.length>0&&visible.every(a=>selected.has(a.application_id))} onChange={e=>SEL(e.target.checked?new Set(visible.map(a=>a.application_id)):new Set())}/></th>}<th>Applicant</th><th>Stage</th><th>Deal-breakers</th><th>Applied</th><th/></tr></thead><tbody>

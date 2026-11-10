@@ -1,6 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
+import {isVideoInterview} from '@/lib/calendar';
 import {useRouter,useSearchParams} from 'next/navigation';
 import AccountWorkspace from '../account-workspace';
 import Invitations from '../invitations';
@@ -49,7 +50,7 @@ function nextStep(a:App):[string,string,string|null]{
  if(a.stage==='rejected')return ['Not progressing','The employer has moved on with other applicants.',null];
  if(a.stage==='hired')return ['Hired','Congratulations.',null];
  if(a.unknown)return ['See messages and interview times','',`/account/applications/${a.id}`];
- if(a.interview)return ['Interview '+when(a.interview.startsAt,{weekday:'short',day:'numeric',month:'short',hour:'numeric',minute:'2-digit',timeZone:a.interview.timeZone}),a.interview.format==='video'?'Join on JobRoles':'',a.interview.format==='video'?`/interview/${a.interview.id}`:`/account/applications/${a.id}`];
+ if(a.interview)return ['Interview '+when(a.interview.startsAt,{weekday:'short',day:'numeric',month:'short',hour:'numeric',minute:'2-digit',timeZone:a.interview.timeZone}),isVideoInterview(a.interview.format)?'Join on JobRoles':'',isVideoInterview(a.interview.format)?`/interview/${a.interview.id}`:`/account/applications/${a.id}`];
  if(a.proposal)return ['Pick an interview time','',`/account/applications/${a.id}`];
  if(a.unread)return [`${a.unread} new ${a.unread===1?'message':'messages'}`,'',`/account/applications/${a.id}`];
  return ['Waiting on employer',a.responseShare!==null&&a.responseShare!==undefined?`${a.company} responds to ${a.responseShare}% of applicants`:'',null];
@@ -73,7 +74,8 @@ function SeekerHome(){
   :open.length?`${open.length} ${open.length===1?'application is':'applications are'} in progress.${h.partial?' Open each one to see messages and interview times.':' Nothing needs you right now.'}`
   :done<3?'Start with your profile: it fills in every application for you, and every job here shows its pay.'
   :'Find a role you like and apply in a few minutes. Every job shows its pay.';
- const action=soon?.interview?.format==='video'?<Link className="ep-btn primary md" href={`/interview/${soon.interview.id}`}>Join interview</Link>
+ const action=soon?.interview&&isVideoInterview(soon.interview.format)?<Link className="ep-btn primary md" href={`/interview/${soon.interview.id}`}>Join interview</Link>
+  :soon?<Link className="ep-btn primary md" href={`/account/applications/${soon.id}`}>View interview details</Link>
   :proposals[0]?<Link className="ep-btn primary md" href={`/account/applications/${proposals[0].id}`}>Pick a time</Link>:!h.applications.length&&done<3?<Link className="ep-btn primary md" href="/job-seeker?view=profile">Complete your profile</Link>:<Link className="ep-btn primary md" href="/search">Find jobs</Link>;
  const shown=all?h.applications:h.applications.slice(0,8);
  return <Section title={first?`Hello, ${first}`:'Home'} sub={finding} actions={<>{(soon||proposals[0]||(!h.applications.length&&done<3))&&<Link className="ep-btn secondary md" href="/search">Find jobs</Link>}{action}</>}>

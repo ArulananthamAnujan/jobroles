@@ -325,6 +325,7 @@ a.ep-stat:hover{background:var(--wash)}
 .sk-apps>li:first-child{border-top:0}
 .sk-app a{font-weight:600;text-decoration:none}
 .sk-app a:hover{text-decoration:underline}
+.sk-app{min-width:0}
 .sk-app small{display:block;color:var(--soft);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sk-track{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin:0;padding:0;list-style:none}
 .sk-track li{height:6px;border-radius:3px;background:var(--wash)}
