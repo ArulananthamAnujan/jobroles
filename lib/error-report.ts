@@ -10,7 +10,9 @@ export function sentryEnvelope(dsn:string,event:{message:string;stack?:string;so
 }
 export async function reportError(error:unknown,context:{source:string;path?:string},send:typeof fetch=fetch){
  const message=error instanceof Error?error.message:String(error),stack=error instanceof Error?error.stack:undefined;
- console.error(`[${context.source}] ${context.path??''} ${scrub(message)}`);
+ // One line per report: line breaks in a reported message could otherwise forge extra log entries.
+ const oneLine=(s:string)=>s.replace(/[\r\n\u2028\u2029]+/g,' ');
+ console.error(`[${oneLine(context.source)}] ${oneLine(context.path??'')} ${oneLine(scrub(message))}`);
  const dsn=process.env.SENTRY_DSN;if(!dsn)return;
  try{const {url,payload}=sentryEnvelope(dsn,{message,stack,...context});await send(url,{method:'POST',headers:{'Content-Type':'application/x-sentry-envelope'},body:payload,signal:AbortSignal.timeout(3000)});}catch{}
 }

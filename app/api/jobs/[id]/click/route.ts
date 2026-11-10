@@ -1,18 +1,22 @@
 import {createHash} from 'node:crypto';
 import {rateLimit,clientIp} from '@/lib/backend/guard';
+import {sameOrigin} from '@/lib/backend/server';
 export const dynamic='force-dynamic';
 const UUID=/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
-// Records a click on a sponsored job. The visitor key is a one-way hash of IP, browser and day, so the employer is
-// charged once per person per day and no address is stored. Always answers 204 so the page never waits on it.
+// Records a click on a sponsored job. The visitor key is a one-way hash of IP address and day, so the employer is
+// charged once per address per day and no address is stored. The browser name is left out of the key on purpose:
+// it is chosen by the caller, so including it let one address pose as many visitors. Clicks must come from this
+// site's own pages, so another website cannot spend an advertiser's budget through its visitors. Always answers 204 so the page never waits on it.
 export async function POST(request:Request,{params}:{params:Promise<{id:string}>}){
  const {id}=await params,secret=process.env.AD_CLICK_SECRET,ip=clientIp(request);
  const done=new Response(null,{status:204});
  if(!UUID.test(id)||!secret||!process.env.SUPABASE_URL)return done;
+ try{sameOrigin(request);}catch{return done;}
  try{rateLimit(`ad-click:${ip}`,60,60_000);}catch{return done;}
  const ua=request.headers.get('user-agent')||'';
  if(!ua||/bot|crawl|spider|slurp|headless|preview/i.test(ua))return done;
  const day=new Date().toLocaleDateString('en-CA',{timeZone:'Australia/Sydney'});
- const visitor=createHash('sha256').update(`${secret}|${ip}|${ua}|${day}`).digest('hex');
+ const visitor=createHash('sha256').update(`${secret}|${ip}|${day}`).digest('hex');
  // The network (IPv4 /24 or IPv6 /48) lets the database spot bursts of clicks from one place.
  const prefix=ip.includes(':')?ip.split(':').slice(0,3).join(':'):ip.split('.').slice(0,3).join('.');
  const network=createHash('sha256').update(`${secret}|net|${prefix}|${day}`).digest('hex');

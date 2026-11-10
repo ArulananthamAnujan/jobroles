@@ -17,6 +17,9 @@ test('employer portal',async t=>{
   const qs=[{question:'Do you hold AHPRA registration?',mustHave:true,expected:'Yes'},{question:'Can you work night shifts?',mustHave:false}];
   await assert.rejects(()=>rows(manager,'select jp_set_screening($1,$2::jsonb)',[job,JSON.stringify(qs)]),/access denied/);
   assert.equal((await rows(owner,'select jp_set_screening($1,$2::jsonb) as r',[job,JSON.stringify(qs)]))[0].r.count,2);
+  // New questions are public wording, so a live job goes back to review; an administrator approves it again.
+  assert.equal((await admin('select state::text from jobs where id=$1',[job]))[0].state,'pending_review');
+  await command(adminId,'job.review',{id:job,decision:'approve',reason:'Questions checked'});
   const q=await rows(null,'select id,question from screening_questions where job_id=$1 order by position',[job]);assert.equal(q.length,2);
   await command(seeker,'application.submit',{jobId:job,resumeId:resume,answers:{[q[0].id]:'No',[q[1].id]:'Yes'},cover:''});
   await assert.rejects(()=>rows(owner,'select jp_set_screening($1,$2::jsonb)',[job,JSON.stringify(qs)]),/fixed once people have applied/);

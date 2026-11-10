@@ -30,7 +30,8 @@ export async function POST(request:Request){try{
  if(body.data.action==='logout'){const {error}=await client.auth.signOut();if(error)throw new ApiError(400,'Could not sign out. Try again.');return response({ok:true});}
  if(body.data.action==='reset'||body.data.action==='resend'){
   const result=body.data.action==='reset'?await client.auth.resetPasswordForEmail(body.data.email,{redirectTo:`${appOrigin()}/auth/callback?flow=recovery`}):await client.auth.resend({type:'signup',email:body.data.email,options:{emailRedirectTo:`${appOrigin()}/auth/callback`}});
-  const problem=mailFailure(result.error);if(problem)throw new ApiError(problem.status,problem.message);
+  // The mail provider throttles repeat requests per account. Passing that on would reveal that the address is registered.
+  const problem=mailFailure(result.error);if(problem&&problem.status!==429)throw new ApiError(problem.status,problem.message);
   return response({ok:true});
  }
  // Social sign-in: Supabase returns the provider URL; the PKCE verifier is kept in this site's cookie for /auth/callback.

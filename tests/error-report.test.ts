@@ -8,3 +8,9 @@ test('Sentry envelopes target the project from the DSN',()=>{
  const [head,type,event]=payload.split('\n').map(l=>JSON.parse(l));
  assert.equal(head.dsn,'https://pubkey@o42.ingest.sentry.io/1234');assert.deepEqual(type,{type:'event'});assert.equal(event.exception.values[0].value,'boom');assert.equal(event.transaction,'/api/jobs');
 });
+test('a reported message is logged on one line, so it cannot forge log entries',async()=>{
+ const {reportError}=await import('../lib/error-report.ts');
+ const seen:string[]=[],original=console.error;console.error=(...a:unknown[])=>{seen.push(a.join(' '));};
+ try{await reportError(new Error('boom\n[api] /admin forged entry\r\nsecond'),{source:'client',path:'/search\n[api] fake'});}finally{console.error=original;}
+ assert.equal(seen.length,1);assert.ok(!/[\r\n]/.test(seen[0]));
+});
