@@ -186,6 +186,27 @@ begin
  return jsonb_build_object('created',created,'updated',updated,'closed',closed,'rejected',rejected);
 end $$;
 
+-- The admin overview counts only ABN-checked employers as verified.
+create or replace function public.jp_admin_overview() returns jsonb language plpgsql stable security definer set search_path='' as $$
+declare today date:=(now() at time zone 'Australia/Sydney')::date;
+begin
+ if not private.is_admin() then raise exception 'Administrator required' using errcode='42501';end if;
+ return jsonb_build_object(
+  'queues',jsonb_build_array(
+   (select jsonb_build_object('id','jobs','count',count(*),'oldest',min(created_at)) from public.jobs where state='pending_review'),
+   (select jsonb_build_object('id','companies','count',count(*),'oldest',min(created_at)) from public.companies where verified_at is null and suspended_at is null),
+   (select jsonb_build_object('id','reports','count',count(*),'oldest',min(created_at)) from public.job_reports where state='open'),
+   (select jsonb_build_object('id','reviews','count',count(*),'oldest',min(created_at)) from public.company_reviews where status='pending'),
+   (select jsonb_build_object('id','community','count',(select count(*) from public.company_interviews where status='pending')+(select count(*) from public.company_questions where status='pending')+(select count(*) from public.company_answers where status='pending'),
+     'oldest',least((select min(created_at) from public.company_interviews where status='pending'),(select min(created_at) from public.company_questions where status='pending'),(select min(created_at) from public.company_answers where status='pending')))),
+   (select jsonb_build_object('id','flagged','count',count(distinct (kind,target_id)),'oldest',min(created_at)) from public.content_reports where resolved_at is null),
+   (select jsonb_build_object('id','support','count',count(*),'oldest',min(created_at)) from public.support_tickets where status='open')),
+  'totals',jsonb_build_object('liveJobs',(select count(*) from public.jobs where state='live' and expires_at>now()),'employers',(select count(*) from public.companies where verified_at is not null and not sourced),
+   'seekers',(select count(*) from public.seeker_profiles),'applications7',(select count(*) from public.applications where state<>'draft' and submitted_at>now()-interval '7 days')),
+  'daily',(select jsonb_agg(jsonb_build_object('day',d::date,'applications',(select count(*) from public.applications a where a.state<>'draft' and (a.submitted_at at time zone 'Australia/Sydney')::date=d::date),
+   'jobs',(select count(*) from public.jobs j where (j.published_at at time zone 'Australia/Sydney')::date=d::date)) order by d) from generate_series(today-13,today,interval '1 day') d));
+end $$;
+
 -- Search can be narrowed to roles that state their pay.
 drop function public.jp_search_jobs(text,text,text,text,text,text,numeric,numeric,text,integer,text,integer,text,integer,integer);
 create function public.jp_search_jobs(p_query text default null,p_query_mode text default 'websearch',p_location text default null,p_company text default null,p_arrangement text default null,p_type text default null,

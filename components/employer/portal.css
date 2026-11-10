@@ -109,10 +109,13 @@ a.ep-stat:hover{background:var(--wash)}
 .ep-table tbody tr:hover{background:#fafbfb}
 .ep-table .num{text-align:right;font-variant-numeric:tabular-nums}
 .ep-table td:first-child,.ep-table th:first-child{padding-left:16px}
+.ep-table td:first-child{min-width:200px}
+.ep-table td.ep-nowrap{white-space:nowrap}
 .ep-table td:last-child,.ep-table th:last-child{padding-right:16px}
 .ep-row-title{font-weight:600}
 .ep-row-sub{font-size:13px;color:var(--soft)}
-.ep-row-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:nowrap}
+.ep-row-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;min-width:270px;max-width:330px;margin-left:auto}
+@media(max-width:860px){.ep-row-actions{min-width:0}}
 
 .ep-tabs{display:flex;gap:20px;border-bottom:1px solid var(--line);margin-bottom:20px;overflow-x:auto}
 .ep-tabs button{background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:8px 0;font-weight:500;font-size:14px;color:var(--soft);cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px}

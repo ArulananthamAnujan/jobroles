@@ -126,7 +126,7 @@ function Record({r,companyId}:{r:Overview['response'];companyId:string}){
  return <div className="ep-record">
   <div className="ep-record-figure"><strong>{r.respondedShare??0}%</strong><span>of {plural(r.applications,'applicant')} heard back</span></div>
   <div className="ep-record-bar" aria-hidden="true"><i style={{width:`${r.respondedShare??0}%`}}/></div>
-  <p>{r.medianDays!==null?`Half got a first response within ${r.medianDays} ${r.medianDays===1?'day':'days'}. `:''}Moving someone to any stage or sending a message counts. Last six months.</p>
+  <p>{r.medianDays!==null?`Half got a first response ${r.medianDays===0?'the same day':`within ${r.medianDays} ${r.medianDays===1?'day':'days'}`}. `:''}Moving someone to any stage or sending a message counts. Last six months.</p>
   <div className="ep-public">{r.public?<>Shown on your <Link href={`/companies/${companyId}`} style={{textDecoration:'underline'}}>company page</Link>. A high figure gets more people to apply.</>:<>Appears on your company page once 5 people have applied.</>}</div>
  </div>;
 }

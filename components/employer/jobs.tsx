@@ -84,7 +84,7 @@ export default function Jobs({ctx}:{ctx:PortalContext}){
     <td><div className="ep-row-title">{j.title}</div><div className="ep-row-sub">{j.job_locations.map(l=>l.label).join(', ')} · {j.employment_type}{j.benefits.length?` · ${j.benefits.length} ${j.benefits.length===1?'benefit':'benefits'}`:''}</div></td>
     <td><Pill tone={st[1]}>{st[0]}</Pill></td>
     <td className="num">{s?<Link href={`/employer?view=applicants&job=${j.id}`}>{s.applications}</Link>:0}</td><td className="num">{s?.views_30d??0}</td>
-    <td>{payText(j)}</td><td>{j.expires_at?when(j.expires_at):'–'}</td>
+    <td className="ep-nowrap">{payText(j)}</td><td>{j.expires_at?when(j.expires_at):'–'}</td>
     <td><div className="ep-row-actions">
      <Link className="ep-btn secondary sm" href={`/employer?view=applicants&job=${j.id}`}>Applicants</Link>
      {status(j)==='live'&&<Link className="ep-btn ghost sm" href={`/employer?${new URLSearchParams({view:'candidates',q:j.title,near:j.job_locations[0]?.label||'',title:j.title})}`}>Matches</Link>}

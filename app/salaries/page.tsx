@@ -46,7 +46,7 @@ export default async function Salaries({searchParams}:{searchParams:Promise<Reco
       <section className="co-card"><h2>Jobs for {title}</h2><p>See live roles and the pay employers advertise.</p><Link className="jp-btn" href={`/search?q=${encodeURIComponent(title)}${place?`&near=${encodeURIComponent(place)}`:''}`}>Search {title} jobs</Link></section>
      </div>
      <aside className="co-col">{data?.topPaying.length?<section className="co-card"><h2>Top-paying employers</h2><p className="muted small">Median advertised yearly pay in live listings.</p><ul className="co-sal">{data.topPaying.map(c=><li key={c.id}><Link className="text-link" href={`/companies/${c.id}?tab=salaries`}>{c.name}</Link><strong>{aud(c.median)}<small> /year · {c.jobs} {Number(c.jobs)===1?'job':'jobs'}</small></strong></li>)}</ul></section>:null}
-      <section className="co-card"><h2>How we calculate this</h2><p className="small">Reported pay is base pay before tax that people shared anonymously, shown only once at least three people report the same job. Advertised pay comes from current job listings, which on JobRoles always show a pay range.</p></section></aside>
+      <section className="co-card"><h2>How we calculate this</h2><p className="small">Reported pay is base pay before tax that people shared anonymously, shown only once at least three people report the same job. Advertised pay comes from current job listings, where the employer states a pay range.</p></section></aside>
     </div>}
    </div>
   </main><SiteFooter/></div>;
