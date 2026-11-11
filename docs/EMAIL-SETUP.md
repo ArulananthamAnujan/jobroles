@@ -17,6 +17,19 @@ domain first (a `.com.au` needs your ABN; registrars such as VentraIP or Crazy D
 to **Domain management > Add a domain** and follow its DNS steps so the site runs on it with HTTPS. Use that domain
 everywhere this guide says `yourdomain.com.au`.
 
+## Sending as noreply@jobroles.com.au
+
+Until step 2 is done, account emails come from Supabase's own address (`noreply@mail.app.supabase.io`), are limited to
+a few an hour, and often land in spam. To send everything as `JobRoles <noreply@jobroles.com.au>`:
+
+- In step 1, add `jobroles.com.au` itself as the Resend domain (not a `mail.` subdomain), so the address after the
+  `@` is exactly `jobroles.com.au`. If the domain already has mailboxes (Google Workspace, Microsoft 365), keep its
+  existing MX records and merge Resend's SPF value into the existing SPF record rather than adding a second one.
+- In step 2, set the sender email to `noreply@jobroles.com.au` and the sender name to `JobRoles`.
+- In step 3, set `NOTIFICATION_FROM="JobRoles <noreply@jobroles.com.au>"`.
+
+Nobody reads replies to a no-reply address, so make sure the help centre contact form is how people reach you.
+
 ## 1. Resend: verify the sending domain
 
 1. Create an account at resend.com.

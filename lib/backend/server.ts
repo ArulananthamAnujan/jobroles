@@ -1,5 +1,6 @@
 import {createServerClient} from '@supabase/ssr';
 import {cookies} from 'next/headers';
+import {fromThisSite} from './origin';
 
 export function backendConfigured() {
   return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_PUBLISHABLE_KEY);
@@ -31,7 +32,7 @@ export function sameOrigin(request:Request){
   const origin=request.headers.get('origin');
   const expected=process.env.APP_ORIGIN?.replace(/\/$/,'') || (process.env.NODE_ENV==='production'?null:new URL(request.url).origin);
   if(!expected) throw new ApiError(503,'This site is not fully configured. Please contact support.');
-  if (!origin || origin !== expected) throw new ApiError(403,'This request must come from the application.');
+  if(!fromThisSite(origin,request.headers.get('sec-fetch-site'),expected))throw new ApiError(403,'This request must come from the application.');
 }
 export async function jsonBody(request:Request){
   if (!request.headers.get('content-type')?.includes('application/json')) throw new ApiError(415,'JSON required.');

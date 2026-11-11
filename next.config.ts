@@ -6,7 +6,9 @@ const securityHeaders = [
   { key: "Content-Security-Policy", value: "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
-  { key: "Referrer-Policy", value: "no-referrer" },
+  // "same-origin" still tells other websites nothing about where a visitor came from, but lets browsers (Firefox in
+  // particular) send this site's own address with its own requests; "no-referrer" made Firefox send "Origin: null".
+  { key: "Referrer-Policy", value: "same-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
 ];
