@@ -1,7 +1,7 @@
 # Continue with Google
 
 The button is built and appears on the sign-in and create-account forms of both portals as soon as it is switched on.
-Switching it on takes three steps, in this order. Allow about 20 minutes.
+Switching it on takes two steps, in this order. Allow about 20 minutes.
 
 You need: your Supabase project reference (the part before `.supabase.co` in the project URL, shown under
 **Project Settings > API**) and a Google account that will own the sign-in screen.
@@ -33,17 +33,13 @@ You need: your Supabase project reference (the part before `.supabase.co` in the
    - Site URL: `https://jobroles.com.au`
    - Redirect URLs: make sure `https://jobroles.com.au/auth/callback` is listed.
 
-## 3. The website: show the button
+## 3. The website: nothing to do
 
-Add this environment variable where the site is hosted, then **rebuild and redeploy** (it is read when the site is
-built, so a restart alone is not enough):
+The site asks Supabase which sign-in providers are switched on and shows their buttons, so **Continue with Google**
+appears within five minutes of step 2. Apple and LinkedIn work the same way once enabled in Supabase.
 
-```
-NEXT_PUBLIC_AUTH_PROVIDERS=google
-```
-
-To add Apple or LinkedIn later, enable them in Supabase the same way and list them too:
-`NEXT_PUBLIC_AUTH_PROVIDERS=google,apple,linkedin_oidc`.
+To hide a button without touching Supabase, set `AUTH_PROVIDERS` where the site is hosted to the list you want
+(`google`, `apple`, `linkedin_oidc`), or to `none`, and restart the site.
 
 ## Check it works
 
@@ -55,7 +51,7 @@ To add Apple or LinkedIn later, enable them in Supabase the same way and list th
 
 | What you see | Cause |
 | --- | --- |
-| No button | The variable is missing, or the site was not rebuilt after adding it |
+| No button | Google is not enabled in Supabase yet, the change was made in the last five minutes, or `AUTH_PROVIDERS` on the host leaves it out |
 | Google says "redirect_uri_mismatch" | The redirect URI in step 1.3 is not exactly the Supabase callback URL |
 | Google says "Access blocked" or only you can sign in | The consent screen is still in *Testing*; publish it |
 | "That sign-in option is unavailable" on the site | Google is not enabled in Supabase, or the ID or secret is wrong |

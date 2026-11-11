@@ -2,12 +2,12 @@ import {mailFailure} from '@/lib/auth-mail';
 import {z} from 'zod';
 import {accountClient,mailClient,backendConfigured,response,failure,sameOrigin,jsonBody,ApiError} from '@/lib/backend/server';
 import {rateLimit,clientIp,verifyCaptcha,appOrigin} from '@/lib/backend/guard';
+import {enabledProviders} from '@/lib/backend/providers';
 export const dynamic='force-dynamic';
-const enabledProviders=()=>(process.env.NEXT_PUBLIC_AUTH_PROVIDERS||'').split(',').map(s=>s.trim()).filter(Boolean);
 export async function GET(){try{
  if(!backendConfigured())return response({configured:false,user:null});
  const client=await accountClient();const {data}=await client.auth.getUser();
- return response({configured:true,user:data.user?{id:data.user.id,email:data.user.email,confirmed:Boolean(data.user.email_confirmed_at),name:typeof data.user.user_metadata?.full_name==='string'?data.user.user_metadata.full_name.slice(0,160):null}:null});
+ return response({configured:true,user:data.user?{id:data.user.id,email:data.user.email,confirmed:Boolean(data.user.email_confirmed_at),name:typeof data.user.user_metadata?.full_name==='string'?data.user.user_metadata.full_name.slice(0,160):null}:null,providers:await enabledProviders()});
 }catch(error){return failure(error);}}
 export async function POST(request:Request){try{
  sameOrigin(request);
@@ -37,7 +37,7 @@ export async function POST(request:Request){try{
  }
  // Social sign-in: Supabase returns the provider URL; the PKCE verifier is kept in this site's cookie for /auth/callback.
  if(body.data.action==='oauth'){
-  if(!enabledProviders().includes(body.data.provider))throw new ApiError(400,'This sign-in option is not available.');
+  if(!(await enabledProviders()).includes(body.data.provider))throw new ApiError(400,'This sign-in option is not available.');
   const {data,error}=await client.auth.signInWithOAuth({provider:body.data.provider,options:{redirectTo:`${appOrigin()}/auth/callback`,skipBrowserRedirect:true}});
   if(error||!data.url)throw new ApiError(503,'That sign-in option is unavailable. Try email instead.');
   return response({ok:true,url:data.url});

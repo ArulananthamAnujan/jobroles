@@ -2,8 +2,6 @@
 import {useState} from 'react';
 import Captcha,{resetCaptcha} from './captcha';
 import {Btn,Field} from './market-ui';
-// Providers are listed in NEXT_PUBLIC_AUTH_PROVIDERS (google, apple, linkedin_oidc) once enabled in Supabase Auth.
-const providers=(process.env.NEXT_PUBLIC_AUTH_PROVIDERS||'').split(',').map(s=>s.trim()).filter(Boolean);
 const names:Record<string,string>={google:'Google',apple:'Apple',linkedin_oidc:'LinkedIn'};
 async function post(body:unknown){const r=await fetch('/api/account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json() as {error?:string;url?:string};if(!r.ok)throw new Error(d.error||'Please try again.');return d;}
 function Mark({provider}:{provider:string}){
@@ -12,7 +10,8 @@ function Mark({provider}:{provider:string}){
 }
 // "Continue with Google" and the other enabled providers, shown above both the sign-in and the create-account form.
 // The portal the person started in is remembered for a few minutes so they come back to it after the provider's screen.
-export function SocialSignIn({portal}:{portal:'seeker'|'employer'}){
+// The list of enabled providers comes from the server, which asks Supabase which ones are switched on.
+export function SocialSignIn({portal,providers}:{portal:'seeker'|'employer';providers:string[]}){
  const [busy,B]=useState(''),[error,E]=useState('');
  const shown=providers.filter(p=>names[p]);
  if(!shown.length)return null;
