@@ -93,8 +93,9 @@ Run [schedules.sql](schedules.sql) in the Supabase SQL editor after filling in i
   `checkout.session.completed` and `checkout.session.async_payment_succeeded`.
 - **Cloudflare Turnstile**: create a widget for the site domain. Set `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and
   `TURNSTILE_SECRET_KEY` in Netlify.
-- **Google, Apple and LinkedIn sign-in**: enable each provider in Supabase Auth, add `/auth/callback` to the
-  allowed redirect URLs, then list them in Netlify as `NEXT_PUBLIC_AUTH_PROVIDERS=google,apple,linkedin_oidc`.
+- **Google, Apple and LinkedIn sign-in**: step by step for Google in [GOOGLE-SIGN-IN.md](GOOGLE-SIGN-IN.md). In
+  short: enable each provider in Supabase Auth, add `/auth/callback` to the allowed redirect URLs, then set
+  `NEXT_PUBLIC_AUTH_PROVIDERS=google,apple,linkedin_oidc` where the site is hosted and rebuild.
 - **OpenAI**: `OPENAI_API_KEY` in Netlify switches on the listing assistant and resume autofill.
 - **Push notifications**: run `npx web-push generate-vapid-keys` once. Put the public key in Netlify as
   `NEXT_PUBLIC_VAPID_PUBLIC_KEY` and both keys in the job-alerts function secrets (above).

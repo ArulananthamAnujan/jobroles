@@ -2,7 +2,7 @@
 import PasswordField,{PASSWORD_HINT,passwordProblem} from './password-field';
 import Captcha,{resetCaptcha} from '@/components/captcha';
 import JobFeeds from '@/components/job-feeds';
-import SignInOptions from '@/components/sign-in-options';
+import SignInOptions,{SocialSignIn} from '@/components/sign-in-options';
 import ResumeAutofill from '@/components/resume-autofill';
 import JobStats from '@/components/job-stats';
 import RecommendedJobs from '@/components/recommended-jobs';
@@ -66,6 +66,7 @@ export default function AccountWorkspace({portal='seeker',embedded=false}:{porta
   </>:<>
    <h2>{mode==='login'?'Sign in':'Create your account'}</h2>
    {mode==='signup'&&<p className="muted">{employer?'Create your account, then add your company. Posting a job takes a few minutes.':'It’s free. Save jobs, apply with one resume and track every application.'}</p>}
+   <SocialSignIn portal={employer?'employer':'seeker'}/>
    <form onSubmit={auth} key={mode} noValidate={false}>
     {mode==='signup'&&<div className="grid-two"><Field label="First name"><input name="firstName" autoComplete="given-name" required maxLength={80}/></Field><Field label="Last name"><input name="lastName" autoComplete="family-name" required maxLength={80}/></Field></div>}
     <Field label="Email address"><input name="email" type="email" autoComplete="email" required maxLength={254} inputMode="email"/></Field>
