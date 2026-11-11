@@ -421,3 +421,7 @@ content_path = "./docs/email-templates/confirmation.html"
 [auth.email.template.recovery]
 subject = "Reset your JobRoles password"
 content_path = "./docs/email-templates/recovery.html"
+
+[auth.email.template.magic_link]
+subject = "Your JobRoles sign-in link"
+content_path = "./docs/email-templates/magic-link.html"

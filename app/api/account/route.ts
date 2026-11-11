@@ -1,6 +1,6 @@
 import {mailFailure} from '@/lib/auth-mail';
 import {z} from 'zod';
-import {accountClient,backendConfigured,response,failure,sameOrigin,jsonBody,ApiError} from '@/lib/backend/server';
+import {accountClient,mailClient,backendConfigured,response,failure,sameOrigin,jsonBody,ApiError} from '@/lib/backend/server';
 import {rateLimit,clientIp,verifyCaptcha,appOrigin} from '@/lib/backend/guard';
 export const dynamic='force-dynamic';
 const enabledProviders=()=>(process.env.NEXT_PUBLIC_AUTH_PROVIDERS||'').split(',').map(s=>s.trim()).filter(Boolean);
@@ -29,7 +29,7 @@ export async function POST(request:Request){try{
  const client=await accountClient();
  if(body.data.action==='logout'){const {error}=await client.auth.signOut();if(error)throw new ApiError(400,'Could not sign out. Try again.');return response({ok:true});}
  if(body.data.action==='reset'||body.data.action==='resend'){
-  const result=body.data.action==='reset'?await client.auth.resetPasswordForEmail(body.data.email,{redirectTo:`${appOrigin()}/auth/callback?flow=recovery`}):await client.auth.resend({type:'signup',email:body.data.email,options:{emailRedirectTo:`${appOrigin()}/auth/callback`}});
+  const result=body.data.action==='reset'?await mailClient().auth.resetPasswordForEmail(body.data.email,{redirectTo:`${appOrigin()}/auth/callback?flow=recovery`}):await mailClient().auth.resend({type:'signup',email:body.data.email,options:{emailRedirectTo:`${appOrigin()}/auth/callback`}});
   // The mail provider throttles repeat requests per account. Passing that on would reveal that the address is registered.
   const problem=mailFailure(result.error);if(problem&&problem.status!==429)throw new ApiError(problem.status,problem.message);
   return response({ok:true});
@@ -43,13 +43,15 @@ export async function POST(request:Request){try{
  }
  // Email sign-in link: creates the account on first use, so no password is needed.
  if(body.data.action==='magic'){
-  const {error}=await client.auth.signInWithOtp({email:body.data.email,options:{emailRedirectTo:`${appOrigin()}/auth/callback`,shouldCreateUser:true}});
+  const {error}=await mailClient().auth.signInWithOtp({email:body.data.email,options:{emailRedirectTo:`${appOrigin()}/auth/callback`,shouldCreateUser:true}});
   const problem=mailFailure(error);if(problem)throw new ApiError(problem.status,problem.message);
   return response({ok:true});
  }
  if(body.data.action==='password'){const {data,error:identityError}=await client.auth.getUser();if(identityError||!data.user)throw new ApiError(401,'Open your password recovery link first.');const {error}=await client.auth.updateUser({password:body.data.password});if(error)throw new ApiError(400,'Password could not be updated. Request a fresh recovery link.');await client.auth.signOut({scope:'global'});return response({ok:true});}
  const {action,email,password}=body.data as {action:'login'|'signup';email:string;password:string};
- const result=action==='login'?await client.auth.signInWithPassword({email,password}):await client.auth.signUp({email,password,options:{emailRedirectTo:`${appOrigin()}/auth/callback`}});
+ const result=action==='login'?await client.auth.signInWithPassword({email,password}):await mailClient().auth.signUp({email,password,options:{emailRedirectTo:`${appOrigin()}/auth/callback`}});
+ // Where email confirmation is switched off, sign-up returns a session straight away; keep it in this site's cookie.
+ if(action==='signup'&&!result.error&&result.data.session){const {error}=await client.auth.setSession({access_token:result.data.session.access_token,refresh_token:result.data.session.refresh_token});if(error)throw new ApiError(400,'Account created. Please sign in.');}
  if(result.error)throw new ApiError(result.error.status===429?429:400,action==='login'?'Sign-in failed. Check your email, password and email confirmation.':'Account could not be created. Please try again later.');
  return response({ok:true,confirmationRequired:action==='signup'&&!result.data.session});
 }catch(error){return failure(error);}}

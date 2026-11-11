@@ -57,11 +57,13 @@ this step.
 3. **Authentication > URL Configuration:**
    - Site URL: `https://yourdomain.com.au`
    - Redirect URLs: add `https://yourdomain.com.au/auth/callback`
-4. Optional: **Authentication > Emails > Templates** to put your wording on the confirmation and reset emails.
-   Links in a template may use any of these forms; all of them work:
-   `{{ .ConfirmationURL }}`, `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery`, or
-   `{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery` (use `type=email` for confirmation and
-   `type=magiclink` for the sign-in link). Ready-made templates are in `docs/email-templates`.
+4. Recommended: **Authentication > Emails > Templates.** Paste the three ready-made templates from
+   `docs/email-templates` into *Confirm signup* (`confirmation.html`), *Reset password* (`recovery.html`) and
+   *Magic link* (`magic-link.html`).
+   Supabase's default emails work too, in any browser, but their links are used up the moment they are opened, and
+   some mail services open links automatically to scan them, which can leave the person with a link that has already
+   been used. The ready-made templates avoid that: the link is only used when the person presses the button on the
+   site.
 
 ## 3. Function secrets
 

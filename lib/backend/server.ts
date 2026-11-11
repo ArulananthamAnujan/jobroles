@@ -1,4 +1,5 @@
 import {createServerClient} from '@supabase/ssr';
+import {createClient} from '@supabase/supabase-js';
 import {cookies} from 'next/headers';
 import {fromThisSite} from './origin';
 
@@ -12,6 +13,14 @@ export async function accountClient() {
     cookieOptions: {httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/'},
     cookies: {getAll: () => jar.getAll(), setAll: values => {for (const {name,value,options} of values) jar.set(name,value,options);}},
   });
+}
+// Used only to ask Supabase to send an account email (confirmation, password reset, sign-in link).
+// The cookie client above always asks for links tied to the browser that requested them, which fail when the email
+// is opened on another device or in a mail app's own browser. Requested this way, the link works anywhere: it comes
+// back to /auth/callback with a short-lived session that the person confirms on /account/verify.
+export function mailClient() {
+  if (!backendConfigured()) throw new ApiError(503, 'Accounts are awaiting database connection.');
+  return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {auth: {flowType: 'implicit', persistSession: false, autoRefreshToken: false, detectSessionInUrl: false}});
 }
 export async function authenticatedClient() {
   const client = await accountClient();
