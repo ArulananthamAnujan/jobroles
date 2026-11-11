@@ -21,6 +21,14 @@ export async function GET(request:Request){try{
   const existing=await client.from('applications').select('id,job_id,state,stage,submitted_at,created_at').eq('seeker_id',user.id).eq('job_id',selected).maybeSingle();
   if(existing.error)throw existing.error;if(existing.data)applications.data?.push(existing.data);
  }
+ // First visit after signing up as a job seeker: start the profile with the name given at sign-up, so the person is
+ // greeted by name and does not have to type it again. Employers set up a company instead.
+ const signupName=typeof user.user_metadata?.full_name==='string'?user.user_metadata.full_name.trim().slice(0,160):'';
+ let fromEmployerSide=false;try{fromEmployerSide=/^\/(employer|admin)/.test(new URL(request.headers.get('referer')||'').pathname);}catch{}
+ if(!profile.data&&signupName&&!fromEmployerSide&&!(memberships.data||[]).length){
+  const made=await client.rpc('jp_command',{action:'profile.save',payload:{name:signupName,headline:'',location:'',skills:[],searchable:false}});
+  if(!made.error){const again=await client.from('seeker_profiles').select('*').eq('user_id',user.id).maybeSingle();if(!again.error)profile.data=again.data;}
+ }
  // The public company list is long once careers-site employers are listed, so the person's own companies are fetched by id.
  const mine=(memberships.data||[]).map(m=>m.company_id).filter(id=>!companies.data?.some(c=>c.id===id));
  if(mine.length){const own=await client.from('companies').select('id,name,verified_at,sourced').in('id',mine);if(own.error)throw new ApiError(503,'The database schema is not ready. Please contact the platform owner.');companies.data?.push(...(own.data||[]));}
