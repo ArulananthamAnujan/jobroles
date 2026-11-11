@@ -6,3 +6,9 @@ test('mail limits have a retry explanation without exposing provider details',()
 test('unknown account outcome stays generic',()=>{assert.equal(mailFailure({code:'user_not_found'}),null);assert.equal(mailFailure(null),null);});
 test('confirmation accepts supported template variants and rejects arbitrary types',()=>{assert.ok(confirmationFields('token','signup'));assert.ok(confirmationFields('token','email'));assert.ok(confirmationFields('token','recovery'));assert.equal(confirmationFields('token','invite'),null);assert.equal(confirmationFields('', 'signup'),null);assert.equal(confirmationFields('x'.repeat(513),'signup'),null);});
 test('confirmation redirects only to fixed local destinations',()=>{assert.equal(confirmationDestination('recovery'),'/account/reset');assert.equal(confirmationDestination('https://evil.test'),'/account?confirmed=1');});
+test('sign-in link tokens are accepted; recovery leads to setting a new password',()=>{
+ assert.deepEqual(confirmationFields('tok','magiclink'),{token_hash:'tok',type:'magiclink'});
+ assert.equal(confirmationFields('tok','invite'),null);
+ assert.equal(confirmationFields('tok','email_change'),null);
+ assert.equal(confirmationDestination('recovery'),'/account/reset');assert.equal(confirmationDestination('magiclink'),'/account?confirmed=1');
+});

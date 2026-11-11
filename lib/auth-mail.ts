@@ -6,7 +6,7 @@ export function mailFailure(error:AuthMailError){
  return {status:503,message:'We could not send the email right now. Please try again later or contact support.'};
 }
 export function confirmationFields(hash:unknown,type:unknown){
- if(typeof hash!=='string'||hash.length<1||hash.length>512||!['signup','email','recovery'].includes(String(type)))return null;
- return {token_hash:hash,type:type as 'signup'|'email'|'recovery'};
+ if(typeof hash!=='string'||hash.length<1||hash.length>512||!['signup','email','recovery','magiclink'].includes(String(type)))return null;
+ return {token_hash:hash,type:type as 'signup'|'email'|'recovery'|'magiclink'};
 }
 export function confirmationDestination(type:string){return type==='recovery'?'/account/reset':'/account?confirmed=1';}

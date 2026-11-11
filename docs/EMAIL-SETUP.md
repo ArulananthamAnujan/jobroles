@@ -58,6 +58,10 @@ this step.
    - Site URL: `https://yourdomain.com.au`
    - Redirect URLs: add `https://yourdomain.com.au/auth/callback`
 4. Optional: **Authentication > Emails > Templates** to put your wording on the confirmation and reset emails.
+   Links in a template may use any of these forms; all of them work:
+   `{{ .ConfirmationURL }}`, `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery`, or
+   `{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery` (use `type=email` for confirmation and
+   `type=magiclink` for the sign-in link). Ready-made templates are in `docs/email-templates`.
 
 ## 3. Function secrets
 
