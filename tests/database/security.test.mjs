@@ -121,3 +121,38 @@ test('security review follow-up',async t=>{
   assert.equal((await admin('select views from job_view_counts where job_id=$1',[job]))[0].views,301);
  });
 });
+test('resume files can be read directly only by people the resume rules already allow',async t=>{
+ const {rows,admin,command}=await createDb();
+ const {manager,resume,question}=ids;
+ // Supabase itself lets signed-in people query storage.objects, subject to its policies; the test stand-in needs telling.
+ await admin('grant select on storage.objects to authenticated');
+ await admin("insert into storage.objects(bucket_id,name,owner_id) values('resumes','test/resume.pdf',$1),('resumes','other/private.pdf',$2),('company-media','x/logo.png',$2)",[seeker,other]);
+ const can=async who=>(await rows(who,"select name from storage.objects where bucket_id='resumes' order by name")).map(r=>r.name);
+ await t.test('before applying: only the owner',async()=>{
+  assert.deepEqual(await can(seeker),['test/resume.pdf']);
+  for(const who of [owner,recruiter,manager,other,adminId])assert.deepEqual(await can(who),[],who);
+  await assert.rejects(()=>rows(null,'select name from storage.objects'),/permission denied/);
+ });
+ let app;
+ await t.test('after applying: the job’s team, and nobody at another company',async()=>{
+  await command(seeker,'application.submit',{jobId:job,resumeId:resume,answers:{[question]:'Yes'},cover:''});
+  app=(await admin('select id from applications where job_id=$1 and seeker_id=$2',[job,seeker]))[0].id;
+  assert.deepEqual(await can(owner),['test/resume.pdf']);assert.deepEqual(await can(recruiter),['test/resume.pdf']);
+  assert.deepEqual(await can(other),[]);
+ });
+ await t.test('scan rules: infected files are closed to everyone; pending files wait when scanning is required',async()=>{
+  await admin("update resume_versions set scan_status='pending' where id=$1",[resume]);
+  assert.deepEqual(await can(owner),['test/resume.pdf']);
+  await admin(`insert into private.settings(key,value) values('resume_scan_required','true')`);
+  assert.deepEqual(await can(owner),[]);assert.deepEqual(await can(seeker),['test/resume.pdf']);
+  await admin("update resume_versions set scan_status='clean' where id=$1",[resume]);
+  assert.deepEqual(await can(owner),['test/resume.pdf']);
+  await admin("update resume_versions set scan_status='infected' where id=$1",[resume]);
+  assert.deepEqual(await can(owner),[]);assert.deepEqual(await can(seeker),[]);
+  await admin("update resume_versions set scan_status='clean' where id=$1",[resume]);
+ });
+ await t.test('withdrawing ends the team’s access',async()=>{
+  await command(seeker,'application.withdraw',{id:app});
+  assert.deepEqual(await can(owner),[]);assert.deepEqual(await can(seeker),['test/resume.pdf']);
+ });
+});

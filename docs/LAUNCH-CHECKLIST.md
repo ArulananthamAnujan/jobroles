@@ -1,5 +1,9 @@
 # Launch checklist
 
+After deploying, open **Admin > Setup status** on the live site. It checks each item below against your real
+setup (database updates, functions, schedules, emails waiting, sign-in providers) and tells you what is working,
+what needs attention and what to do.
+
 The code for every item below is built and tested. Each one is switched on by an account, key or setting
 that only the business owner can create. Work through the steps in order.
 
@@ -44,6 +48,8 @@ After this migration, check in Supabase Storage that the `company-media` bucket 
 | `20261110000001_job_sourcing` | Job sourcing: administrators list employers' public careers feeds (Greenhouse, Lever, Ashby, SmartRecruiters, XML, JSON), imported roles may have no stated pay, "Pay shown" search filter. Redeploy `job-feed-import` with it |
 | `20261110000002_security_fixes` | Fixes from the November 2026 security review: durable daily limit on resume autofill, push subscriptions cannot be taken over, removed team members cannot answer as the employer, company images must be in the company's own storage folder, changed questions or benefits on a live job go back to review, support-request and salary-search corrections. If the Supabase project uses a custom domain, set `media_host` in `private.settings` (see the migration) or logo uploads will be refused |
 | `20261110000003_security_followup` | Withdrawn applications hide the applicant's details from the employer, companies handed over from job sourcing wait for their ABN check before recruiting tools open, hiring managers no longer see colleagues' full emails or event attendee details, counted job views are capped per hour |
+| `20261111000001_resume_direct_download` | Resume downloads work without the `resume-download` function: the applicant and the employers they applied to read the file directly, under the same rules |
+| `20261111000002_setup_status` | Data for **Admin > Setup status**, which checks every part of the site and says what to do about anything that is off |
 
 ## 2. Edge Functions
 
