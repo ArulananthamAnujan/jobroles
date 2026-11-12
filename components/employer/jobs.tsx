@@ -33,7 +33,7 @@ function Editor({ctx,job,copy,applicants,onClose,onSaved}:{ctx:PortalContext;job
    await employerPost({action:'extras',jobId:id,benefits,startDate:f.startDate||'',externalApplyUrl:f.externalApplyUrl||''});
    await employerPost({action:'job.assessment',jobId:id,code:f.assessment||null});
    if(!locked)await employerPost({action:'screening',jobId:id,questions:questions.filter(q=>q.question.trim().length>=5)});
-   onSaved(submit?'Sent for approval. Most jobs are reviewed within one business day.':'Draft saved.');
+   onSaved(submit?'Sent for approval. Most jobs are reviewed within one business day.':'Draft saved. Job seekers cannot see it until you open it and choose Submit for approval.');
   }catch(e){E((e as Error).message);}finally{B(false);}
  }
  return <Drawer open wide onClose={onClose} title={editing?`Edit ${editing.title}`:copy?`Copy of ${source?.title}`:'Post a job'}>
@@ -77,7 +77,7 @@ export default function Jobs({ctx}:{ctx:PortalContext}){
  async function remove(j:Job){E('');N('');try{await post('/api/manage',{action:'job.delete',id:j.id});N(`Draft “${j.title}” deleted.`);V(v=>v+1);}catch(e){E((e as Error).message);}}
  async function setState(j:Job,state:string,msg:string){E('');N('');try{await command('job.state',{id:j.id,state});N(msg);V(v=>v+1);}catch(e){E((e as Error).message);}}
  return <Section title="Jobs" sub="Every listing shows its pay range. New and edited jobs are checked before they go live." actions={canEdit&&<><Link className="ep-btn secondary md" href="/employer?view=import">Import from spreadsheet</Link><Button onClick={()=>ED({job:null,copy:false})}>Post a job</Button></>}>
-  <Notice error={error} message={note}/>
+  <Notice error={error} message={note} next={note.startsWith('Sent for approval')?[['Complete your company page','/employer?view=company'],['Back to overview','/employer']]:note.startsWith('Draft saved')?[['Back to overview','/employer']]:undefined}/>
   <Tabs value={tab} onChange={T} items={[['all','All',counts.all],['live','Live',counts.live||0],['pending_review','Awaiting approval',counts.pending_review||0],['draft','Drafts',counts.draft||0],['paused','Paused',counts.paused||0],['closed','Closed',(counts.closed||0)+(counts.expired||0)]]}/>
   <div className="ep-toolbar"><input type="search" placeholder="Search jobs" value={q} onChange={e=>Q(e.target.value)} aria-label="Search jobs"/></div>
   {!jobs?<p role="status">Loading jobs…</p>:shown.length?<div className="ep-table-wrap"><table className="ep-table"><thead><tr><th>Job</th><th>Status</th><th className="num">Applicants</th><th className="num">Views, 30 days</th><th>Pay</th><th>Closes</th><th><span className="visually-hidden">Actions</span></th></tr></thead><tbody>
