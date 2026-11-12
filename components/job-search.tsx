@@ -29,8 +29,16 @@ function recentSnapshot(){let raw='';try{raw=localStorage.getItem(RECENT_KEY)||'
 function subscribeRecent(cb:()=>void){window.addEventListener('storage',cb);return()=>window.removeEventListener('storage',cb);}
 
 
+// The address always carries the whole search (what, where and every filter), so a search can be bookmarked,
+// shared, refreshed and stepped through with the back button. `sent` stops the same address being added twice.
+let sent='';
+function typed(){const f=document.querySelector<HTMLFormElement>('form.jr-search');return {q:String(f?.elements.namedItem('q') instanceof HTMLInputElement?(f.elements.namedItem('q') as HTMLInputElement).value:'').trim(),near:String(f?.elements.namedItem('near') instanceof HTMLInputElement?(f.elements.namedItem('near') as HTMLInputElement).value:'').trim()};}
+function searchAddress(change?:(p:URLSearchParams)=>void){const next=new URLSearchParams(window.location.pathname==='/search'?window.location.search:''),t=typed();
+ for(const k of ['q','near'] as const){if(t[k])next.set(k,t[k]);else next.delete(k);}if(!t.near)next.delete('radius');next.delete('location');change?.(next);return `/search${next.size?`?${next}`:''}`;}
 function SearchBar({q,near,compact}:{q:string;near:string;compact:boolean}){
- return <form action="/search" role="search" className={`jr-search ${compact?'compact':''}`} onSubmit={e=>{const f=new FormData(e.currentTarget);rememberSearch(String(f.get('q')||'').trim(),String(f.get('near')||'').trim());}}>
+ const router=useRouter();
+ // Without JavaScript the form still works as an ordinary link to /search?q=…&near=….
+ return <form action="/search" role="search" className={`jr-search ${compact?'compact':''}`} onSubmit={e=>{e.preventDefault();const t=typed();rememberSearch(t.q,t.near);const to=searchAddress(p=>p.delete('page'));sent=to;router.push(to);}}>
   <label className="jr-field"><span className="jr-field-label">What</span><input name="q" defaultValue={q} maxLength={120} placeholder="Job title, keywords or company" autoComplete="off"/></label>
   <label className="jr-field"><span className="jr-field-label">Where</span><PlaceInput defaultValue={near}/></label>
   <button type="submit" className="jr-primary">Find jobs</button>
@@ -39,9 +47,12 @@ function SearchBar({q,near,compact}:{q:string;near:string;compact:boolean}){
 
 function Filters({params}:{params:URLSearchParams}){
  const router=useRouter();
- const set=(key:string,value:string)=>{const next=new URLSearchParams(params);if(value)next.set(key,value);else next.delete(key);next.delete('page');if(key==='salaryMin'&&value)next.set('salaryPeriod','year');router.push(`/search?${next}`);};
- const pill=(key:string,label:string,options:[string,string][],value=params.get(key)||'')=><label className={`jr-pill ${value?'on':''}`}><span className="visually-hidden">{label}</span><select value={value} onChange={e=>set(key,e.target.value)} aria-label={label}><option value="">{label}</option>{options.map(([v,t])=><option key={v} value={v}>{t}</option>)}</select></label>;
- return <div className="jr-filters" role="group" aria-label="Filters">
+ const set=(key:string,value:string)=>{const to=searchAddress(next=>{if(value)next.set(key,value);else next.delete(key);next.delete('page');if(key==='salaryMin'){if(value)next.set('salaryPeriod','year');else next.delete('salaryPeriod');}});if(to===sent)return;sent=to;router.push(to);};
+ // Some browsers' autofill and automation tools change a menu without the event React listens for; this catches those too.
+ const box=useRef<HTMLDivElement>(null),latest=useRef(set);useEffect(()=>{latest.current=set;});
+ useEffect(()=>{const el=box.current;if(!el)return;const on=(e:Event)=>{const t=e.target;if(t instanceof HTMLSelectElement&&t.dataset.filter)latest.current(t.dataset.filter,t.value);};el.addEventListener('change',on,true);el.addEventListener('input',on,true);return()=>{el.removeEventListener('change',on,true);el.removeEventListener('input',on,true);};},[]);
+ const pill=(key:string,label:string,options:[string,string][],value=params.get(key)||'')=><label className={`jr-pill ${value?'on':''}`}><span className="visually-hidden">{label}</span><select value={value} data-filter={key} onChange={e=>set(key,e.target.value)} aria-label={label}><option value="">{label}</option>{options.map(([v,t])=><option key={v} value={v}>{t}</option>)}</select></label>;
+ return <div className="jr-filters" role="group" aria-label="Filters" ref={box}>
   {pill('salaryMin','Pay',[['50000','$50,000+ a year'],['70000','$70,000+'],['90000','$90,000+'],['110000','$110,000+'],['130000','$130,000+'],['160000','$160,000+']])}
   {pill('pay','Pay shown',[['shown','Only jobs that show pay']])}
   {pill('arrangement','Work setting',[['remote','Remote'],['hybrid','Hybrid'],['on_site','On-site']])}
@@ -108,6 +119,12 @@ export default function JobSearch(){
   }).catch(e=>{if(e.name!=='AbortError')setState({key,error:(e as Error).message});});
   return()=>c.abort();
  },[key,query,home,tab]);
+ // On the results page the address follows the What and Where boxes as they are typed, without piling up history.
+ const hero=useRef<HTMLDivElement>(null);
+ useEffect(()=>{sent=`${path}${query?`?${query}`:''}`;},[path,query]);
+ useEffect(()=>{const el=hero.current;if(!el||home)return;let timer:ReturnType<typeof setTimeout>|undefined;
+  const on=(e:Event)=>{const t=e.target;if(!(t instanceof HTMLInputElement)||(t.name!=='q'&&t.name!=='near'))return;clearTimeout(timer);timer=setTimeout(()=>{const to=searchAddress(p=>p.delete('page'));if(to===sent)return;sent=to;router.replace(to,{scroll:false});},600);};
+  el.addEventListener('input',on,true);el.addEventListener('change',on,true);return()=>{clearTimeout(timer);el.removeEventListener('input',on,true);el.removeEventListener('change',on,true);};},[home,router]);
  const loading=state.key!==key,results=state.results,error=state.error,signIn=Boolean(state.signIn)&&!loading;
  const [hidden,H]=useState<Set<string>>(new Set()),[hideNote,HN]=useState<{id:string;text:string}|null>(null);
  async function hide(id:string,on=true){const r=await fetch('/api/career',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'hide',jobId:id,hide:on})}).catch(()=>null);
@@ -120,7 +137,7 @@ export default function JobSearch(){
  return <div className="jr">
   <a className="skip-link" href="#results">Skip to results</a>
   <SiteHeader/>
-  <div className={`jr-hero ${home?'home':''}`}>
+  <div className={`jr-hero ${home?'home':''}`} ref={hero}>
    {home&&<h1 className="jr-home-title">Find a job in Australia, with pay up front</h1>}
    <SearchBar q={q} near={near} compact={!home}/>
    {home?<div className="jr-under">
