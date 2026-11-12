@@ -18,3 +18,7 @@ test('thin notes are flagged, and interview questions come from the notes',()=>{
  assert.ok(lines.some(l=>/lead a team of twelve pickers and packers/.test(l)));assert.ok(lines.some(l=>/forklift licence required/.test(l)));
  assert.ok(q.reviewNotes.some(n=>/age, family plans/.test(n)));
 });
+test('a sentence about pay goes under pay and benefits, not requirements',()=>{
+ const d=builtInDraft({...base,task:'draft',brief:'Lead a team of twelve pickers and packers. Forklift licence required. $38 an hour plus super for experienced supervisors. Free parking.'});
+ assert.match(d.description,/What you’ll need\n• Forklift licence required\n\nPay and benefits\n• \$38 an hour plus super for experienced supervisors\n• Free parking/);
+});

@@ -88,7 +88,7 @@ function FirstRun({canPost,go,ctx}:{canPost:boolean;go:PortalContext['go'];ctx:P
  return <div className="ep-over">
   <div className="ep-over-main">
    <div className="ep-grid three">{ways.map(([t,s,b,f],i)=><Card key={t} title={t}><p className="ep-muted" style={{minHeight:60}}>{s}</p>{canPost&&<div style={{marginTop:12}}><Button tone={i===0?'primary':'secondary'} onClick={f}>{b}</Button></div>}</Card>)}</div>
-   <Card title="What job seekers see next to your jobs" action={<Link className="ep-btn ghost sm" href={`/companies/${ctx.company.id}`}>Your public page</Link>}>
+   <Card title="What job seekers see next to your jobs" action={ctx.company.verified_at?<Link className="ep-btn ghost sm" href={`/companies/${ctx.company.id}`}>Your public page</Link>:undefined}>
     <ul className="ep-list">
      <li><div className="ep-grow"><strong>Pay on every listing</strong><small>Every job you post shows its real pay range. Listings without pay can’t be posted.</small></div></li>
      <li><div className="ep-grow"><strong>Verified employer badge</strong><small>Shown once your ABN check is done.</small></div></li>

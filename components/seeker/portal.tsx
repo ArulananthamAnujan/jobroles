@@ -11,6 +11,7 @@ import {salaryLabel} from '@/lib/salary';
 import SavedView from './saved';
 import Contributions from './contributions';
 import GetStarted from './get-started';
+import ResumeBuilder from '../resume-builder';
 import AccountSettings from './account';
 import {accountView} from '@/lib/navigation';
 import {AppShell,AccountMenu,type NavItem} from '../employer/shell';
@@ -24,23 +25,23 @@ type Home={partial?:boolean;applications:App[];drafts:number;saved:number;alerts
  profile:null|{name:string;headline:boolean;location:boolean;skills:boolean;experience:boolean;searchable:boolean;resume:boolean;assessment:boolean}};
 type Rec={id:string;title:string;salary_min:number|null;salary_max:number|null;salary_period:string;currency:string;companies:{name:string};job_locations:{label:string}[];distance_km:number|null};
 const VIEWS:[string,string,string,string][]=[['','overview','Home','home'],['','applications','Applications','jobs'],['','profile','Profile and resume','people'],['','preferences','Application preferences','settings'],['','saved','Saved jobs and alerts','star'],['','contributions','My reviews','chat'],['','account','Account and password','settings'],['','privacy','Privacy and data','shield']];
-const TOOLS:[string,string,string][]=[['/search','Find jobs','search'],['/resume','Resume builder','file'],['/assessments','Skills assessments','check'],['/events','Hiring events','calendar'],['/career-advice','Career advice','chat']];
+const TOOLS:[string,string,string][]=[['/search','Find jobs','search'],['/job-seeker?view=resume','Resume builder','file'],['/assessments','Skills assessments','check'],['/events','Hiring events','calendar'],['/career-advice','Career advice','chat']];
 const SUBS:Record<string,string>={applications:'Every application you’ve sent, with its messages and history.',profile:'What employers see when you apply, and your resume versions.',preferences:'Choose how your applications are sent.',saved:'Jobs you saved and the searches we email you about.',privacy:'Download your data, ask us to correct it, or delete your account.',jobs:'Finish your application.'};
 
 export default function SeekerPortal(){
  const params=useSearchParams(),router=useRouter();
  const [account,A]=useState<Account|null>(null),[error,E]=useState(''),[admin,AD]=useState(false),[employer,EM]=useState(false);
- useEffect(()=>{let live=true;get<Account>('/api/account').then(async a=>{const d=a.user?.confirmed?await get<{isAdmin:boolean;memberships:unknown[]}>('/api/data').catch(()=>null):null;if(live){A(a);AD(Boolean(d?.isAdmin));EM(Boolean(d?.memberships?.length));}}).catch(e=>{if(live)E((e as Error).message);});return()=>{live=false;};},[]);
+ useEffect(()=>{let live=true;Promise.all([get<Account>('/api/account'),get<{isAdmin:boolean;memberships:unknown[]}>('/api/data').catch(()=>null)]).then(([a,first])=>{const d=a.user?.confirmed?first:null;if(live){A(a);AD(Boolean(d?.isAdmin));EM(Boolean(d?.memberships?.length));}}).catch(e=>{if(live)E((e as Error).message);});return()=>{live=false;};},[]);
  const raw=accountView(`?${params}`,''),view=['hiring','analytics','candidates','feeds','reviews'].includes(raw)?'overview':raw;
  if(error)return <AppShell nav={[]} current="" crumb="Job seeker"><Notice error={error}/></AppShell>;
  if(account&&!account.user?.confirmed)return <AccountWorkspace portal="seeker"/>;
- const nav:NavItem[]=[...VIEWS.map(([group,id,label,icon])=>({group,id,label,icon,href:`/job-seeker?view=${id}`})),...TOOLS.map(([href,label,icon])=>({group:'Tools',id:href,label,icon,href}))];
- const label=VIEWS.find(v=>v[1]===view)?.[2]||'Apply';
+ const nav:NavItem[]=[...VIEWS.map(([group,id,label,icon])=>({group,id,label,icon,href:`/job-seeker?view=${id}`})),...TOOLS.map(([href,label,icon])=>({group:'Tools',id:href.endsWith('view=resume')?'resume':href,label,icon,href}))];
+ const label=view==='resume'?'Resume builder':VIEWS.find(v=>v[1]===view)?.[2]||'Apply';
  return <AppShell nav={nav} current={view} crumb={<>Job seeker <span aria-hidden="true">/</span> <strong>{label}</strong></>}
   search={{placeholder:'Search jobs, e.g. nurse in Geelong',onSubmit:q=>router.push(`/search?${new URLSearchParams({q})}`)}}
   end={account?.user&&<><Link className="ep-iconbtn" href="/help" aria-label="Help"><Icon name="help"/></Link><AccountMenu email={account.user.email} links={[['/job-seeker?view=profile','Profile and resume'],['/job-seeker?view=account','Account and password'],['/alerts','Job alerts'],...(employer?[['/employer','Employer portal'] as [string,string]]:[['/employer','Hire on JobRoles'] as [string,string]]),...(admin?[['/admin','Admin console'] as [string,string]]:[])]}/></>}
   foot={<><Link href="/employer">{employer?'Switch to employer':'Hiring? Post a job'}</Link></>}>
-  {!account?<p role="status" className="ep-muted">Loading…</p>:view==='overview'?<SeekerHome/>:view==='applications'?<SeekerApplications/>:view==='saved'?<SavedView/>:view==='contributions'?<Contributions/>:view==='account'?<AccountSettings email={account.user?.email||''}/>:
+  {!account?<p role="status" className="ep-muted">Loading…</p>:view==='overview'?<SeekerHome/>:view==='applications'?<SeekerApplications/>:view==='saved'?<SavedView/>:view==='contributions'?<Contributions/>:view==='account'?<AccountSettings email={account.user?.email||''}/>:view==='resume'?<div className="ep-resume"><ResumeBuilder/></div>:
    <Section title={view==='jobs'?'Apply':label} sub={SUBS[view]}><AccountWorkspace portal="seeker" embedded/></Section>}
  </AppShell>;
 }
@@ -68,7 +69,7 @@ function SeekerHome(){
  const interviews=h.applications.filter(a=>a.interview&&a.state==='submitted').sort((x,y)=>x.interview!.startsAt.localeCompare(y.interview!.startsAt));
  const proposals=h.applications.filter(a=>a.proposal&&a.state==='submitted'),unread=h.applications.reduce((n,a)=>n+a.unread,0);
  const p=h.profile,checks:[boolean,string,string][]=[[Boolean(p?.name),'Your name','/job-seeker?view=profile'],[Boolean(p?.headline),'A headline','/job-seeker?view=profile'],[Boolean(p?.location),'Where you want to work','/job-seeker?view=profile'],
-  [Boolean(p?.skills),'Your skills','/job-seeker?view=profile'],[Boolean(p?.resume),'A resume','/job-seeker?view=profile'],[Boolean(p?.experience),'Work history','/resume'],[Boolean(p?.assessment),'A skills assessment','/assessments'],[Boolean(p?.searchable),'Visible to employers','/job-seeker?view=profile']];
+  [Boolean(p?.skills),'Your skills','/job-seeker?view=profile'],[Boolean(p?.resume),'A resume','/job-seeker?view=profile'],[Boolean(p?.experience),'Work history','/job-seeker?view=resume'],[Boolean(p?.assessment),'A skills assessment','/assessments'],[Boolean(p?.searchable),'Visible to employers','/job-seeker?view=profile']];
  const done=checks.filter(c=>c[0]).length,first=p?.name?.split(' ')[0];
  const soon=interviews[0];
  const finding=soon?`Your next interview is with ${soon.company} on ${when(soon.interview!.startsAt,{weekday:'long',day:'numeric',month:'long',hour:'numeric',minute:'2-digit',timeZone:soon.interview!.timeZone})}.`

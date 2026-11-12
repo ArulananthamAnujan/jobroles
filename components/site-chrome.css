@@ -31,3 +31,5 @@
 .jr-header-end .jr-account-menu a,.jr-account-menu button{display:block;height:auto;border:0;padding:9px 10px;border-radius:6px;font-weight:500;font-size:15px;text-align:left;background:none;color:var(--ink)}
 .jr-header-end .jr-account-menu a:hover,.jr-account-menu button:hover{background:#f3f5f6;color:var(--ink)}
 @media(max-width:700px){.jr-account-label{display:none}}
+
+.jr-account-wait{display:inline-block;width:112px;height:36px}

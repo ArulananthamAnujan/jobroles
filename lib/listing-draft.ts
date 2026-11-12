@@ -5,14 +5,16 @@ export type Draft={title:string;description:string;reviewNotes:string[]};
 const SETTING:Record<string,string>={on_site:'On-site',hybrid:'Hybrid',remote:'Remote'};
 const REQUIREMENT=/\b(must|require[ds]?|essential|mandatory|licen[cs]e|ticket|certificate|certification|qualif|degree|diploma|registration|experience|years?|proven|ability to|able to|right to work|police check|working with children|wwcc|ndis|clearance|competent|proficient|knowledge of)\b/i;
 const BENEFIT=/\b(benefits?|parking|superannuation|bonus|leave|discount|training provided|paid training|flexible|flexibility|salary packag|uniform|career|progression|development|allowance|company car|vehicle provided|work from home days?|employee assistance|eap|free)\b/i;
+// A sentence about money belongs with what the employer offers, even when it also mentions experience or years.
+const PAY=/\$\s?\d|\b(salary|wage|wages|pay rate|hourly rate|penalty rates|per hour|an hour|per annum|per year|a year|p\.?a\.?|plus super|\+\s?super|superannuation|bonus|commission|overtime (?:is )?paid)\b/i;
 const HOURS=/\b(hours?|shift work|night shifts?|rotating roster|rostered|monday|tuesday|wednesday|thursday|friday|saturday|sunday|weekends?|weekdays?|nights?|\d{1,2}(?::\d{2})?\s?(?:am|pm)|days? (?:a|per) week|fortnight)\b/i;
 const sentence=(s:string)=>{const t=s.replace(/^[\s•\-–*·\d.)]+/,'').replace(/\s+/g,' ').trim();return t?t[0].toUpperCase()+t.slice(1).replace(/[.;,]+$/,''):'';};
 const lowerFirst=(s:string)=>/^[A-Z][a-z]/.test(s)?s[0].toLowerCase()+s.slice(1):s;
 function facts(text:string){
- return [...new Set(text.split(/\r?\n|;|•|(?<=[.!?])\s+(?=[A-Z])/).map(sentence).filter(f=>f.length>=4&&f.length<=400&&!/^existing description:?$/i.test(f)))].slice(0,40);
+ return [...new Set(text.split(/\r?\n|;|•|(?<=[.!?])\s+(?=[A-Z$])/).map(sentence).filter(f=>f.length>=4&&f.length<=400&&!/^existing description:?$/i.test(f)))].slice(0,40);
 }
 export function builtInDraft(input:Brief):Draft{
- const all=facts(input.brief),need=all.filter(f=>REQUIREMENT.test(f)),perks=all.filter(f=>!need.includes(f)&&BENEFIT.test(f)),hours=all.filter(f=>!need.includes(f)&&!perks.includes(f)&&HOURS.test(f)),duties=all.filter(f=>!need.includes(f)&&!perks.includes(f)&&!hours.includes(f));
+ const all=facts(input.brief),money=all.filter(f=>PAY.test(f)),need=all.filter(f=>!money.includes(f)&&REQUIREMENT.test(f)),perks=[...money,...all.filter(f=>!money.includes(f)&&!need.includes(f)&&BENEFIT.test(f))],hours=all.filter(f=>!need.includes(f)&&!perks.includes(f)&&HOURS.test(f)),duties=all.filter(f=>!need.includes(f)&&!perks.includes(f)&&!hours.includes(f));
  const title=input.title.trim();
  if(input.task==='interview'){
   const questions=[
@@ -32,7 +34,7 @@ export function builtInDraft(input:Brief):Draft{
   duties.length?`What you’ll do\n${list(duties)}`:'',
   need.length?`What you’ll need\n${list(need)}`:'',
   hours.length?`Hours\n${list(hours)}`:'',
-  perks.length?`What we offer\n${list(perks)}`:'',
+  perks.length?`${money.length?'Pay and benefits':'What we offer'}\n${list(perks)}`:'',
   'How to apply\nApply through JobRoles with your resume. We read every application and will let you know the outcome.',
  ].filter(Boolean);
  const notes=['Organised from your notes without AI. Nothing was added, so anything missing here is missing from your notes.'];

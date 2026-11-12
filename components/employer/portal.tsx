@@ -66,7 +66,7 @@ export default function EmployerPortal(){
  const router=useRouter(),path=usePathname(),params=useSearchParams();
  const [account,A]=useState<Account|null>(null),[data,D]=useState<Data|null>(null),[error,E]=useState(''),[companyId,C]=useState(''),[version,V]=useState(0);
  const rawView=params.get('view')||'dashboard',view=LEGACY[rawView]??(NAV.some(n=>n[1]===rawView)?rawView:'dashboard');
- useEffect(()=>{let live=true;get<Account>('/api/account').then(async a=>{const d=a.user?.confirmed?await get<Data>('/api/data'):null;if(live){A(a);D(d);}}).catch(e=>{if(live)E((e as Error).message);});return()=>{live=false;};},[version]);
+ useEffect(()=>{let live=true;Promise.all([get<Account>('/api/account'),get<Data>('/api/data').catch(()=>null)]).then(async([a,first])=>{const d=a.user?.confirmed?first??await get<Data>('/api/data'):null;if(live){A(a);D(d);}}).catch(e=>{if(live)E((e as Error).message);});return()=>{live=false;};},[version]);
  const companies=useMemo(()=>(data?.companies||[]).filter(c=>data?.memberships.some(m=>m.company_id===c.id)),[data]);
  useEffect(()=>{if(!companies.length)return;const wanted=params.get('company');let saved='';try{saved=localStorage.getItem('ep.company')||'';}catch{}const pick=[wanted,saved].find(x=>x&&companies.some(c=>c.id===x))||companies[0].id;Promise.resolve().then(()=>C(pick));},[companies,params]);
  const nav=NAV.map(([group,id,label,icon])=>({group,id,label,icon,href:`/employer?view=${id}`}));
@@ -103,8 +103,8 @@ export default function EmployerPortal(){
   search={companies.length?{placeholder:'Search applicants',onSubmit:q=>go('applicants',{q})}:undefined}
   org={companies.length>0&&<div className="ep-org">{companies.length>1?<label><small>Company</small><select value={companyId} onChange={e=>pick(e.target.value)}>{companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>:company&&<><small>Employer</small><strong>{company.name}</strong></>}
    {company&&!company.verified_at&&<span className="ep-pill amber" style={{width:'fit-content',marginTop:4}}>Verification pending</span>}</div>}
-  end={<><Link className="ep-iconbtn" href="/help" aria-label="Help"><Icon name="help"/></Link><Bell/><AccountMenu email={account.user.email} links={[...(company?[[`/companies/${company.id}`,'View company page'] as [string,string]]:[]),['/job-seeker','Job seeker view'],...(data.isAdmin?[['/admin','Admin console'] as [string,string]]:[]),['/employer?view=settings','Settings']]}/></>}
-  foot={<>{company&&<Link href={`/companies/${company.id}`}>View company page</Link>}<Link href="/job-seeker">Switch to job seeker</Link></>}>
+  end={<><Link className="ep-iconbtn" href="/help" aria-label="Help"><Icon name="help"/></Link><Bell/><AccountMenu email={account.user.email} links={[...(company?.verified_at?[[`/companies/${company.id}`,'View company page'] as [string,string]]:[]),['/job-seeker','Job seeker view'],...(data.isAdmin?[['/admin','Admin console'] as [string,string]]:[]),['/employer?view=settings','Settings']]}/></>}
+  foot={<>{company?.verified_at&&<Link href={`/companies/${company.id}`}>View company page</Link>}<Link href="/job-seeker">Switch to job seeker</Link></>}>
   {body}
  </AppShell>;
 }

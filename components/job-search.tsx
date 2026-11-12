@@ -6,6 +6,7 @@ import {salaryLabel} from '@/lib/salary';
 import {SECTORS} from '@/lib/search';
 import {SaveSearch,ReportJob} from './launch-tools';
 import SaveJob from './save-job';
+import PlaceInput from './place-input';
 import {SiteHeader,SiteFooter} from './site-chrome';
 import './job-search.css';
 // The home page and /search share one familiar layout: a What/Where bar, filter pills, a result list on the
@@ -31,7 +32,7 @@ function subscribeRecent(cb:()=>void){window.addEventListener('storage',cb);retu
 function SearchBar({q,near,compact}:{q:string;near:string;compact:boolean}){
  return <form action="/search" role="search" className={`jr-search ${compact?'compact':''}`} onSubmit={e=>{const f=new FormData(e.currentTarget);rememberSearch(String(f.get('q')||'').trim(),String(f.get('near')||'').trim());}}>
   <label className="jr-field"><span className="jr-field-label">What</span><input name="q" defaultValue={q} maxLength={120} placeholder="Job title, keywords or company" autoComplete="off"/></label>
-  <label className="jr-field"><span className="jr-field-label">Where</span><input name="near" defaultValue={near} maxLength={120} placeholder="City, suburb or state" autoComplete="address-level2"/></label>
+  <label className="jr-field"><span className="jr-field-label">Where</span><PlaceInput defaultValue={near}/></label>
   <button type="submit" className="jr-primary">Find jobs</button>
  </form>;
 }
@@ -43,7 +44,7 @@ function Filters({params}:{params:URLSearchParams}){
  return <div className="jr-filters" role="group" aria-label="Filters">
   {pill('salaryMin','Pay',[['50000','$50,000+ a year'],['70000','$70,000+'],['90000','$90,000+'],['110000','$110,000+'],['130000','$130,000+'],['160000','$160,000+']])}
   {pill('pay','Pay shown',[['shown','Only jobs that show pay']])}
-  {pill('arrangement','Remote',[['remote','Remote'],['hybrid','Hybrid'],['on_site','On-site']])}
+  {pill('arrangement','Work setting',[['remote','Remote'],['hybrid','Hybrid'],['on_site','On-site']])}
   {pill('type','Job type',['Full-time','Part-time','Casual','Contract','Temporary','Internship'].map(t=>[t,t] as [string,string]))}
   {pill('posted','Date posted',[['1','Last 24 hours'],['3','Last 3 days'],['7','Last 7 days'],['14','Last 14 days']])}
   {params.get('near')&&pill('radius','Distance',[['5','Within 5 km'],['10','Within 10 km'],['50','Within 50 km'],['100','Within 100 km'],['250','Within 250 km']])}

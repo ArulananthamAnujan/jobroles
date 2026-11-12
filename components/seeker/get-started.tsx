@@ -25,7 +25,7 @@ export default function GetStarted({checks,onChange}:{checks:Checks;onChange:()=
    <Step n={1} step={step} title="Add your resume" done={checks.resume}>
     <p>Upload it and we fill in your profile and work history for you. PDF or Word, up to 10 MB.</p>
     <div className="ep-actions"><label className={`ep-btn primary md ${busy?'busy':''}`}>{busy?'Reading your resume…':'Upload my resume'}<input type="file" hidden accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" disabled={busy} onChange={e=>{void upload(e.target.files?.[0]);e.target.value='';}}/></label>
-     <Link className="ep-btn secondary md" href="/resume">I don’t have one: build it here</Link></div>
+     <Link className="ep-btn secondary md" href="/job-seeker?view=resume">I don’t have one: build it here</Link></div>
    </Step>
    <Step n={2} step={step} title="Check your profile" done={checks.profile}>
     <p>Make sure your headline, location and skills are right. Employers see these when you apply.</p>
@@ -33,7 +33,7 @@ export default function GetStarted({checks,onChange}:{checks:Checks;onChange:()=
    </Step>
    <Step n={3} step={step} title="Find a job and apply" done={checks.applied}>
     <p>You’re ready. Search for a role, open it and choose Apply now. Your resume is attached for you.</p>
-    <div className="ep-actions"><Link className="ep-btn primary md" href="/search">Find jobs</Link><Link className="ep-btn secondary md" href="/resume">Review my resume details</Link></div>
+    <div className="ep-actions"><Link className="ep-btn primary md" href="/search">Find jobs</Link><Link className="ep-btn secondary md" href="/job-seeker?view=resume">Review my resume details</Link></div>
    </Step>
   </ol>
  </Card>;
