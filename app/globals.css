@@ -64,3 +64,5 @@ input[type=file]::file-selector-button:hover{background:var(--mint)}
 .resume-list{list-style:none;margin:0;padding:0;display:grid;gap:10px}.resume-list li{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;border:1px solid var(--line);border-radius:10px;margin:0}.resume-list li>div{flex:1 1 180px;min-width:0}.resume-list strong{display:block;overflow-wrap:anywhere}.resume-list small{display:block}
 .jp-btn.small{min-height:40px;padding:8px 14px;font-size:14px}.jp-btn.secondary.danger-btn{color:#a12f2f;border-color:#d9a3a3}.jp-btn.secondary.danger-btn:hover{background:#fceced;color:#a12f2f}
 .change-password{display:grid;gap:12px;min-width:min(100%,320px);flex:1 1 320px}
+
+.account-shell>.notice,.auth-shell .notice{position:sticky;top:8px;z-index:30;box-shadow:0 8px 24px #172b3a1a}

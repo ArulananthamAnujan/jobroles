@@ -413,3 +413,22 @@ a.ep-stat:hover{background:var(--wash)}
 .sk-steps li.ok strong{color:var(--soft);font-weight:500}
 .sk-steps small{display:block;color:var(--soft);font-size:13px}
 .sk-steps .ep-btn{flex-shrink:0}
+
+/* Confirmations and errors stay in view: they stick to the top of the screen while the person is further down the page. */
+/* 64px clears the portal's own top bar, which also sticks. */
+.ep-notice{position:sticky;top:64px;z-index:15;box-shadow:0 8px 24px #172b3a1a}
+@media(max-width:860px){.ep-notice{top:56px}}
+div.ep-notice{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+.ep-notice-next{display:inline-flex;flex-wrap:wrap;gap:8px;margin-left:auto}
+
+/* Job seeker "Get started" steps */
+.gs{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.gs-step{display:grid;grid-template-columns:32px minmax(0,1fr);gap:12px;align-items:start;padding:12px 0;margin:0;border-top:1px solid var(--rule)}
+.gs-step:first-child{border-top:0}
+.gs-num{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:14px;font-weight:700;background:var(--wash);color:var(--soft)}
+.gs-step.now .gs-num{background:var(--ink);color:#fff}
+.gs-step.done .gs-num{background:var(--mint);color:#04463f}
+.gs-step.done strong{color:var(--soft);font-weight:500}
+.gs-body{margin-top:6px;display:grid;gap:10px}
+.gs-body p{color:var(--soft)}
+.ep-btn.busy{opacity:.6;pointer-events:none}

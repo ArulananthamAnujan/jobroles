@@ -10,6 +10,7 @@ import PushToggle from '../push-toggle';
 import {salaryLabel} from '@/lib/salary';
 import SavedView from './saved';
 import Contributions from './contributions';
+import GetStarted from './get-started';
 import AccountSettings from './account';
 import {accountView} from '@/lib/navigation';
 import {AppShell,AccountMenu,type NavItem} from '../employer/shell';
@@ -58,9 +59,9 @@ function nextStep(a:App):[string,string,string|null]{
  return ['Waiting on employer',a.responseShare!==null&&a.responseShare!==undefined?`${a.company} responds to ${a.responseShare}% of applicants`:'',null];
 }
 function SeekerHome(){
- const [h,H]=useState<Home|null>(null),[recs,R]=useState<Rec[]|null>(null),[error,E]=useState(''),[all,AL]=useState(false);
+ const [h,H]=useState<Home|null>(null),[recs,R]=useState<Rec[]|null>(null),[error,E]=useState(''),[all,AL]=useState(false),[version,V]=useState(0);
  useEffect(()=>{const c=new AbortController();get<Home>('/api/seeker-home',c.signal).then(H).catch(e=>{if(e.name!=='AbortError')E(e.message);});
-  get<{jobs:Rec[]}>('/api/recommendations',c.signal).then(d=>R(d.jobs||[])).catch(()=>R([]));return()=>c.abort();},[]);
+  get<{jobs:Rec[]}>('/api/recommendations',c.signal).then(d=>R(d.jobs||[])).catch(()=>R([]));return()=>c.abort();},[version]);
  if(error)return <Section title="Home"><Notice error={error}/></Section>;
  if(!h)return <Section title="Home" sub="Loading your applications…"><div className="ep-stats" aria-hidden="true" style={{height:96}}/></Section>;
  const open=h.applications.filter(a=>a.state==='submitted'&&!['rejected','hired'].includes(a.stage));
@@ -81,6 +82,7 @@ function SeekerHome(){
   :proposals[0]?<Link className="ep-btn primary md" href={`/account/applications/${proposals[0].id}`}>Pick a time</Link>:!h.applications.length&&done<3?<Link className="ep-btn primary md" href="/job-seeker?view=profile">Complete your profile</Link>:<Link className="ep-btn primary md" href="/search">Find jobs</Link>;
  const shown=all?h.applications:h.applications.slice(0,8);
  return <Section title={first?`Hello, ${first}`:'Home'} sub={finding} actions={<>{(soon||proposals[0]||(!h.applications.length&&done<3))&&<Link className="ep-btn secondary md" href="/search">Find jobs</Link>}{action}</>}>
+  <GetStarted checks={{resume:Boolean(p?.resume),profile:Boolean(p?.headline&&p?.location&&p?.skills),applied:h.applications.length>0}} onChange={()=>V(v=>v+1)}/>
   <div className="ep-over">
    <div className="ep-over-main">
     <div className="ep-stats" style={{marginBottom:0}}>

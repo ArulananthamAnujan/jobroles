@@ -13,27 +13,42 @@ const blankExp:Exp={title:'',company:'',location:'',start:'',end:'',description:
 export default function ResumeBuilder(){
  const [state,S]=useState<'loading'|'signin'|'noprofile'|'ok'>('loading'),[base,BA]=useState<Profile|null>(null),[email,EM]=useState('');
  const [summary,SU]=useState(''),[exp,EX]=useState<Exp[]>([]),[edu,ED]=useState<Edu[]>([]),[licences,LI]=useState(''),[languages,LA]=useState(''),[titles,TI]=useState(''),[pay,PA]=useState(''),[period,PE]=useState('year'),[types,TY]=useState<string[]>([]),[ready,RE]=useState(false),[availability,AV]=useState('');
- const [busy,B]=useState(''),[error,E]=useState(''),[note,N]=useState('');
+ const [busy,B]=useState(''),[error,E]=useState(''),[note,N]=useState(''),[next,NX]=useState<[string,string][]>([]);
+ type Found={summary:string;experience:Exp[];education:Edu[];licences:string[];languages:string[]};
+ // Fills the form from the person's uploaded resume. Nothing is saved until they press Save.
+ async function importResume(auto=false){if(!auto){B('import');E('');N('');NX([]);}
+  try{const r=await fetch('/api/career',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'import'})});const d=await r.json() as {details?:Found;filename?:string;error?:string};if(!r.ok||!d.details)throw new Error(d.error||'Your resume could not be read.');
+   const f=d.details,got:string[]=[];
+   if(f.summary){SU(f.summary);got.push('summary');}
+   if(f.experience.length){EX(f.experience.map(e=>({...blankExp,...e})));got.push(`${f.experience.length} ${f.experience.length===1?'job':'jobs'}`);}
+   if(f.education.length){ED(f.education);got.push(`${f.education.length} ${f.education.length===1?'qualification':'qualifications'}`);}
+   if(f.licences.length){LI(f.licences.join('\n'));got.push('licences');}
+   if(f.languages.length){LA(f.languages.join(', '));got.push('languages');}
+   if(got.length)N(`We filled in your ${got.join(', ')} from ${d.filename}. Check each part, fix anything we got wrong, then press Save.`);
+   else if(!auto)N(`We read ${d.filename} but could not pick out your jobs or education from its layout. Add them below.`);
+  }catch(e){if(!auto)E((e as Error).message);}finally{if(!auto)B('');}}
  useEffect(()=>{let live=true;fetch('/api/career',{cache:'no-store'}).then(async r=>{if(!live)return;if(r.status===401||r.status===403){S('signin');return;}const d=await r.json() as {profile:Profile|null;email:string};
   if(!d.profile){S('noprofile');return;}const p=d.profile;BA(p);EM(d.email);SU(p.summary||'');EX(p.experience.map(e=>({title:e.title,company:e.company,location:e.location||'',start:e.start,end:e.end||'',description:e.description||''})));
-  ED(p.education.map(e=>({qualification:e.qualification,institution:e.institution,year:e.year?String(e.year):''})));LI(p.licences.join('\n'));LA(p.languages.join(', '));TI(p.desired_titles.join(', '));PA(p.desired_pay?String(p.desired_pay):'');PE(p.desired_period||'year');TY(p.desired_types);RE(p.ready_to_work);AV(p.availability||'');S('ok');}).catch(e=>{if(live)E(e.message);});return()=>{live=false;};},[]);
+  ED(p.education.map(e=>({qualification:e.qualification,institution:e.institution,year:e.year?String(e.year):''})));LI(p.licences.join('\n'));LA(p.languages.join(', '));TI(p.desired_titles.join(', '));PA(p.desired_pay?String(p.desired_pay):'');PE(p.desired_period||'year');TY(p.desired_types);RE(p.ready_to_work);AV(p.availability||'');S('ok');
+  // Someone who has uploaded a resume should not be asked to type it out again.
+  if(!p.summary&&!p.experience.length&&!p.education.length)void importResume(true);}).catch(e=>{if(live)E(e.message);});return()=>{live=false;};},[]);
  const list=(v:string,sep:RegExp)=>v.split(sep).map(x=>x.trim()).filter(Boolean);
  const data:ResumeData={name:base?.full_name||'',headline:base?.headline,location:base?.location,email:base?.email||email,summary,skills:base?.skills,
   experience:exp.filter(e=>e.title&&e.company&&e.start).map(e=>({...e,end:e.end||null})),education:edu.filter(e=>e.qualification&&e.institution).map(e=>({...e,year:e.year?Number(e.year):null})),licences:list(licences,/\n/),languages:list(languages,/,/)};
- async function save(){B('save');E('');N('');try{const r=await fetch('/api/career',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'profile',summary,experience:data.experience!.map(e=>({...e,location:e.location||undefined,description:e.description||undefined})),
+ async function save(){B('save');E('');N('');NX([]);try{const r=await fetch('/api/career',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'profile',summary,experience:data.experience!.map(e=>({...e,location:e.location||undefined,description:e.description||undefined})),
    education:edu.filter(e=>e.qualification&&e.institution).map(e=>({qualification:e.qualification,institution:e.institution,year:e.year})),licences:data.licences,languages:data.languages,desiredTitles:list(titles,/,/).slice(0,5),desiredPay:pay?Number(pay):null,desiredPeriod:pay?period:null,desiredTypes:types,readyToWork:ready,availability})});
-  const d=await r.json() as {error?:string};if(!r.ok)throw new Error(d.error);N('Profile saved. Employers you apply to see your experience, education and licences.');}catch(e){E((e as Error).message||'Could not save.');}finally{B('');}}
+  const d=await r.json() as {error?:string};if(!r.ok)throw new Error(d.error);N('Saved. Employers you apply to see your experience, education and licences.');NX([['Save it as a resume to apply with','#use'],['Find jobs','/search']]);}catch(e){E((e as Error).message||'Could not save.');}finally{B('');}}
  function download(){const blob=new Blob([resumePdf(data) as BlobPart],{type:'application/pdf'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${data.name||'resume'} resume.pdf`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
- async function useForApplying(){B('upload');E('');N('');try{await save();const form=new FormData();form.append('resume',new File([resumePdf(data) as BlobPart],`${data.name||'resume'} resume.pdf`,{type:'application/pdf'}));
-  const r=await fetch('/api/resumes',{method:'POST',body:form});const d=await r.json() as {error?:string};if(!r.ok)throw new Error(d.error);N('Saved as a resume. Choose it when you apply, or set it as your default in your profile.');}catch(e){E((e as Error).message||'Could not upload.');}finally{B('');}}
+ async function saveAsResume(){B('upload');E('');N('');try{await save();const form=new FormData();form.append('autofill','no');form.append('resume',new File([resumePdf(data) as BlobPart],`${data.name||'resume'} resume.pdf`,{type:'application/pdf'}));
+  const r=await fetch('/api/resumes',{method:'POST',body:form});const d=await r.json() as {error?:string};if(!r.ok)throw new Error(d.error);N('Saved as a resume you can apply with. It is now in your list of resumes.');NX([['Find jobs to apply for','/search'],['See my resumes','/job-seeker?view=profile']]);}catch(e){E((e as Error).message||'Could not upload.');}finally{B('');}}
  if(state==='loading')return <p role="status" className="cr-pad">Loading your resume…</p>;
  if(state==='signin')return <div className="cr-pad cr-card"><h1>Build your resume</h1><p>Sign in to build a resume from your experience, then download it or apply with it.</p><Link className="jp-btn" href="/job-seeker">Sign in or create an account</Link></div>;
  if(state==='noprofile')return <div className="cr-pad cr-card"><h1>Build your resume</h1><p>Start by adding your name and headline to your profile.</p><Link className="jp-btn" href="/job-seeker?view=profile">Set up your profile</Link></div>;
  const setExp=(i:number,k:keyof Exp,v:string)=>EX(exp.map((e,j)=>j===i?{...e,[k]:v}:e)),setEdu=(i:number,k:keyof Edu,v:string)=>ED(edu.map((e,j)=>j===i?{...e,[k]:v}:e));
  return <div className="cr-builder">
   <section className="cr-editor">
-   <div className="cr-head"><div><h1>Resume builder</h1><p className="muted">Name, headline, location and skills come from <Link className="text-link" href="/job-seeker?view=profile">your profile</Link>.</p></div></div>
-   {(error||note)&&<p role={error?'alert':'status'} className={error?'error':'notice'}>{error||note}</p>}
+   <div className="cr-head"><div><h1>Resume builder</h1><p className="muted">Name, headline, location and skills come from <Link className="text-link" href="/job-seeker?view=profile">your profile</Link>.</p></div><button type="button" className="jp-btn secondary small" disabled={!!busy} onClick={()=>void importResume()}>{busy==='import'?'Reading your resume…':'Fill in from my uploaded resume'}</button></div>
+   {(error||note)&&<div role={error?'alert':'status'} className={`cr-toast ${error?'error':'notice'}`}><p>{error||note}</p>{!error&&next.length>0&&<div className="row">{next.map(([label,href])=>href==='#use'?<button key={label} type="button" className="jp-btn small" disabled={!!busy} onClick={()=>void saveAsResume()}>{label}</button>:<Link key={label} className="jp-btn secondary small" href={href}>{label}</Link>)}</div>}</div>}
    <fieldset className="cr-box"><legend>Summary</legend><textarea value={summary} onChange={e=>SU(e.target.value)} maxLength={2000} placeholder="Two or three sentences about your experience and what you are looking for." aria-label="Summary"/></fieldset>
    <fieldset className="cr-box"><legend>Work experience</legend>
     {exp.map((e,i)=><div key={i} className="cr-entry"><div className="cr-grid"><label className="field"><span>Job title</span><input value={e.title} onChange={x=>setExp(i,'title',x.target.value)} maxLength={120}/></label><label className="field"><span>Employer</span><input value={e.company} onChange={x=>setExp(i,'company',x.target.value)} maxLength={160}/></label>
@@ -54,7 +69,7 @@ export default function ResumeBuilder(){
     <label className="field"><span>Desired job titles (comma separated)</span><input value={titles} onChange={e=>TI(e.target.value)}/></label>
     <div className="cr-grid two"><label className="field"><span>Desired minimum pay (AUD)</span><input type="number" min={0} value={pay} onChange={e=>PA(e.target.value)}/></label><label className="field"><span>Per</span><select value={period} onChange={e=>PE(e.target.value)}><option value="year">Year</option><option value="month">Month</option><option value="day">Day</option><option value="hour">Hour</option></select></label></div>
     <div className="cr-types">{TYPES.map(t=><label key={t} className="check"><input type="checkbox" checked={types.includes(t)} onChange={e=>TY(e.target.checked?[...types,t]:types.filter(x=>x!==t))}/>{t}</label>)}</div></fieldset>
-   <div className="cr-actions"><button className="jp-btn" disabled={Boolean(busy)} onClick={save}>{busy==='save'?'Saving…':'Save profile'}</button><button className="jp-btn secondary" disabled={Boolean(busy)} onClick={useForApplying}>{busy==='upload'?'Saving…':'Save as a resume to apply with'}</button><button className="jp-btn secondary" onClick={download}>Download PDF</button></div>
+   <div className="cr-actions"><button className="jp-btn" disabled={Boolean(busy)} onClick={save}>{busy==='save'?'Saving…':'Save profile'}</button><button className="jp-btn secondary" disabled={Boolean(busy)} onClick={saveAsResume}>{busy==='upload'?'Saving…':'Save as a resume to apply with'}</button><button className="jp-btn secondary" onClick={download}>Download PDF</button></div>
   </section>
   <aside className="cr-preview" aria-label="Resume preview"><div className="cr-paper">
    <h2>{data.name}</h2>{data.headline&&<p className="cr-sub">{data.headline}</p>}<p className="cr-contact">{[data.location,data.email].filter(Boolean).join(' · ')}</p>

@@ -1,6 +1,9 @@
 import {z} from 'zod';
 import {authenticatedClient,failure,response,sameOrigin,jsonBody,ApiError} from '@/lib/backend/server';
 import {rateLimit} from '@/lib/backend/guard';
+import {resumeText} from '@/lib/backend/resume-autofill';
+import {parseResumeDetails} from '@/lib/resume-parse';
+export const runtime='nodejs';
 export const dynamic='force-dynamic';
 const id=z.string().uuid(),month=z.string().regex(/^(19|20)\d{2}-(0[1-9]|1[0-2])$/);
 const schema=z.discriminatedUnion('action',[
@@ -9,6 +12,7 @@ const schema=z.discriminatedUnion('action',[
   education:z.array(z.object({qualification:z.string().trim().min(1).max(160),institution:z.string().trim().min(1).max(160),year:z.string().regex(/^((19|20)\d{2})?$/).optional()})).max(10),
   licences:z.array(z.string().max(160)).max(20),languages:z.array(z.string().max(60)).max(10),desiredTitles:z.array(z.string().max(120)).max(5),
   desiredPay:z.number().min(0).max(10000000).nullable(),desiredPeriod:z.enum(['hour','day','month','year']).nullable(),desiredTypes:z.array(z.string()).max(6),readyToWork:z.boolean(),availability:z.string().max(240).default('')}),
+ z.object({action:z.literal('import')}),
  z.object({action:z.literal('hide'),jobId:id,hide:z.boolean()}),
  z.object({action:z.literal('assessment.start'),code:z.string().regex(/^[a-z-]{3,40}$/)}),
  z.object({action:z.literal('assessment.finish'),attempt:id,answers:z.record(z.string().regex(/^\d{1,2}$/),z.number().int().min(0).max(9))}),
@@ -28,6 +32,17 @@ export async function POST(request:Request){try{
  sameOrigin(request);const {client,user}=await authenticatedClient();rateLimit(`career:${user.id}`,120,60_000);
  const parsed=schema.safeParse(await jsonBody(request));if(!parsed.success)throw new ApiError(400,'Check the highlighted details and try again.');
  const d=parsed.data;
+ // Reads the person's most recent uploaded resume and returns what it says, for the resume builder to show.
+ // Nothing is saved here: they check it and press Save.
+ if(d.action==='import'){
+  const {data:latest}=await client.from('resume_versions').select('storage_key,filename').eq('user_id',user.id).is('deleted_at',null).order('version',{ascending:false}).limit(1).maybeSingle();
+  if(!latest)throw new ApiError(404,'Upload a resume first, under Profile and resume.');
+  const {data:file}=await client.storage.from('resumes').download(latest.storage_key);
+  if(!file)throw new ApiError(404,'Your resume file could not be opened. Upload it again under Profile and resume.');
+  const text=await resumeText(new Uint8Array(await file.arrayBuffer()));
+  if(text.replace(/\s/g,'').length<40)throw new ApiError(422,`We could not find any text in ${latest.filename}. It may be a scan or a photo, so please type your details here.`);
+  return response({details:parseResumeDetails(text),filename:latest.filename});
+ }
  const {data,error}=d.action==='profile'?await client.rpc('jp_save_career_profile',{payload:d})
   :d.action==='hide'?await client.rpc('jp_hide_job',{target:d.jobId,hide:d.hide})
   :d.action==='assessment.start'?await client.rpc('jp_start_assessment',{assessment:d.code})

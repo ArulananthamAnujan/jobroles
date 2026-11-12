@@ -1,4 +1,6 @@
 import {authenticatedClient,response,failure,sameOrigin,ApiError} from '@/lib/backend/server';
+import {resumeText,autofillFromResume,filledSentence,type Filled} from '@/lib/backend/resume-autofill';
+export const runtime='nodejs';
 export async function POST(request:Request){try{
  sameOrigin(request);const {client,user}=await authenticatedClient();
  const length=Number(request.headers.get('content-length'));
@@ -20,5 +22,8 @@ export async function POST(request:Request){try{
  if(uploadError)throw new ApiError(400,'The resume could not be uploaded. Please try again.');
  const {data,error}=await client.rpc('jp_register_resume',{object_key:key,original_name:filename,content_type:file.type});
  if(error)throw new ApiError(400,'The file uploaded but could not be linked. Save your profile and try again.');
- return response({id:data,filename},201);
+ // Use what the resume says, so the person is not asked to type it again. A resume that cannot be read is still saved.
+ let filled:Filled={profile:[],builder:[]};
+ if(form.get('autofill')!=='no'){try{filled=await autofillFromResume(client,user.id,await resumeText(new Uint8Array(await file.arrayBuffer())));}catch{}}
+ return response({id:data,filename,filled,filledNote:filledSentence(filled)},201);
 }catch(error){return failure(error);}}
