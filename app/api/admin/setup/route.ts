@@ -32,6 +32,8 @@ export async function GET(request:Request){try{
 
  // --- The basics
  if(!db)add('The basics','Database updates','attention','The database is missing the latest updates, so some screens will show errors.','Run “supabase db push --linked” (or apply the files in supabase/migrations in order), then reload this page.');
+ // The newest update is recognised by one of the functions it adds, which only reads the administrator's own contributions.
+ else if((await client.rpc('jp_my_contributions')).error?.code==='PGRST202')add('The basics','Database updates','attention','The database is missing the newest update (20261112000001_manage_your_things), so deleting a resume, discarding a draft and similar actions will fail.','Run “supabase db push --linked”.');
  else if(db.version<EXPECTED)add('The basics','Database updates','attention',`The database is at update ${db.version}; this version of the site expects ${EXPECTED}.`,'Run “supabase db push --linked”.');
  else add('The basics','Database updates','ok','The database has every update this version of the site needs.');
  const expected=process.env.APP_ORIGIN?.replace(/\/$/,''),host=request.headers.get('x-forwarded-host')||request.headers.get('host')||'';

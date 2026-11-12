@@ -9,18 +9,20 @@ import ReviewPrompts from '../review-prompts';
 import PushToggle from '../push-toggle';
 import {salaryLabel} from '@/lib/salary';
 import SavedView from './saved';
+import Contributions from './contributions';
+import AccountSettings from './account';
 import {accountView} from '@/lib/navigation';
 import {AppShell,AccountMenu,type NavItem} from '../employer/shell';
 import {Section} from '../employer/shell';
-import {Card,Empty,Icon,Notice,Pill,Stat,Tabs} from '../employer/ui';
-import {get,when,ago} from '../employer/api';
+import {Button,Card,Empty,Icon,Notice,Pill,Stat,Tabs} from '../employer/ui';
+import {get,post,when,ago} from '../employer/api';
 type Account={configured:boolean;user:null|{id:string;email:string;confirmed:boolean}};
 type App={id:string;jobId:string;title:string;company:string;companyId:string;state:string;stage:string;submittedAt:string;updatedAt:string;unread:number;
  interview:null|{id:string;startsAt:string;timeZone:string;format:string};proposal:boolean;responseShare:string|null;unknown?:boolean};
 type Home={partial?:boolean;applications:App[];drafts:number;saved:number;alerts:number;invites:number;email:string;
  profile:null|{name:string;headline:boolean;location:boolean;skills:boolean;experience:boolean;searchable:boolean;resume:boolean;assessment:boolean}};
 type Rec={id:string;title:string;salary_min:number|null;salary_max:number|null;salary_period:string;currency:string;companies:{name:string};job_locations:{label:string}[];distance_km:number|null};
-const VIEWS:[string,string,string,string][]=[['','overview','Home','home'],['','applications','Applications','jobs'],['','profile','Profile and resume','people'],['','preferences','Application preferences','settings'],['','saved','Saved jobs and alerts','star'],['','privacy','Privacy and data','shield']];
+const VIEWS:[string,string,string,string][]=[['','overview','Home','home'],['','applications','Applications','jobs'],['','profile','Profile and resume','people'],['','preferences','Application preferences','settings'],['','saved','Saved jobs and alerts','star'],['','contributions','My reviews','chat'],['','account','Account and password','settings'],['','privacy','Privacy and data','shield']];
 const TOOLS:[string,string,string][]=[['/search','Find jobs','search'],['/resume','Resume builder','file'],['/assessments','Skills assessments','check'],['/events','Hiring events','calendar'],['/career-advice','Career advice','chat']];
 const SUBS:Record<string,string>={applications:'Every application you’ve sent, with its messages and history.',profile:'What employers see when you apply, and your resume versions.',preferences:'Choose how your applications are sent.',saved:'Jobs you saved and the searches we email you about.',privacy:'Download your data, ask us to correct it, or delete your account.',jobs:'Finish your application.'};
 
@@ -35,9 +37,9 @@ export default function SeekerPortal(){
  const label=VIEWS.find(v=>v[1]===view)?.[2]||'Apply';
  return <AppShell nav={nav} current={view} crumb={<>Job seeker <span aria-hidden="true">/</span> <strong>{label}</strong></>}
   search={{placeholder:'Search jobs, e.g. nurse in Geelong',onSubmit:q=>router.push(`/search?${new URLSearchParams({q})}`)}}
-  end={account?.user&&<><Link className="ep-iconbtn" href="/help" aria-label="Help"><Icon name="help"/></Link><AccountMenu email={account.user.email} links={[['/job-seeker?view=profile','Profile and resume'],['/alerts','Job alerts'],...(employer?[['/employer','Employer portal'] as [string,string]]:[['/employer','Hire on JobRoles'] as [string,string]]),...(admin?[['/admin','Admin console'] as [string,string]]:[])]}/></>}
+  end={account?.user&&<><Link className="ep-iconbtn" href="/help" aria-label="Help"><Icon name="help"/></Link><AccountMenu email={account.user.email} links={[['/job-seeker?view=profile','Profile and resume'],['/job-seeker?view=account','Account and password'],['/alerts','Job alerts'],...(employer?[['/employer','Employer portal'] as [string,string]]:[['/employer','Hire on JobRoles'] as [string,string]]),...(admin?[['/admin','Admin console'] as [string,string]]:[])]}/></>}
   foot={<><Link href="/employer">{employer?'Switch to employer':'Hiring? Post a job'}</Link></>}>
-  {!account?<p role="status" className="ep-muted">Loading…</p>:view==='overview'?<SeekerHome/>:view==='applications'?<SeekerApplications/>:view==='saved'?<SavedView/>:
+  {!account?<p role="status" className="ep-muted">Loading…</p>:view==='overview'?<SeekerHome/>:view==='applications'?<SeekerApplications/>:view==='saved'?<SavedView/>:view==='contributions'?<Contributions/>:view==='account'?<AccountSettings email={account.user?.email||''}/>:
    <Section title={view==='jobs'?'Apply':label} sub={SUBS[view]}><AccountWorkspace portal="seeker" embedded/></Section>}
  </AppShell>;
 }
@@ -129,7 +131,7 @@ function SeekerApplications(){
  return <Section title="Applications" sub={h?`${lists.active.length} in progress · ${all.length} sent in total`:'Loading…'} actions={<Link className="ep-btn primary md" href="/search">Find jobs</Link>}>
   <Notice error={error}/>
   <Tabs value={tab} onChange={T} items={[['active','In progress',lists.active.length],['interview','Interviews',lists.interview.length],['drafts','Drafts',drafts.length],['closed','Closed',lists.closed.length]]}/>
-  {tab==='drafts'?(drafts.length?<Card><ul className="ep-list">{drafts.map(d=><li key={d.id}><div className="ep-grow"><strong>{d.jobs?.title||'Application'}</strong><small>{d.jobs?.companies?.name} · not sent yet</small></div><Link className="ep-btn secondary sm" href={`/job-seeker?job=${d.job_id}#application`}>Continue</Link></li>)}</ul></Card>
+  {tab==='drafts'?(drafts.length?<Card><ul className="ep-list">{drafts.map(d=><li key={d.id}><div className="ep-grow"><strong>{d.jobs?.title||'Application'}</strong><small>{d.jobs?.companies?.name} · not sent yet</small></div><Link className="ep-btn secondary sm" href={`/job-seeker?job=${d.job_id}#application`}>Continue</Link><Button size="sm" tone="danger" onClick={async()=>{if(!window.confirm('Discard this draft application? What you wrote will be deleted.'))return;try{await post('/api/manage',{action:'draft.discard',id:d.id});D(drafts.filter(x=>x.id!==d.id));}catch(e){E((e as Error).message);}}}>Discard</Button></li>)}</ul></Card>
    :<Card><Empty title="No drafts">Applications you start but don’t send are kept here.</Empty></Card>)
   :!h?null:lists[tab].length?<Card><AppRows apps={lists[tab]}/></Card>
   :<Card><Empty title={tab==='closed'?'Nothing closed':tab==='interview'?'No interviews yet':'No applications in progress'} action={tab==='active'?<Link className="ep-btn primary md" href="/search">Find jobs</Link>:undefined}>{tab==='interview'?'When an employer invites you to interview, it shows here with the time and a link to join.':tab==='closed'?'Withdrawn applications and roles that didn’t go ahead are kept here.':'Apply for a role and follow each step here.'}</Empty></Card>}

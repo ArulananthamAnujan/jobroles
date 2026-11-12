@@ -1,4 +1,5 @@
 'use client';
+import ChangePassword from '../change-password';
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
 import {employerGet,employerPost} from './api';
@@ -19,7 +20,7 @@ export default function Settings({ctx}:{ctx:PortalContext}){
     {row('stage_changes','Interviews and other updates','Interview bookings, withdrawals and reinstatement requests.')}
    </ul><div className="ep-actions" style={{marginTop:12}}><Button disabled={busy} onClick={async()=>{B(true);E('');N('');try{await employerPost({action:'prefs',newApplicant:p.new_applicant,messages:p.messages,stageChanges:p.stage_changes,dailyDigest:p.daily_digest});N('Notification settings saved.');}catch(e){E((e as Error).message);}finally{B(false);}}}>Save</Button></div></>:<p role="status">Loading…</p>}</Card>
    <Card title="Account and security"><ul className="ep-list">
-    <li><div className="ep-grow"><strong>Password</strong><small>Change your password by email link.</small></div><Link className="ep-btn secondary sm" href="/account/reset">Change</Link></li>
+    <li style={{alignItems:'flex-start'}}><div className="ep-grow"><strong>Password</strong><small style={{whiteSpace:'normal'}}>Choose a new password. You’ll be signed out everywhere and asked to sign in again.</small></div><ChangePassword returnTo="/employer"/></li>
     <li><div className="ep-grow"><strong>Your data</strong><small>Export, correct or delete your personal information.</small></div><Link className="ep-btn secondary sm" href="/job-seeker?view=privacy">Privacy controls</Link></li>
     <li><div className="ep-grow"><strong>Company page</strong><small>Logo, photos, benefits and facts.</small></div><Link className="ep-btn secondary sm" href="/employer?view=company">Edit</Link></li>
     <li><div className="ep-grow"><strong>Team access</strong><small>Invite or remove recruiters and hiring managers.</small></div><Link className="ep-btn secondary sm" href="/employer?view=team">Manage</Link></li>

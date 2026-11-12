@@ -3,7 +3,7 @@ import {useEffect,useMemo,useRef,useState} from 'react';
 import Link from 'next/link';
 import {useSearchParams} from 'next/navigation';
 import ListingAssistant from '../listing-assistant';
-import {employerGet,employerPost,command,money,when} from './api';
+import {employerGet,employerPost,command,money,when,post} from './api';
 import {Button,Drawer,Empty,Field,Notice,Pill,Tabs} from './ui';
 import {Section,type PortalContext} from './portal';
 export type Job={id:string;company_id:string;title:string;state:string;published_at:string|null;expires_at:string|null;created_at:string;description:string;employment_type:string;arrangement:string;salary_min:number|null;salary_max:number|null;salary_period:string|null;visa_sponsorship:boolean;benefits:string[];start_date:string|null;external_apply_url:string|null;assessment_code?:string|null;job_locations:{label:string}[];screening_questions:{id:string;question:string}[]};
@@ -74,6 +74,7 @@ export default function Jobs({ctx}:{ctx:PortalContext}){
  const counts=useMemo(()=>{const c:Record<string,number>={all:jobs?.length||0};for(const j of jobs||[])c[status(j)]=(c[status(j)]||0)+1;return c;},[jobs]);
  const shown=(jobs||[]).filter(j=>(tab==='all'||status(j)===tab||(tab==='closed'&&status(j)==='expired'))&&j.title.toLowerCase().includes(q.toLowerCase()));
  const stat=(id:string)=>stats.find(s=>s.job_id===id);
+ async function remove(j:Job){E('');N('');try{await post('/api/manage',{action:'job.delete',id:j.id});N(`Draft “${j.title}” deleted.`);V(v=>v+1);}catch(e){E((e as Error).message);}}
  async function setState(j:Job,state:string,msg:string){E('');N('');try{await command('job.state',{id:j.id,state});N(msg);V(v=>v+1);}catch(e){E((e as Error).message);}}
  return <Section title="Jobs" sub="Every listing shows its pay range. New and edited jobs are checked before they go live." actions={canEdit&&<><Link className="ep-btn secondary md" href="/employer?view=import">Import from spreadsheet</Link><Button onClick={()=>ED({job:null,copy:false})}>Post a job</Button></>}>
   <Notice error={error} message={note}/>
@@ -93,6 +94,7 @@ export default function Jobs({ctx}:{ctx:PortalContext}){
      {canEdit&&j.state==='live'&&status(j)!=='expired'&&<Button size="sm" tone="ghost" onClick={()=>setState(j,'paused','Job paused. It no longer appears in search.')}>Pause</Button>}
      {canEdit&&j.state==='paused'&&<Button size="sm" tone="ghost" onClick={()=>setState(j,'pending_review','Sent for approval to go live again.')}>Resume</Button>}
      {canEdit&&!['closed','draft'].includes(j.state)&&<Button size="sm" tone="danger" onClick={()=>{if(window.confirm(`Close “${j.title}”? Applicants keep access to their application.`))void setState(j,'closed','Job closed.');}}>Close</Button>}
+     {canEdit&&j.state==='draft'&&!j.published_at&&<Button size="sm" tone="danger" onClick={()=>{if(window.confirm(`Delete the draft “${j.title}”? This cannot be undone.`))void remove(j);}}>Delete</Button>}
      {j.state==='live'&&<Link className="ep-btn ghost sm" href={`/jobs/${j.id}`}>View</Link>}
     </div></td></tr>;})}
   </tbody></table></div>:<div className="ep-card"><Empty title={jobs.length?'No jobs here':'No jobs yet'} action={canEdit&&<Button onClick={()=>ED({job:null,copy:false})}>Post a job</Button>}>{jobs.length?'Try another tab or search.':'Post your first job, or import a spreadsheet of jobs at once.'}</Empty></div>}

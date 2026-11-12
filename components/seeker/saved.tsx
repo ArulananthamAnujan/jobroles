@@ -9,8 +9,10 @@ type Launch={searches:{id:string;filters:Record<string,string>;frequency?:string
 const FILTER_NAMES:Record<string,string>={on_site:'On-site',hybrid:'Hybrid',remote:'Remote'};
 // Saved jobs and the searches that email new roles, as two lists that can be acted on in place.
 export default function SavedView(){
+ const [hidden,H]=useState<{job_id:string;created_at:string;jobs:null|{title:string;companies:null|{name:string}}}[]>([]);
  const [saved,S]=useState<Saved[]|null>(null),[total,T]=useState(0),[page,P]=useState(1),[launch,L]=useState<Launch|null>(null),[error,E]=useState(''),[note,N]=useState(''),[version,V]=useState(0),[busy,B]=useState(false);
  useEffect(()=>{const c=new AbortController();get<{saved:Saved[];total:number}>(`/api/saved?page=${page}`,c.signal).then(d=>{S(d.saved);T(d.total);}).catch(e=>{if(e.name!=='AbortError')E(e.message);});
+  get<{hidden:typeof hidden}>('/api/manage?resource=hidden',c.signal).then(d=>H(d.hidden)).catch(()=>{});
   get<Launch>('/api/launch',c.signal).then(L).catch(e=>{if(e.name!=='AbortError')E(e.message);});return()=>c.abort();},[page,version]);
  async function act(fn:()=>Promise<unknown>,done:string){B(true);E('');N('');try{await fn();N(done);V(v=>v+1);}catch(e){E((e as Error).message);}finally{B(false);}}
  const open=(j:Saved['jobs'])=>j?.state==='live'&&new Date(j.expires_at)>new Date();
@@ -41,6 +43,7 @@ export default function SavedView(){
     {launch&&launch.reports.length>0&&<><h2>Jobs you reported</h2><Card><ul className="ep-list">{launch.reports.map(r=><li key={r.id}><div className="ep-grow"><strong><Link href={`/jobs/${r.job_id}`}>Reported job</Link></strong><small>{r.resolution||r.reason}</small></div><Pill tone={r.state==='open'?'amber':'teal'}>{r.state==='open'?'Under review':'Reviewed'}</Pill></li>)}</ul></Card></>}
    </aside>
   </div>
+   {hidden.length>0&&<Card title={`Jobs you hid (${hidden.length})`}><p className="ep-muted" style={{marginBottom:8}}>Jobs you marked “Not interested” are left out of your search results. Bring one back if you change your mind.</p><ul className="ep-list">{hidden.map(h=><li key={h.job_id}><div className="ep-grow"><strong>{h.jobs?.title||'Job no longer listed'}</strong><small>{h.jobs?.companies?.name?`${h.jobs.companies.name} · `:''}hidden {when(h.created_at,{day:'numeric',month:'short'})}</small></div>{h.jobs&&<Link className="ep-btn ghost sm" href={`/jobs/${h.job_id}`}>View</Link>}<Button size="sm" tone="secondary" disabled={busy} onClick={()=>act(()=>post('/api/career',{action:'hide',jobId:h.job_id,hide:false}),'The job will show in your searches again.')}>Show again</Button></li>)}</ul></Card>}
  </Section>;
 }
 

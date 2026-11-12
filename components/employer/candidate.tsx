@@ -1,6 +1,6 @@
 'use client';
 import {useCallback,useEffect,useState} from 'react';
-import {get,employerGet,employerPost,command,STAGES,stageLabel,when,ago} from './api';
+import {get,post,employerGet,employerPost,command,STAGES,stageLabel,when,ago} from './api';
 import {monthLabel} from '@/lib/resume-pdf';
 import {Button,Field,Notice,Pill} from './ui';
 import type {PortalContext} from './portal';
@@ -8,7 +8,7 @@ import {isVideoInterview} from '@/lib/calendar';
 type Detail={userId:string;role:string|null;application:{id:string;job_id:string;seeker_id:string;state:string;stage:string;reinstatement_requested_at:string|null;submitted_at?:string};
  job:{title:string;screening_questions:{id:string;question:string;must_have:boolean;expected_answer:string|null}[]}|null;
  snapshot:{profile:{full_name:string;headline:string;location:string;skills:string[];email?:string};resume_version_id:string;answers:Record<string,string>;cover_letter:string}|null;
- history:{id:string;to_state:string;created_at:string}[];notes:{id:string;body:string;rating:number|null;created_at:string}[];
+ history:{id:string;to_state:string;created_at:string}[];notes:{id:string;body:string;rating:number|null;created_at:string;author_id?:string}[];
  interviews:{id:string;starts_at:string;time_zone:string;format:string;cancelled_at:string|null}[];messages:{id:string;sender_id:string;body:string;created_at:string}[]};
 type Extras={summary:string;experience:{title:string;company:string;location?:string|null;start:string;end?:string|null;description?:string|null}[];education:{qualification:string;institution:string;year?:number|null}[];licences:string[];languages:string[];readyToWork:boolean;availability:string;assessments:{title:string;score:number;level:string;completedAt:string}[]}|null;
 const ZONES=['Australia/Melbourne','Australia/Sydney','Australia/Brisbane','Australia/Adelaide','Australia/Perth','Australia/Hobart','Australia/Darwin'];
@@ -63,7 +63,7 @@ export default function Candidate({id,ctx,templates,onChange}:{id:string;ctx:Por
     <div className="ep-actions"><Button size="sm" disabled={busy}>{mode==='single'?'Book interview':'Send times'}</Button></div></form>}
   </section>
   <section className="ep-section"><h3>Team notes</h3><p className="ep-muted" style={{marginBottom:8}}>Only your hiring team sees notes and ratings.</p>
-   <ul className="ep-list">{d.notes.map(n=><li key={n.id}><div className="ep-grow"><span className="job-description">{n.body}</span><small>{when(n.created_at)}</small></div>{n.rating&&<Pill tone="amber">Rated {n.rating} of 5</Pill>}</li>)}</ul>
+   <ul className="ep-list">{d.notes.map(n=><li key={n.id}><div className="ep-grow"><span className="job-description">{n.body}</span><small>{when(n.created_at)}</small></div>{n.rating&&<Pill tone="amber">Rated {n.rating} of 5</Pill>}{n.author_id===d.userId&&<Button size="sm" tone="ghost" type="button" disabled={busy} onClick={()=>{if(window.confirm('Delete this note?'))void act(()=>post('/api/manage',{action:'note.delete',id:n.id}),'Note deleted.');}}>Delete</Button>}</li>)}</ul>
    {d.role&&<form onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);const form=e.currentTarget;void act(async()=>{await command('application.note',{id,body:String(f.get('body')),rating:f.get('rating')?Number(f.get('rating')):undefined});form.reset();},'Note saved.');}} style={{display:'grid',gap:8,marginTop:8}}>
     <textarea name="body" required maxLength={5000} placeholder="Add a note for your team" aria-label="Note"/><div className="ep-actions"><select name="rating" aria-label="Rating"><option value="">No rating</option>{[5,4,3,2,1].map(n=><option key={n} value={n}>{n} of 5</option>)}</select><Button size="sm" tone="secondary" disabled={busy}>Save note</Button></div></form>}
   </section>

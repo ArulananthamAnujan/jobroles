@@ -10,7 +10,7 @@ export async function GET(_request:Request,{params}:{params:Promise<{id:string}>
  const [snapshot,history,notes,interviews,messages,job,draft]=await Promise.all([
   client.from('application_snapshots').select('*').eq('application_id',id).maybeSingle(),
   client.from('application_stage_history').select('id,to_state,created_at,reason').eq('application_id',id).order('created_at').limit(200),
-  client.from('application_notes').select('id,body,rating,created_at').eq('application_id',id).order('created_at',{ascending:false}).limit(100),
+  client.from('application_notes').select('id,body,rating,created_at,author_id').eq('application_id',id).order('created_at',{ascending:false}).limit(100),
   client.from('interviews').select('id,starts_at,time_zone,format,cancelled_at').eq('application_id',id).order('starts_at',{ascending:false}).limit(50),
   client.from('application_messages').select('id,sender_id,body,created_at').eq('application_id',id).order('created_at',{ascending:false}).limit(100),
   client.from('jobs').select('id,title,company_id,companies(name),screening_questions(id,question)').eq('id',application.job_id).maybeSingle(),

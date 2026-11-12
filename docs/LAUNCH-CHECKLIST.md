@@ -50,6 +50,7 @@ After this migration, check in Supabase Storage that the `company-media` bucket 
 | `20261110000003_security_followup` | Withdrawn applications hide the applicant's details from the employer, companies handed over from job sourcing wait for their ABN check before recruiting tools open, hiring managers no longer see colleagues' full emails or event attendee details, counted job views are capped per hour |
 | `20261111000001_resume_direct_download` | Resume downloads work without the `resume-download` function: the applicant and the employers they applied to read the file directly, under the same rules |
 | `20261111000002_setup_status` | Data for **Admin > Setup status**, which checks every part of the site and says what to do about anything that is off |
+| `20261112000001_manage_your_things` | Delete a resume, discard a draft application, list and delete your own reviews, salaries and questions, delete your own team notes, delete a draft job, change a team member's role |
 
 ## 2. Edge Functions
 

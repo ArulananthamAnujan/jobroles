@@ -56,3 +56,11 @@
 .field>.pw-wrap{position:relative;display:block;font-weight:400;font-size:inherit}.pw-wrap input{padding-right:76px}.pw-toggle{position:absolute;right:6px;top:50%;transform:translateY(-50%);min-height:40px;padding:0 12px;border:0;border-radius:6px;background:transparent;color:var(--teal);font-size:14px;font-weight:700}.pw-toggle:hover{background:var(--mint)}
 
 .social-sign-in{display:flex;flex-direction:column;gap:12px}.social-btn{display:flex;align-items:center;justify-content:center;gap:10px;min-height:52px;padding:12px 18px;border:1px solid var(--input-line);border-radius:8px;background:#fff;color:var(--ink);font-size:16px;font-weight:700}.social-btn:hover{background:var(--paper)}.social-or{display:flex;align-items:center;gap:12px;color:var(--text-muted);font-size:14px;margin:4px 0}.social-or:before,.social-or:after{content:'';flex:1;height:1px;background:var(--line)}
+
+/* File pickers: the browser's own button is styled as a proper button so it is obvious where to click. */
+input[type=file]{padding:8px;cursor:pointer}
+input[type=file]::file-selector-button{margin-right:12px;padding:9px 16px;border:1px solid var(--teal);border-radius:6px;background:#fff;color:var(--teal);font:inherit;font-weight:700;cursor:pointer}
+input[type=file]::file-selector-button:hover{background:var(--mint)}
+.resume-list{list-style:none;margin:0;padding:0;display:grid;gap:10px}.resume-list li{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;border:1px solid var(--line);border-radius:10px;margin:0}.resume-list li>div{flex:1 1 180px;min-width:0}.resume-list strong{display:block;overflow-wrap:anywhere}.resume-list small{display:block}
+.jp-btn.small{min-height:40px;padding:8px 14px;font-size:14px}.jp-btn.secondary.danger-btn{color:#a12f2f;border-color:#d9a3a3}.jp-btn.secondary.danger-btn:hover{background:#fceced;color:#a12f2f}
+.change-password{display:grid;gap:12px;min-width:min(100%,320px);flex:1 1 320px}

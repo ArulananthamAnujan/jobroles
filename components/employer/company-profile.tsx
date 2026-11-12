@@ -25,9 +25,9 @@ export default function CompanyProfile({ctx}:{ctx:PortalContext}){
    <Card title="Branding">
     <div className="ep-cover" style={{backgroundImage:p.cover_url?`url(${p.cover_url})`:undefined}} role="img" aria-label="Cover image"/>
     <div className="ep-actions" style={{marginTop:12}}><div className="ep-logo" style={{backgroundImage:p.logo_url?`url(${p.logo_url})`:undefined}} role="img" aria-label="Logo"/>
-     <label className="ep-btn secondary sm">Upload logo<input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={e=>media('logo_url',e.target.files)}/></label>
-     <label className="ep-btn secondary sm">Upload cover<input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={e=>media('cover_url',e.target.files)}/></label>
-     {(p.logo_url||p.cover_url)&&<Button size="sm" tone="ghost" type="button" onClick={()=>P({...p,logo_url:null,cover_url:null})}>Remove images</Button>}
+     <label className="ep-btn secondary sm">{p.logo_url?'Replace logo':'Upload logo'}<input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={e=>media('logo_url',e.target.files)}/></label>
+     <label className="ep-btn secondary sm">{p.cover_url?'Replace cover':'Upload cover'}<input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={e=>media('cover_url',e.target.files)}/></label>
+     {p.logo_url&&<Button size="sm" tone="danger" type="button" onClick={()=>{P({...p,logo_url:null});N('Logo removed. Save to publish the change.');}}>Remove logo</Button>}{p.cover_url&&<Button size="sm" tone="danger" type="button" onClick={()=>{P({...p,cover_url:null});N('Cover removed. Save to publish the change.');}}>Remove cover</Button>}
      <span className="ep-muted">JPEG, PNG or WebP, up to 5 MB. Logo square; cover about 1500×400.</span></div>
    </Card>
    <Card title="About">
