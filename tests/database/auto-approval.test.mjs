@@ -56,6 +56,37 @@ test('automatic approval',async t=>{
   assert.ok((await admin('select review_requested_at from jobs where id=$1',[j]))[0].review_requested_at>before);
   await run(other);assert.equal(await state(j),'pending_review');
  });
+ await t.test('with the ABN register connected, a company is verified only when the register says active and the name matches',async()=>{
+  const {admin:adm}=ids;
+  await admin('insert into private.platform_admins(user_id) values($1) on conflict do nothing',[adm]);
+  await assert.rejects(()=>rows(other,"select jp_set_abn_register_key('11111111-2222-3333-4444-555555555555')"),/Administrator required/);
+  await assert.rejects(()=>rows(adm,"select jp_set_abn_register_key('not-a-key')"),/does not look like/);
+  await rows(adm,"select jp_set_abn_register_key('11111111-2222-3333-4444-555555555555')");
+  // Stand in for the register: answers by ABN in the same shape the real service uses.
+  await admin(`create or replace function private.abr_fetch(abn text,guid text) returns text language sql as $f$ select case abn
+   when '80000000001' then 'callback({"Abn":"80000000001","AbnStatus":"Active","EntityName":"HARBOUR FREIGHT PTY LTD","BusinessName":["Harbour Freight Logistics"],"EntityTypeName":"Australian Private Company","AddressState":"NSW","AddressPostcode":"2150","Message":""})'
+   when '80000000033' then 'callback({"Abn":"80000000033","AbnStatus":"Cancelled","EntityName":"OLD TRADING CO PTY LTD","BusinessName":[],"Message":""})'
+   when '80000000065' then 'callback({"Abn":"80000000065","AbnStatus":"Active","EntityName":"SMITH PLUMBING PTY LTD","BusinessName":[],"Message":""})'
+   when '80000000097' then 'callback({"Abn":"","AbnStatus":"","EntityName":"","BusinessName":[],"Message":"Search text is not a valid ABN or ACN"})'
+   else null end $f$`);
+  const abns=(await admin("select string_agg(a,',') s from unnest(array['80000000001','80000000033','80000000065','80000000097','80000000114']) a where private.valid_abn(a)"))[0].s;
+  assert.equal(abns,'80000000001,80000000033,80000000065,80000000097,80000000114','the sample ABNs are well formed');
+  const [real,cancelled,stolen,unknown,down]=[uid(821),uid(822),uid(823),uid(824),uid(825)];
+  await admin(`insert into public.companies(id,name,abn,created_at) values($1,'Harbour Freight','80000000001',now()-interval '2 minutes'),($2,'Old Trading Co','80000000033',now()-interval '2 minutes'),
+   ($3,'Kumar Building Supplies','80000000065',now()-interval '2 minutes'),($4,'Nowhere Ltd','80000000097',now()-interval '2 minutes'),($5,'Unlucky Co','80000000114',now()-interval '2 minutes')`,[real,cancelled,stolen,unknown,down]);
+  for(const id of [real,cancelled,stolen,unknown,down])await admin("insert into public.company_memberships(company_id,user_id,role) values($1,$2,'owner')",[id,other]);
+  await run(other);await run(other);
+  assert.deepEqual([await verified(real),await verified(cancelled),await verified(stolen),await verified(unknown),await verified(down)],[true,false,false,false,false]);
+  const why=async id=>(await rows(other,'select jp_abn_check($1) as r',[id]))[0].r;
+  assert.equal((await why(real)).state,'verified');assert.equal((await why(cancelled)).state,'cancelled');assert.equal((await why(unknown)).state,'not_found');assert.equal((await why(down)).state,'checking');
+  assert.deepEqual([(await why(stolen)).state,(await why(stolen)).registeredName],['name_mismatch','SMITH PLUMBING PTY LTD']);
+  await assert.rejects(()=>rows(seeker,'select jp_abn_check($1)',[real]),/Company not found/);
+  assert.match((await admin("select reason from audit_log where action='company.auto_verified' and entity_id=$1",[real]))[0].reason,/ABN register: active, registered to HARBOUR FREIGHT PTY LTD/);
+  const status=(await rows(adm,'select jp_abn_register_status() as r'))[0].r;assert.equal(status.connected,true);assert.equal(Number(status.checked),4);assert.equal(Number(status.failing),1);
+  await assert.rejects(()=>rows(other,'select jp_abn_register_status()'),/Administrator required/);
+  // The register is asked once per ABN, not on every run.
+  assert.equal((await admin("select attempts from private.abn_checks where abn='80000000001'"))[0].attempts,1);
+ });
  await t.test('visitors who are not signed in cannot trigger it',async()=>{
   await assert.rejects(()=>rows(null,'select jp_auto_approve()'),/permission denied/);
  });

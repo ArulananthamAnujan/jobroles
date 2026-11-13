@@ -1,4 +1,4 @@
-import {authenticatedClient,failure,response,ApiError} from '@/lib/backend/server';
+import {authenticatedClient,failure,response,ApiError,sameOrigin,jsonBody} from '@/lib/backend/server';
 import {enabledProviders} from '@/lib/backend/providers';
 export const dynamic='force-dynamic';
 // The newest database update this version of the site expects (see supabase/migrations).
@@ -78,5 +78,20 @@ export async function GET(request:Request){try{
  add('Safety and extras','Malware scanning of resumes',has['resume-scan']===true&&scheduled('jobroles-resume-scan')?'ok':'off',has['resume-scan']===true&&scheduled('jobroles-resume-scan')?`Scanning uploads.${db?.scansWaiting?` ${db.scansWaiting} waiting.`:''}`:'Resumes are checked for file type and size only, not scanned for malware.','Optional but recommended before employers download many files. See “Resume malware scanning” in docs/LAUNCH-CHECKLIST.md.');
  add('Safety and extras','AI writing help',set('OPENAI_API_KEY')?'ok':'off',set('OPENAI_API_KEY')?'People can choose AI to read resumes and draft listings.':'Resume reading and the listing assistant use the site’s built-in versions, which need no key.','Optional. Set OPENAI_API_KEY where the site is hosted to offer AI as an extra.');
  add('Safety and extras','Error reports',set('SENTRY_DSN')?'ok':'off',set('SENTRY_DSN')?'Errors are sent to Sentry.':'Errors are written to the host’s log only.','Optional. Set SENTRY_DSN to a Sentry project address.');
- return response({rows,checkedAt:new Date().toISOString()});
+ // --- Employer checks
+ const abnAnswer=await client.rpc('jp_abn_register_status');const abn=(abnAnswer.error?null:abnAnswer.data) as null|{connected:boolean;canReach:boolean;checked:number;failing:number;lastError:string|null;waiting:number};
+ if(!abn)add('Employer checks','ABN register (checks that each employer is a real, active business)','attention','The database is missing the update that checks ABNs against the Australian Business Register.','Run “supabase db push --linked”.');
+ else if(!abn.connected)add('Employer checks','ABN register (checks that each employer is a real, active business)','attention','Not connected. New companies are verified when their ABN is merely well formed, which does not prove the business exists or belongs to the person registering.','Get a free access key (GUID) from abr.business.gov.au/Tools/WebServices, then paste it into “Connect the ABN register” on this page. Steps are in docs/ABN-CHECK.md.');
+ else if(!abn.canReach)add('Employer checks','ABN register (checks that each employer is a real, active business)','attention','The access key is saved, but the database cannot make web requests, so companies wait for you to verify them by hand.','In Supabase open Database > Extensions and switch on “http”.');
+ else if(abn.failing>0&&!abn.checked)add('Employer checks','ABN register (checks that each employer is a real, active business)','attention',`The register is not answering${abn.lastError?` (“${abn.lastError}”)`:''}. Companies wait until it does.`,'Check the access key is the one emailed to you by the ABN Lookup service, and save it again below.');
+ else add('Employer checks','ABN register (checks that each employer is a real, active business)','ok',`Connected. A company is verified only when the register says its ABN is active and registered to a matching name. ${abn.checked} checked so far${abn.waiting?`, ${abn.waiting} waiting or needing your review`:''}.`);
+ return response({rows,checkedAt:new Date().toISOString(),abnRegister:abn?{connected:abn.connected}:null});
+}catch(e){return failure(e);}}
+// Saves (or, with an empty value, removes) the access key for the Australian Business Register.
+export async function POST(request:Request){try{
+ sameOrigin(request);const {client}=await authenticatedClient();
+ const body=await jsonBody(request) as {abnRegisterKey?:unknown};if(typeof body?.abnRegisterKey!=='string')throw new ApiError(400,'Paste the access key.');
+ const {data,error}=await client.rpc('jp_set_abn_register_key',{guid:body.abnRegisterKey});
+ if(error)throw new ApiError(error.code==='42501'?403:error.code==='22023'?400:503,error.code==='42501'?'Administrator required.':error.code==='22023'?'That does not look like an ABN Lookup access key. It has the form xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.':'The key could not be saved. Apply the latest database update first.');
+ return response(data);
 }catch(e){return failure(e);}}

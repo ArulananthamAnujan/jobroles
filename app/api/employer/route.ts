@@ -21,6 +21,7 @@ async function read(client:Client,userId:string,resource:string,p:URLSearchParam
    const {data:stats}=await client.rpc('jp_job_stats',{company});
    return {jobs:(data||[]).map(j=>({...j,screening_questions:(j.screening_questions||[]).sort((a:{position:number},b:{position:number})=>a.position-b.position)})),stats:stats||[]};
   }
+  case 'abn':{const {data,error}=await client.rpc('jp_abn_check',{company:need(company)});if(error)return {check:null};return {check:data};}
   case 'rules':{const {data,error}=await client.rpc('jp_screening_rules',{target:need(job)});if(error)denied(error,'Questions unavailable.');return {rules:data};}
   case 'pipeline':{
    const {data,error}=await client.rpc('jp_pipeline',{target:need(job)});if(error)denied(error,'Applicants unavailable.');
@@ -45,7 +46,7 @@ async function read(client:Client,userId:string,resource:string,p:URLSearchParam
 export async function GET(request:Request){try{
  const {client,user}=await authenticatedClient();rateLimit(`employer:${user.id}`,240,60_000);
  const p=new URL(request.url).searchParams;
- if(['jobs','dashboard'].includes(p.get('resource')||''))await client.rpc('jp_auto_approve').then(()=>{},()=>{});
+ if(['jobs','dashboard','abn'].includes(p.get('resource')||''))await client.rpc('jp_auto_approve').then(()=>{},()=>{});
  return response(await read(client,user.id,p.get('resource')||'',p));
 }catch(e){return failure(e);}}
 const write=z.discriminatedUnion('action',[

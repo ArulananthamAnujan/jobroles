@@ -33,9 +33,10 @@ where user_id = (select id from auth.users where lower(email) = lower('them@exam
 
 ## What still needs an administrator
 
-Companies and jobs are approved automatically (see `20261113000001_automatic_approval`). A person is only needed for:
+Companies and jobs are approved automatically (see `docs/ABN-CHECK.md`). A person is only needed for:
 
-- companies whose ABN fails the check, is missing, or is already used by another company;
+- companies whose ABN is missing, cancelled, unknown to the ABN register, registered to a different name, or already
+  used by another company (see `docs/ABN-CHECK.md`);
 - jobs that the scam checks flag, and jobs from recruitment agencies;
 - reviews, reports, support messages, refunds and job sourcing.
 

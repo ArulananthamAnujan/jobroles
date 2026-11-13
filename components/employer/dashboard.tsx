@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
-import {employerGet,when} from './api';
+import {employerGet,when,forgetAnswers} from './api';
 import {Button,Card,Empty,Icon,Notice,Stat} from './ui';
 import {Section,type PortalContext} from './portal';
 import {Bars} from './bars';
@@ -35,7 +35,7 @@ export default function Dashboard({ctx}:{ctx:PortalContext}){
    {canPost&&<Link className="ep-btn secondary md" href="/employer?view=import">Import jobs</Link>}
    {canPost&&<Button tone={oldest?'secondary':'primary'} onClick={()=>ctx.go('jobs',{new:'1'})}>Post a job</Button>}
    {oldest&&<Link className="ep-btn primary md" href={`/employer?view=applicants&application=${oldest.applicationId}`}>Review oldest applicant</Link>}</>}>
-  {!ctx.company.verified_at&&<p className="ep-notice warn">We’re checking your ABN. This usually takes a couple of minutes and this page updates by itself. You can post jobs now; they go live as soon as the check is done.</p>}
+  {!ctx.company.verified_at&&<AbnNotice companyId={ctx.company.id}/>}
   {first?<FirstRun canPost={canPost} go={ctx.go} ctx={ctx}/>:<div className="ep-over">
    <div className="ep-over-main">
     <div className="ep-stats" style={{marginBottom:0}}>
@@ -67,6 +67,23 @@ export default function Dashboard({ctx}:{ctx:PortalContext}){
  </Section>;
 }
 
+// Says where the ABN check is up to, and what to do when it cannot pass by itself.
+const ABN_TEXT:Record<string,string>={
+ checking:'We’re checking your ABN with the Australian Business Register. This usually takes a couple of minutes and this page updates by itself. You can post jobs now; they go live as soon as the check is done.',
+ no_abn:'Your company has no ABN on file, so your jobs cannot go live yet. Contact us through the Help centre with your ABN and we will add it.',
+ invalid:'The ABN on file is not a valid ABN, so your jobs cannot go live yet. Contact us through the Help centre with the correct ABN.',
+ duplicate:'Another company on JobRoles is registered with this ABN, so we need to check yours by hand. If your company is already here, ask its owner to invite you from Team instead of registering again. Otherwise contact us through the Help centre.',
+ not_found:'The Australian Business Register has no record of this ABN, so your jobs cannot go live yet. Contact us through the Help centre with the correct ABN.',
+ cancelled:'The Australian Business Register lists this ABN as cancelled, so your jobs cannot go live. If that is out of date, contact us through the Help centre.',
+};
+function AbnNotice({companyId}:{companyId:string}){
+ const [c,C]=useState<{state:string;registeredName:string|null;abn:string|null}|null>(null);
+ const [tick,T]=useState(0),state=c?.state||'checking';
+ useEffect(()=>{const a=new AbortController();employerGet<{check:typeof c}>('abn',{company:companyId},a.signal).then(d=>C(d.check)).catch(()=>{});return()=>a.abort();},[companyId,tick]);
+ // While the check is still running, ask again every 20 seconds so the answer appears without a refresh.
+ useEffect(()=>{if(state!=='checking')return;const t=setInterval(()=>{forgetAnswers();T(n=>n+1);},20000);return()=>clearInterval(t);},[state]);if(state==='verified')return null;
+ return <p className="ep-notice warn">{state==='name_mismatch'?<>This ABN is registered to <strong>{c?.registeredName}</strong>, which does not match your company name, so we need to check it by hand before your jobs go live. If that is your business, contact us through the <Link href="/help#contact" style={{textDecoration:'underline'}}>Help centre</Link> and we will sort it out. You can keep preparing jobs meanwhile.</>:<>{ABN_TEXT[state]||ABN_TEXT.checking}{state!=='checking'&&<> <Link href="/help#contact" style={{textDecoration:'underline'}}>Contact us</Link></>}</>}</p>;
+}
 function FirstRun({canPost,go,ctx}:{canPost:boolean;go:PortalContext['go'];ctx:PortalContext}){
  const [setup,SU]=useState<{page:number;team:number;invites:number}|null>(null);
  useEffect(()=>{const c=new AbortController(),q={company:ctx.company.id};

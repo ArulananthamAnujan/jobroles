@@ -52,6 +52,7 @@ After this migration, check in Supabase Storage that the `company-media` bucket 
 | `20261111000002_setup_status` | Data for **Admin > Setup status**, which checks every part of the site and says what to do about anything that is off |
 | `20261112000001_manage_your_things` | Delete a resume, discard a draft application, list and delete your own reviews, salaries and questions, delete your own team notes, delete a draft job, change a team member's role |
 | `20261113000001_automatic_approval` | Companies with a valid, unused ABN are verified automatically and submitted jobs go live after one minute unless the scam checks flag them. Runs every minute in the database |
+| `20261113000002_abn_register_lookup` | Checks each new company's ABN against the Australian Business Register (active, and registered to a matching name) before verifying it. Needs a free access key: see `docs/ABN-CHECK.md` |
 
 ## 2. Edge Functions
 
