@@ -3,13 +3,13 @@ import {useEffect,useMemo,useRef,useState} from 'react';
 import Link from 'next/link';
 import {useSearchParams} from 'next/navigation';
 import ListingAssistant from '../listing-assistant';
-import {employerGet,employerPost,command,money,when,post} from './api';
+import {employerGet,employerPost,command,money,when,post,forgetAnswers} from './api';
 import {Button,Drawer,Empty,Field,Notice,Pill,Tabs} from './ui';
 import {Section,type PortalContext} from './portal';
 export type Job={id:string;company_id:string;title:string;state:string;published_at:string|null;expires_at:string|null;created_at:string;description:string;employment_type:string;arrangement:string;salary_min:number|null;salary_max:number|null;salary_period:string|null;visa_sponsorship:boolean;benefits:string[];start_date:string|null;external_apply_url:string|null;assessment_code?:string|null;job_locations:{label:string}[];screening_questions:{id:string;question:string}[]};
 type Stat={job_id:string;views_30d:number;applications:number};
 type Question={question:string;mustHave:boolean;expected:'Yes'|'No'};
-const STATE:Record<string,[string,'teal'|'amber'|'neutral'|'red'|'blue']>={live:['Live','teal'],pending_review:['Awaiting approval','amber'],draft:['Draft','neutral'],paused:['Paused','blue'],closed:['Closed','neutral'],expired:['Expired','neutral']};
+const STATE:Record<string,[string,'teal'|'amber'|'neutral'|'red'|'blue']>={live:['Live','teal'],pending_review:['Going live shortly','amber'],draft:['Draft','neutral'],paused:['Paused','blue'],closed:['Closed','neutral'],expired:['Expired','neutral']};
 const isExpired=(j:Job)=>j.state==='live'&&!!j.expires_at&&new Date(j.expires_at)<new Date();
 const status=(j:Job)=>isExpired(j)?'expired':j.state;
 const payText=(j:Pick<Job,'salary_min'|'salary_max'|'salary_period'>)=>j.salary_min!==null&&j.salary_max!==null?`${money(Number(j.salary_min))}–${money(Number(j.salary_max))} per ${j.salary_period}`:'Pay not set';
@@ -33,7 +33,7 @@ function Editor({ctx,job,copy,applicants,onClose,onSaved}:{ctx:PortalContext;job
    await employerPost({action:'extras',jobId:id,benefits,startDate:f.startDate||'',externalApplyUrl:f.externalApplyUrl||''});
    await employerPost({action:'job.assessment',jobId:id,code:f.assessment||null});
    if(!locked)await employerPost({action:'screening',jobId:id,questions:questions.filter(q=>q.question.trim().length>=5)});
-   onSaved(submit?'Sent for approval. Most jobs are reviewed within one business day.':'Draft saved. Job seekers cannot see it until you open it and choose Submit for approval.');
+   onSaved(submit?'Sent for approval. It goes live in about a minute, once our automatic checks pass. This page updates by itself.':'Draft saved. Job seekers cannot see it until you open it and choose Submit for approval.');
   }catch(e){E((e as Error).message);}finally{B(false);}
  }
  return <Drawer open wide onClose={onClose} title={editing?`Edit ${editing.title}`:copy?`Copy of ${source?.title}`:'Post a job'}>
@@ -71,6 +71,9 @@ export default function Jobs({ctx}:{ctx:PortalContext}){
  const [editor,ED]=useState<null|{job:Job|null;copy:boolean}>(params.get('new')?{job:null,copy:false}:null);
  useEffect(()=>{const c=new AbortController();employerGet<{jobs:Job[];stats:Stat[]}>('jobs',{company:ctx.company.id},c.signal).then(d=>{J(d.jobs);S(d.stats);const edit=params.get('edit');if(edit){const j=d.jobs.find(x=>x.id===edit);if(j)ED({job:j,copy:status(j)==='expired'||j.state==='closed'});}}).catch(e=>{if(e.name!=='AbortError')E(e.message);});return()=>c.abort();},[ctx.company.id,version,params]);
  const canEdit=ctx.role==='owner'||ctx.role==='recruiter';
+ // While a job is waiting to go live, check again every 20 seconds so it turns Live without a refresh.
+ const waiting=(jobs||[]).some(j=>j.state==='pending_review');
+ useEffect(()=>{if(!waiting)return;const t=setInterval(()=>{forgetAnswers();V(v=>v+1);},20000);return()=>clearInterval(t);},[waiting]);
  const counts=useMemo(()=>{const c:Record<string,number>={all:jobs?.length||0};for(const j of jobs||[])c[status(j)]=(c[status(j)]||0)+1;return c;},[jobs]);
  const shown=(jobs||[]).filter(j=>(tab==='all'||status(j)===tab||(tab==='closed'&&status(j)==='expired'))&&j.title.toLowerCase().includes(q.toLowerCase()));
  const stat=(id:string)=>stats.find(s=>s.job_id===id);
@@ -78,7 +81,7 @@ export default function Jobs({ctx}:{ctx:PortalContext}){
  async function setState(j:Job,state:string,msg:string){E('');N('');try{await command('job.state',{id:j.id,state});N(msg);V(v=>v+1);}catch(e){E((e as Error).message);}}
  return <Section title="Jobs" sub="Every listing shows its pay range. New and edited jobs are checked before they go live." actions={canEdit&&<><Link className="ep-btn secondary md" href="/employer?view=import">Import from spreadsheet</Link><Button onClick={()=>ED({job:null,copy:false})}>Post a job</Button></>}>
   <Notice error={error} message={note} next={note.startsWith('Sent for approval')?[['Complete your company page','/employer?view=company'],['Back to overview','/employer']]:note.startsWith('Draft saved')?[['Back to overview','/employer']]:undefined}/>
-  <Tabs value={tab} onChange={T} items={[['all','All',counts.all],['live','Live',counts.live||0],['pending_review','Awaiting approval',counts.pending_review||0],['draft','Drafts',counts.draft||0],['paused','Paused',counts.paused||0],['closed','Closed',(counts.closed||0)+(counts.expired||0)]]}/>
+  <Tabs value={tab} onChange={T} items={[['all','All',counts.all],['live','Live',counts.live||0],['pending_review','Going live shortly',counts.pending_review||0],['draft','Drafts',counts.draft||0],['paused','Paused',counts.paused||0],['closed','Closed',(counts.closed||0)+(counts.expired||0)]]}/>
   <div className="ep-toolbar"><input type="search" placeholder="Search jobs" value={q} onChange={e=>Q(e.target.value)} aria-label="Search jobs"/></div>
   {!jobs?<p role="status">Loading jobs…</p>:shown.length?<div className="ep-table-wrap"><table className="ep-table"><thead><tr><th>Job</th><th>Status</th><th className="num">Applicants</th><th className="num">Views, 30 days</th><th>Pay</th><th>Closes</th><th><span className="visually-hidden">Actions</span></th></tr></thead><tbody>
    {shown.map(j=>{const st=STATE[status(j)]??[j.state,'neutral'],s=stat(j.id);return <tr key={j.id}>

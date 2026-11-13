@@ -44,7 +44,9 @@ async function read(client:Client,userId:string,resource:string,p:URLSearchParam
 }
 export async function GET(request:Request){try{
  const {client,user}=await authenticatedClient();rateLimit(`employer:${user.id}`,240,60_000);
- const p=new URL(request.url).searchParams;return response(await read(client,user.id,p.get('resource')||'',p));
+ const p=new URL(request.url).searchParams;
+ if(['jobs','dashboard'].includes(p.get('resource')||''))await client.rpc('jp_auto_approve').then(()=>{},()=>{});
+ return response(await read(client,user.id,p.get('resource')||'',p));
 }catch(e){return failure(e);}}
 const write=z.discriminatedUnion('action',[
  z.object({action:z.literal('profile'),companyId:id,profile:z.object({about:z.string().max(5000).optional(),logoUrl:z.string().max(500).optional(),coverUrl:z.string().max(500).optional(),website:z.string().max(300).optional(),industry:z.string().max(80).optional(),sizeBand:z.string().max(20).optional(),headquarters:z.string().max(120).optional(),foundedYear:z.string().max(4).optional(),pitch:z.string().max(2000).optional(),benefits:z.array(z.string().max(80)).max(20).optional(),photos:z.array(z.string().max(500)).max(12).optional()})}),

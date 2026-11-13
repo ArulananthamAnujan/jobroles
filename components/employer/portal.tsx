@@ -3,7 +3,7 @@ import {useCallback,useEffect,useMemo,useState,type ReactNode} from 'react';
 import Link from 'next/link';
 import {usePathname,useRouter,useSearchParams} from 'next/navigation';
 import AccountWorkspace from '../account-workspace';
-import {get,command,ago} from './api';
+import {get,command,ago,forgetAnswers} from './api';
 import {Button,Card,Field,Icon,Notice} from './ui';
 import Dashboard from './dashboard';
 import Jobs from './jobs';
@@ -43,14 +43,16 @@ function Bell(){
   {open&&<div className="ep-pop" role="dialog" aria-label="Notifications"><div className="ep-pop-head">Notifications</div>{items.length?items.slice(0,20).map(i=><Link key={i.id} href={`/employer?view=applicants&application=${i.applicationId}`} onClick={()=>O(false)}><strong>{i.kind}</strong> {i.text}<small>{ago(i.at)}</small></Link>):<p className="ep-muted" style={{padding:12}}>No notifications yet.</p>}</div>}</>;
 }
 
+// The Australian Business Register's check digits: catches typing mistakes before the company is registered.
+function validAbn(raw:string){const d=raw.replace(/\s/g,'');if(!/^\d{11}$/.test(d))return false;const w=[10,1,3,5,7,9,11,13,15,17,19];return [...d].reduce((sum,c,i)=>sum+(Number(c)-(i===0?1:0))*w[i],0)%89===0;}
 function Onboarding({onDone,email}:{onDone:()=>void;email:string}){
  const [busy,B]=useState(false),[error,E]=useState('');
  return <Section title="Set up your company" sub={`${email} isn’t linked to a company yet. Jobs, applicants and messages appear once it is.`}>
   <div className="ep-over"><div className="ep-over-main">
-  <Card title="Register your company to start hiring"><p className="ep-muted" style={{marginBottom:14}}>We check every employer’s ABN before their roles go live. Most checks finish within one business day.</p>
-  <form className="ep-form" onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);B(true);E('');try{await command('company.create',{name:f.get('name'),about:f.get('about')||'',abn:String(f.get('abn')||'').replace(/\s/g,'')||undefined,agency:f.get('agency')==='on'});onDone();}catch(err){E((err as Error).message);}finally{B(false);}}}>
+  <Card title="Register your company to start hiring"><p className="ep-muted" style={{marginBottom:14}}>We check every employer’s ABN before their roles go live. The check is automatic and usually takes a couple of minutes.</p>
+  <form className="ep-form" onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);if(!validAbn(String(f.get('abn')||''))){E('That ABN doesn’t look right. Check the 11 digits against your ABN registration and try again.');return;}B(true);E('');try{await command('company.create',{name:f.get('name'),about:f.get('about')||'',abn:String(f.get('abn')||'').replace(/\s/g,'')||undefined,agency:f.get('agency')==='on'});onDone();}catch(err){E((err as Error).message);}finally{B(false);}}}>
    <Field label="Company name"><input name="name" required minLength={2} maxLength={160}/></Field>
-   <Field label="ABN" hint="11 digits"><input name="abn" inputMode="numeric" pattern="[0-9 ]{11,14}" maxLength={14}/></Field>
+   <Field label="ABN" hint="11 digits. Needed for your jobs to go live."><input name="abn" required inputMode="numeric" pattern="[0-9 ]{11,14}" maxLength={14}/></Field>
    <Field label="About your company" wide><textarea name="about" maxLength={5000}/></Field>
    <label className="ep-check"><input name="agency" type="checkbox"/>We are a recruitment agency</label>
    <div className="ep-actions"><Button disabled={busy}>{busy?'Registering…':'Register company'}</Button></div>
@@ -67,6 +69,9 @@ export default function EmployerPortal(){
  const [account,A]=useState<Account|null>(null),[data,D]=useState<Data|null>(null),[error,E]=useState(''),[companyId,C]=useState(''),[version,V]=useState(0);
  const rawView=params.get('view')||'dashboard',view=LEGACY[rawView]??(NAV.some(n=>n[1]===rawView)?rawView:'dashboard');
  useEffect(()=>{let live=true;Promise.all([get<Account>('/api/account'),get<Data>('/api/data').catch(()=>null)]).then(async([a,first])=>{const d=a.user?.confirmed?first??await get<Data>('/api/data'):null;if(live){A(a);D(d);}}).catch(e=>{if(live)E((e as Error).message);});return()=>{live=false;};},[version]);
+ // A new company is verified automatically a minute or two after registering: pick that up without a refresh.
+ const unverified=Boolean(data?.companies.some(c=>!c.verified_at&&data.memberships.some(m=>m.company_id===c.id)));
+ useEffect(()=>{if(!unverified)return;const t=setInterval(()=>{forgetAnswers();V(v=>v+1);},20000);return()=>clearInterval(t);},[unverified]);
  const companies=useMemo(()=>(data?.companies||[]).filter(c=>data?.memberships.some(m=>m.company_id===c.id)),[data]);
  useEffect(()=>{if(!companies.length)return;const wanted=params.get('company');let saved='';try{saved=localStorage.getItem('ep.company')||'';}catch{}const pick=[wanted,saved].find(x=>x&&companies.some(c=>c.id===x))||companies[0].id;Promise.resolve().then(()=>C(pick));},[companies,params]);
  const nav=NAV.map(([group,id,label,icon])=>({group,id,label,icon,href:`/employer?view=${id}`}));

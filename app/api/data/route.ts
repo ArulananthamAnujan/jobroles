@@ -2,6 +2,8 @@ import {authenticatedClient,response,failure,ApiError} from '@/lib/backend/serve
 export const dynamic='force-dynamic';
 export async function GET(request:Request){try{
  const {client,user}=await authenticatedClient();
+ // Verifies newly registered companies and publishes jobs whose one-minute wait is over. Missing on an older database: ignored.
+ await client.rpc('jp_auto_approve').then(()=>{},()=>{});
  const [profile,resumes,applications,memberships,companies,jobs,admin]=await Promise.all([
   client.from('seeker_profiles').select('*').eq('user_id',user.id).maybeSingle(),
   client.from('resume_versions').select('id,filename,version,created_at').eq('user_id',user.id).is('deleted_at',null).order('version',{ascending:false}).limit(50),

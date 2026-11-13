@@ -110,7 +110,7 @@ function Sheet({ctx}:{ctx:PortalContext}){
     <div className="ep-seg" role="radiogroup" aria-label="After import">
      <label><input type="radio" name="submit" checked={submit} onChange={()=>SU(true)}/>Submit for approval</label>
      <label><input type="radio" name="submit" checked={!submit} onChange={()=>SU(false)}/>Save as drafts</label></div>
-    <span className="ep-muted" style={{fontSize:13,flex:1,minWidth:200}}>{submit?'Each job is checked by our team and goes live once approved, usually the same business day.':'Drafts stay private until you open each one and submit it.'}{bad.length?` ${bad.length} ${bad.length===1?'job needs':'jobs need'} fixing and will be left out unless you fix ${bad.length===1?'it':'them'} here.`:''}</span>
+    <span className="ep-muted" style={{fontSize:13,flex:1,minWidth:200}}>{submit?'Each job is checked automatically and goes live in about a minute. Anything our checks flag is reviewed by our team first.':'Drafts stay private until you open each one and submit it.'}{bad.length?` ${bad.length} ${bad.length===1?'job needs':'jobs need'} fixing and will be left out unless you fix ${bad.length===1?'it':'them'} here.`:''}</span>
     <Button disabled={busy||!good.length} onClick={run}>{busy?'Importing…':`Import ${good.length} ${good.length===1?'job':'jobs'}`}</Button>
    </div></Card>
   </>}

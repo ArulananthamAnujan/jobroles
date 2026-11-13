@@ -51,6 +51,7 @@ After this migration, check in Supabase Storage that the `company-media` bucket 
 | `20261111000001_resume_direct_download` | Resume downloads work without the `resume-download` function: the applicant and the employers they applied to read the file directly, under the same rules |
 | `20261111000002_setup_status` | Data for **Admin > Setup status**, which checks every part of the site and says what to do about anything that is off |
 | `20261112000001_manage_your_things` | Delete a resume, discard a draft application, list and delete your own reviews, salaries and questions, delete your own team notes, delete a draft job, change a team member's role |
+| `20261113000001_automatic_approval` | Companies with a valid, unused ABN are verified automatically and submitted jobs go live after one minute unless the scam checks flag them. Runs every minute in the database |
 
 ## 2. Edge Functions
 
@@ -137,7 +138,7 @@ on the privacy or terms page if it requires attribution.
 
 ## Running the marketplace day to day
 
-All of this is in `/admin`:
+To give yourself access to `/admin`, follow `docs/ADMIN-ACCOUNT.md`. All of this is in `/admin`:
 
 - **Job approvals and employer verification**: new employers and their first jobs.
 - **Review moderation** and **Interviews & Q&A**: posts arrive with automatic flags (contact details, links, offensive

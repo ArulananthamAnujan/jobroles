@@ -16,7 +16,7 @@ const FAQ:[string,[string,string][]][]=[
   ['How do video interviews work?','If an employer books a JobRoles video interview, a Join button appears on your application 30 minutes before the start. It works in your browser with no download.'],
  ]],
  ['Employers',[
-  ['How do I post a job?','Register your company in the employer portal. We check your ABN, usually within one business day. Then post jobs from Jobs, Post a job. Every listing must show a genuine pay range.'],
+  ['How do I post a job?','Register your company in the employer portal. We check your ABN automatically, usually within a couple of minutes. Then post jobs from Jobs, Post a job. Every listing must show a genuine pay range.'],
   ['How much does it cost?','Posting jobs is free. You can pay to sponsor jobs: either a fixed 30-day sponsorship or pay-per-click with a daily budget you control. Invalid clicks are filtered out and never charged.'],
   ['How do I add my team?','In the employer portal, go to Team and create an invitation link for a recruiter or hiring manager. You choose which jobs each person can see.'],
   ['Can I respond to reviews?','Yes. Company owners can post one public reply to each review from Reviews in the employer portal. You cannot remove genuine reviews, but you can report ones that break our guidelines.'],

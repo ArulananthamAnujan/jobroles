@@ -35,14 +35,14 @@ export default function Dashboard({ctx}:{ctx:PortalContext}){
    {canPost&&<Link className="ep-btn secondary md" href="/employer?view=import">Import jobs</Link>}
    {canPost&&<Button tone={oldest?'secondary':'primary'} onClick={()=>ctx.go('jobs',{new:'1'})}>Post a job</Button>}
    {oldest&&<Link className="ep-btn primary md" href={`/employer?view=applicants&application=${oldest.applicationId}`}>Review oldest applicant</Link>}</>}>
-  {!ctx.company.verified_at&&<p className="ep-notice warn">We’re checking your ABN. You can prepare and import jobs now; they go live once your company is verified and each job is approved.</p>}
+  {!ctx.company.verified_at&&<p className="ep-notice warn">We’re checking your ABN. This usually takes a couple of minutes and this page updates by itself. You can post jobs now; they go live as soon as the check is done.</p>}
   {first?<FirstRun canPost={canPost} go={ctx.go} ctx={ctx}/>:<div className="ep-over">
    <div className="ep-over-main">
     <div className="ep-stats" style={{marginBottom:0}}>
      <Stat label="Waiting for you" value={o.waitingTotal} hint={o.partial?'Not yet reviewed':o.waitingOver3?`${o.waitingOver3} over 3 days`:'None over 3 days'} warn={o.waitingOver3>0} href="/employer?view=applicants&stage=new"/>
      <Stat label="New applicants" value={d.newWeek} hint={`Last 7 days · ${d.newToday} today`} href="/employer?view=applicants"/>
      <Stat label="Interviews" value={d.interviewsWeek} hint="Next 7 days" href="/employer?view=interviews"/>
-     <Stat label="Live jobs" value={d.live} hint={[d.pending&&`${d.pending} awaiting approval`,d.drafts&&plural(d.drafts,'draft')].filter(Boolean).join(' · ')||`${d.views7.toLocaleString('en-AU')} views in 7 days`} href="/employer?view=jobs"/>
+     <Stat label="Live jobs" value={d.live} hint={[d.pending&&`${d.pending} going live shortly`,d.drafts&&plural(d.drafts,'draft')].filter(Boolean).join(' · ')||`${d.views7.toLocaleString('en-AU')} views in 7 days`} href="/employer?view=jobs"/>
     </div>
     {o.partial?<Card title="Pipeline by job"><p className="ep-muted">The pipeline chart isn’t available right now. Every applicant, by stage, is on the <Link href="/employer?view=applicants" style={{textDecoration:'underline'}}>Applicants</Link> page.</p></Card>:<>
     <Pipeline jobs={o.pipeline} canPost={canPost} go={ctx.go}/>
@@ -79,7 +79,7 @@ function FirstRun({canPost,go,ctx}:{canPost:boolean;go:PortalContext['go'];ctx:P
  // The steps between registering and the first applicant, each with its state and a way to do it.
  const steps:[boolean,string,string,string|null,string][]=[
   [true,'Register your company','Done','',''],
-  [Boolean(ctx.company.verified_at),'ABN check',ctx.company.verified_at?'Verified':'We’re checking it, usually within one business day. You don’t need to do anything.',null,''],
+  [Boolean(ctx.company.verified_at),'ABN check',ctx.company.verified_at?'Verified':'Checked automatically, usually within a couple of minutes. You don’t need to do anything.',null,''],
   [false,'Add your first jobs','Post one, import a spreadsheet, or connect your ATS.','/employer?view=import','Add jobs'],
   [(setup?.page??0)>=4,'Complete your company page',setup?`${setup.page} of 5 done: logo, why work here, about, benefits and photos.`:'Logo, why work here, about, benefits and photos.','/employer?view=company','Edit page'],
   [(setup?.team??1)>1||(setup?.invites??0)>0,'Invite your team','Recruiters and hiring managers, each with the right access.','/employer?view=team','Invite'],
