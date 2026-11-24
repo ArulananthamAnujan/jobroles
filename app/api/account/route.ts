@@ -38,7 +38,10 @@ export async function POST(request:Request){try{
  // Social sign-in: Supabase returns the provider URL; the PKCE verifier is kept in this site's cookie for /auth/callback.
  if(body.data.action==='oauth'){
   if(!(await enabledProviders()).includes(body.data.provider))throw new ApiError(400,'This sign-in option is not available.');
-  const {data,error}=await client.auth.signInWithOAuth({provider:body.data.provider,options:{redirectTo:`${appOrigin()}/auth/callback`,skipBrowserRedirect:true}});
+  const {data,error}=await client.auth.signInWithOAuth({provider:body.data.provider,options:{redirectTo:`${appOrigin()}/auth/callback`,skipBrowserRedirect:true,
+   // Always show Google's account chooser, so someone with several Google accounts can pick which one to use
+   // instead of being signed straight back in to the last one.
+   ...(body.data.provider==='google'?{queryParams:{prompt:'select_account'}}:{})}});
   if(error||!data.url)throw new ApiError(503,'That sign-in option is unavailable. Try email instead.');
   return response({ok:true,url:data.url});
  }
