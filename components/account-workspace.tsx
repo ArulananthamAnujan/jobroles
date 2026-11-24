@@ -30,6 +30,12 @@ type Data={profile:null|{full_name:string;headline:string;location:string;skills
 async function api<T={ok:boolean;confirmationRequired?:boolean}>(path:string,body?:unknown){const res=await fetch(path,{method:body?'POST':'GET',credentials:'same-origin',cache:'no-store',headers:body?{'Content-Type':'application/json'}:undefined,body:body?JSON.stringify(body):undefined});const data=await res.json() as T & {error?:string};if(!res.ok)throw new Error(data.error||'Request failed.');return data;}
 export default function AccountWorkspace({portal='seeker',embedded=false}:{portal?:'seeker'|'employer';embedded?:boolean}){
  const search=useSearchParams().toString(),router=useRouter();
+ // Why "Continue with Google" did not finish, when it did not (set by /auth/callback).
+ const signinProblem=({cookie:'Google sign-in could not be finished because this browser did not keep the sign-in cookie between pressing the button and coming back from Google. This happens in private windows, with container or cookie-blocking add-ons, or with strict tracking protection. Try once more in a normal window, or sign in with your email below. (Reference: cookie)',
+  expired:'That Google sign-in had already been used or took too long. Please press Continue with Google again. (Reference: expired)',
+  cancelled:'Google sign-in was cancelled. Press Continue with Google to try again, or sign in with your email below.',
+  provider:'Google did not complete the sign-in. Please try again, or sign in with your email below. (Reference: provider)',
+  failed:'Google sign-in could not be completed. Please try again, or sign in with your email below. (Reference: failed)'} as Record<string,string>)[new URLSearchParams(search).get('signin')||''];
  const employer=portal==='employer',base=employer?'/employer':'/job-seeker';
  const [view,V]=useState(employer?'hiring':'overview');
  function navigate(next:string){router.push(accountHref(next,search).replace('/account',base),{scroll:false});}
@@ -74,6 +80,7 @@ export default function AccountWorkspace({portal='seeker',embedded=false}:{porta
   </>:<>
    <h2>{mode==='login'?'Sign in':'Create your account'}</h2>
    {mode==='signup'&&<p className="muted">{employer?'Create your account, then add your company. Posting a job takes a few minutes.':'It’s free. Save jobs, apply with one resume and track every application.'}</p>}
+   {signinProblem&&<p role="alert" className="notice error">{signinProblem}</p>}
    <SocialSignIn portal={employer?'employer':'seeker'} providers={account.providers||[]}/>
    <form onSubmit={auth} key={mode} noValidate={false}>
     {mode==='signup'&&<div className="grid-two"><Field label="First name"><input name="firstName" autoComplete="given-name" required maxLength={80}/></Field><Field label="Last name"><input name="lastName" autoComplete="family-name" required maxLength={80}/></Field></div>}
