@@ -50,6 +50,17 @@ test('invitation emails',async t=>{
   assert.equal((await admin('select token from private.invitation_mail where invitation_id=$1',[gone]))[0].token,null);
   assert.equal((await rows(seeker,'select jp_invitation_preview($1) as r',[hash(secret('d'))]))[0].r.state,'cancelled');
  });
+ await t.test('an email nobody has tried to send for three minutes shows as delayed, and administrators are told',async()=>{
+  const late=await invite('late@example.test',secret('f'));await rows(owner,'select jp_queue_invitation_mail($1,$2)',[late,secret('f')]);
+  assert.equal((await rows(owner,'select jp_invitation_mail_states($1) as r',[company]))[0].r[late],'sending');
+  await admin("update private.invitation_mail set created_at=now()-interval '10 minutes' where invitation_id=$1",[late]);
+  assert.equal((await rows(owner,'select jp_invitation_mail_states($1) as r',[company]))[0].r[late],'delayed');
+  await admin('insert into private.platform_admins(user_id) values($1) on conflict do nothing',[ids.admin]);
+  const h=(await rows(ids.admin,'select jp_invitation_mail_health() as r'))[0].r;
+  assert.deepEqual([Number(h.neverTried),Number(h.waiting),Number(h.oldestMinutes)>=10,Number(h.sent),h.lastError],[1,1,true,1,'Mail provider answered 403']);
+  await assert.rejects(()=>rows(owner,'select jp_invitation_mail_health()'),/Administrator required/);
+  await admin('update company_invitations set revoked_at=now() where id=$1',[late]);
+ });
  await t.test('at most 30 invitation emails a company a day',async()=>{
   await admin(`insert into private.invitation_mail(invitation_id,state) select id,'accepted' from (insert into company_invitations(company_id,email,role,token_hash) select $1,'bulk'||g||'@example.test','recruiter',md5(g::text)||md5(g::text) from generate_series(1,30) g returning id) x`,[company]).catch(async()=>{
    for(let g=1;g<=30;g++){const [r]=await admin("insert into company_invitations(company_id,email,role,token_hash) values($1,$2,'recruiter',$3) returning id",[company,`bulk${g}@example.test`,hash('bulk'+g)]);await admin("insert into private.invitation_mail(invitation_id,state) values($1,'accepted')",[r.id]);}});
