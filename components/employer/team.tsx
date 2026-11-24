@@ -12,7 +12,7 @@ export default function Team({ctx}:{ctx:PortalContext}){
  const [emailed,EMD]=useState(false);
  // Creates the invitation and emails it. Used by the form and by “Send again”.
  async function invite(email:string,role:string){B(true);E('');N('');L('');try{const r=await post<{invitationUrl?:string;emailed?:boolean;emailProblem?:string}>('/api/team',{action:'invite',companyId:ctx.company.id,email,role});L(r.invitationUrl||'');EMD(Boolean(r.emailed));
-   N(r.emailed?`Invitation emailed to ${email}. They have 7 days to accept.`:`Invitation created, but we could not email it${r.emailProblem?`: ${r.emailProblem}`:'.'} Send ${email} the link below yourself.`);V(v=>v+1);return true;}catch(e){E((e as Error).message);return false;}finally{B(false);}}
+   N(r.emailed?`Invitation created. We’re emailing it to ${email} now; the list below shows when it has been sent. They have 7 days to accept.`:`Invitation created, but we could not email it${r.emailProblem?`: ${r.emailProblem}`:'.'} Send ${email} the link below yourself.`);V(v=>v+1);return true;}catch(e){E((e as Error).message);return false;}finally{B(false);}}
  // While an email is on its way, check again every 20 seconds so “Sending” turns into “Email sent” by itself.
  const mailStates=Object.values(team?.invitationMail||{}),sending=mailStates.includes('sending')||mailStates.includes('delayed'),stuck=mailStates.includes('delayed')||mailStates.includes('failed');
  useEffect(()=>{if(!sending)return;const t=setInterval(()=>{forgetAnswers();V(v=>v+1);},20000);return()=>clearInterval(t);},[sending]);
