@@ -30,7 +30,10 @@ async function read(client:Client,userId:string,resource:string,p:URLSearchParam
   }
   case 'inbox':{const {data,error}=await client.rpc('jp_inbox',{company:need(company)});if(error)denied(error,'Inbox unavailable.');return {threads:data};}
   case 'calendar':{const from=p.get('from')||new Date().toISOString(),to=p.get('to')||new Date(Date.now()+42*864e5).toISOString();const {data,error}=await client.rpc('jp_interview_calendar',{company:need(company),from_at:from,to_at:to});if(error)denied(error,'Calendar unavailable.');return {interviews:data};}
-  case 'team':{const {data,error}=await client.rpc('jp_team',{company:need(company)});if(error)denied(error,'Team unavailable.');return data;}
+  case 'team':{const {data,error}=await client.rpc('jp_team',{company:need(company)});if(error)denied(error,'Team unavailable.');
+   // Owners also see whether each invitation's email went out.
+   const mail=(data as {isOwner?:boolean})?.isOwner?await client.rpc('jp_invitation_mail_states',{company}):null;
+   return {...(data as object),invitationMail:mail&&!mail.error?mail.data:{}};}
   case 'templates':{const {data,error}=await client.from('message_templates').select('id,name,body,created_at').eq('company_id',need(company)).order('name');if(error)throw new ApiError(503,'Templates unavailable.');return {templates:data};}
   case 'billing':{const {data,error}=await client.from('job_sponsorships').select('id,job_id,amount_total,currency,starts_at,ends_at,created_at,invoice_url,jobs(title)').eq('company_id',need(company)).order('created_at',{ascending:false}).limit(200);if(error)throw new ApiError(503,'Billing unavailable.');return {orders:data};}
   case 'prefs':{const {data}=await client.from('notification_prefs').select('new_applicant,messages,stage_changes,daily_digest').eq('user_id',userId).maybeSingle();return {prefs:data||{new_applicant:true,messages:true,stage_changes:true,daily_digest:false}};}

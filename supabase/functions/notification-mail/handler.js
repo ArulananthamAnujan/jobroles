@@ -9,6 +9,20 @@ export function notificationEmail(d,info,origin){
  const link=`${origin}/account/applications/${d.application_id}`;
  return {subject,text:`${subject}.\n\nSign in to see the details:\n${link}\n\nJobRoles\nFor your privacy, this email never includes messages, resumes or interview details. Change which emails you get in your account settings.`};
 }
+// The email that invites someone to a company's hiring team. The link carries the invitation's secret after "#", so
+// it is never sent to a server. It works for the invited address only and the page helps a newcomer create an account.
+const ROLE_NAME={recruiter:'a recruiter',hiring_manager:'a hiring manager',owner:'an owner'};
+const esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+const clean=t=>String(t||'').replace(/[\r\n\u2028\u2029]+/g,' ').trim().slice(0,160);
+export function invitationEmail(inv,origin){
+ const company=clean(inv.company)||'A company',inviter=clean(inv.inviter),role=ROLE_NAME[inv.role]||'a team member';
+ const link=`${origin}/account/invite#${inv.token}`,who=inviter?`${inviter} from ${company}`:company;
+ const until=new Intl.DateTimeFormat('en-AU',{day:'numeric',month:'long',timeZone:'Australia/Melbourne'}).format(new Date(inv.expires_at));
+ const subject=`${company} invited you to their hiring team on JobRoles`;
+ const text=`${who} has invited you to join ${company}'s hiring team on JobRoles as ${role}.\n\nAccept the invitation:\n${link}\n\nThe link works until ${until}, for ${inv.email} only. If you don't have a JobRoles account yet, the page will help you create one first.\n\nIf you weren't expecting this, you can ignore this email and nothing will happen.\n\nJobRoles`;
+ const html=`<div style="font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5;color:#172b3a;max-width:560px"><p>${esc(who)} has invited you to join <strong>${esc(company)}</strong>'s hiring team on JobRoles as ${esc(role)}.</p><p style="margin:24px 0"><a href="${esc(link)}" style="background:#076d65;color:#ffffff;text-decoration:none;font-weight:bold;padding:12px 20px;border-radius:8px;display:inline-block">Accept invitation</a></p><p>The link works until ${esc(until)}, for ${esc(inv.email)} only. If you don't have a JobRoles account yet, the page will help you create one first.</p><p style="color:#425563;font-size:14px">If the button doesn't work, copy this address into your browser:<br>${esc(link)}</p><p style="color:#425563;font-size:14px">If you weren't expecting this, you can ignore this email and nothing will happen.</p><p>JobRoles</p></div>`;
+ return {subject,text,html};
+}
 export function makeMailWorker(createClient,env,send=fetch){
  const reply=(status,body)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
  return async request=>{
@@ -35,7 +49,21 @@ export function makeMailWorker(createClient,env,send=fetch){
     if(done.error||done.data!==true)return reply(503,{error:'Delivery acknowledgement failed; retry with the same idempotency key'});
     if(ok)accepted++;else failed++;
    }
-   return reply(200,{accepted,failed});
+   // Team invitations. On a database without that update the queue does not exist yet: skip it.
+   let invited=0,invitesFailed=0;
+   const claim=await client.rpc('jp_claim_invitation_mail');
+   for(const inv of !claim.error&&Array.isArray(claim.data)?claim.data:[]){
+    let ok=false,problem='Email was not accepted';
+    try{
+     const mail=invitationEmail(inv,base.origin);
+     const r=await send('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json','Idempotency-Key':`jobroles-invite-${inv.id}-${inv.lease_token}`},body:JSON.stringify({from,to:[inv.email],subject:mail.subject,text:mail.text,html:mail.html}),signal:AbortSignal.timeout(15000)});
+     const result=await r.json().catch(()=>({}));ok=r.ok&&typeof result.id==='string';if(!ok)problem=`Mail provider answered ${r.status}${typeof result.message==='string'?`: ${result.message}`:''}`;
+    }catch(e){problem='Mail provider could not be reached';}
+    const done=await client.rpc('jp_finish_invitation_mail',{mail_id:inv.id,lease:inv.lease_token,accepted:ok,problem:ok?null:problem});
+    if(done.error)return reply(503,{error:'Invitation acknowledgement failed'});
+    if(ok)invited++;else invitesFailed++;
+   }
+   return reply(200,{accepted,failed,invited,invitesFailed});
   }catch{return reply(503,{error:'Notification queue unavailable'});}
  };
 }
