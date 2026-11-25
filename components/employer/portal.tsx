@@ -25,14 +25,15 @@ import {AppShell,AccountMenu,Section} from './shell';
 import BulkImport from './bulk-import';
 export type Company={id:string;name:string;verified_at:string|null};
 export type Membership={company_id:string;role:string};
-export type PortalContext={company:Company;role:string;companies:Company[];memberships:Membership[];isAdmin:boolean;userId:string;go:(view:string,params?:Record<string,string>)=>void};
+export type PortalContext={sponsoring:boolean;company:Company;role:string;companies:Company[];memberships:Membership[];isAdmin:boolean;userId:string;go:(view:string,params?:Record<string,string>)=>void};
 type Account={configured:boolean;user:null|{id:string;email:string;confirmed:boolean}};
-type Data={memberships:Membership[];companies:Company[];isAdmin:boolean;jobs:{id:string;title:string;company_id:string;state:string}[]};
+type Data={features?:{sponsoredJobs?:boolean};memberships:Membership[];companies:Company[];isAdmin:boolean;jobs:{id:string;title:string;company_id:string;state:string}[]};
 const NAV:[string,string,string,string][]=[
  ['Hire','dashboard','Overview','home'],['Hire','jobs','Jobs','jobs'],['Hire','applicants','Applicants','people'],['Hire','messages','Messages','chat'],['Hire','interviews','Interviews','calendar'],['Hire','candidates','Find candidates','search'],['Hire','events','Hiring events','calendar'],
  ['Grow','advertising','Sponsored jobs','card'],['Grow','performance','Performance','chart'],['Grow','company','Company page','building'],['Grow','reviews','Reviews','star'],
  ['Manage','team','Team','team'],['Manage','billing','Billing','card'],['Manage','import','Import jobs','upload'],['Manage','settings','Settings','settings'],
 ];
+const PAID=['advertising','billing'];
 const LEGACY:Record<string,string>={hiring:'applicants',analytics:'performance',feeds:'import',overview:'dashboard'};
 
 function Bell(){
@@ -67,20 +68,22 @@ function Onboarding({onDone,email}:{onDone:()=>void;email:string}){
 export default function EmployerPortal(){
  const router=useRouter(),path=usePathname(),params=useSearchParams();
  const [account,A]=useState<Account|null>(null),[data,D]=useState<Data|null>(null),[error,E]=useState(''),[companyId,C]=useState(''),[version,V]=useState(0);
- const rawView=params.get('view')||'dashboard',view=LEGACY[rawView]??(NAV.some(n=>n[1]===rawView)?rawView:'dashboard');
+ const rawView=params.get('view')||'dashboard',named=LEGACY[rawView]??(NAV.some(n=>n[1]===rawView)?rawView:'dashboard');
  useEffect(()=>{let live=true;Promise.all([get<Account>('/api/account'),get<Data>('/api/data').catch(()=>null)]).then(async([a,first])=>{const d=a.user?.confirmed?first??await get<Data>('/api/data'):null;if(live){A(a);D(d);}}).catch(e=>{if(live)E((e as Error).message);});return()=>{live=false;};},[version]);
  // A new company is verified automatically a minute or two after registering: pick that up without a refresh.
  const unverified=Boolean(data?.companies.some(c=>!c.verified_at&&data.memberships.some(m=>m.company_id===c.id)));
  useEffect(()=>{if(!unverified)return;const t=setInterval(()=>{forgetAnswers();V(v=>v+1);},20000);return()=>clearInterval(t);},[unverified]);
+ // Sponsored jobs and their billing screen exist only when the owner of the site has switched them on.
+ const sponsoring=Boolean(data?.features?.sponsoredJobs),view=!sponsoring&&PAID.includes(named)?'dashboard':named;
  const companies=useMemo(()=>(data?.companies||[]).filter(c=>data?.memberships.some(m=>m.company_id===c.id)),[data]);
  useEffect(()=>{if(!companies.length)return;const wanted=params.get('company');let saved='';try{saved=localStorage.getItem('ep.company')||'';}catch{}const pick=[wanted,saved].find(x=>x&&companies.some(c=>c.id===x))||companies[0].id;Promise.resolve().then(()=>C(pick));},[companies,params]);
- const nav=NAV.map(([group,id,label,icon])=>({group,id,label,icon,href:`/employer?view=${id}`}));
+ const nav=NAV.filter(n=>sponsoring||!PAID.includes(n[1])).map(([group,id,label,icon])=>({group,id,label,icon,href:`/employer?view=${id}`}));
  const go=useCallback((next:string,extra:Record<string,string>={})=>{const p=new URLSearchParams({view:next,...extra});router.push(`${path}?${p}`,{scroll:true});},[router,path]);
  if(error)return <AppShell nav={[]} current="" crumb="Employer"><Notice error={error}/></AppShell>;
  if(!account)return <AppShell nav={nav} current={view} crumb="Employer"><p role="status" className="ep-muted">Loading your employer portal…</p></AppShell>;
  if(!account.user?.confirmed||!data)return <AccountWorkspace portal="employer"/>;
  const company=companies.find(c=>c.id===companyId),membership=data.memberships.find(m=>m.company_id===companyId);
- const ctx:PortalContext|null=company&&membership?{company,role:membership.role,companies,memberships:data.memberships,isAdmin:data.isAdmin,userId:account.user.id,go}:null;
+ const ctx:PortalContext|null=company&&membership?{sponsoring,company,role:membership.role,companies,memberships:data.memberships,isAdmin:data.isAdmin,userId:account.user.id,go}:null;
  const canManage=membership?.role==='owner'||membership?.role==='recruiter';
  let body:ReactNode;
  if(!companies.length)body=<Onboarding email={account.user.email} onDone={()=>V(v=>v+1)}/>;
@@ -91,7 +94,7 @@ export default function EmployerPortal(){
   case 'messages':body=<Messages ctx={ctx}/>;break;
   case 'interviews':body=<Interviews ctx={ctx}/>;break;
   case 'candidates':body=<Section title={params.get('title')?`Matched candidates for ${params.get('title')}`:'Find candidates'} sub="People who chose to be found by employers. They see your invitation in their account."><CandidateSearch companies={canManage&&ctx.company.verified_at?[ctx.company]:[]} jobs={data.jobs||[]} initial={params.get('q')?{q:params.get('q')||'',near:params.get('near')||'',title:params.get('title')||undefined}:undefined}/>{!ctx.company.verified_at&&<p className="ep-muted">Candidate search opens once your company is verified.</p>}{!canManage&&<p className="ep-muted">Only owners and recruiters can search candidates.</p>}</Section>;break;
-  case 'performance':body=<Section title="Performance" sub="How each listing performs. Fixed 30-day sponsorship is also available here."><JobStats companies={canManage?[ctx.company]:[]}/></Section>;break;
+  case 'performance':body=<Section title="Performance" sub={sponsoring?'How each listing performs. Fixed 30-day sponsorship is also available here.':'How each listing performs: views, applications, interviews and hires.'}><JobStats sponsoring={sponsoring} companies={canManage?[ctx.company]:[]}/></Section>;break;
   case 'events':body=<EventsView ctx={ctx}/>;break;
   case 'advertising':body=<Advertising ctx={ctx}/>;break;
   case 'company':body=<CompanyProfile ctx={ctx}/>;break;

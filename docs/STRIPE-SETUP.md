@@ -1,5 +1,9 @@
 # Stripe setup
 
+> **Sponsored jobs are switched off by default.** Employers see no sponsorship screens, buttons or prices until you set
+> `SPONSORED_JOBS=on` where the site is hosted (Hostinger > environment variables) and redeploy. Do that last, after the
+> steps below are finished and tested. To switch them off again, remove the variable and redeploy.
+
 Posting jobs on JobRoles is free. Stripe only takes payment for two optional extras:
 
 | Product | What the employer gets | Where they buy it |

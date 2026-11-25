@@ -1,6 +1,7 @@
 import {authenticatedClient,failure,response,ApiError,sameOrigin,jsonBody} from '@/lib/backend/server';
 import {enabledProviders} from '@/lib/backend/providers';
 import {billingStatus} from '@/lib/backend/billing-status';
+import {sponsoredJobs} from '@/lib/backend/features';
 export const dynamic='force-dynamic';
 // The newest database update this version of the site expects (see supabase/migrations).
 const EXPECTED='20261111000002';
@@ -73,7 +74,8 @@ export async function GET(request:Request){try{
  // --- Money
  const stripe=has['billing']===true?await billingStatus(token):{credit:false,sponsor:false};
  const stripeTitle='Sponsored listings and advertising credit (Stripe)';
- if(has['billing']!==true)add('Payments and advertising',stripeTitle,'off','The billing function is not installed, so employers cannot pay yet. They are told paid sponsorship is not switched on; nothing fails part-way.','Follow docs/STRIPE-SETUP.md.');
+ if(!sponsoredJobs())add('Payments and advertising',stripeTitle,'off','Sponsored jobs are switched off. Employers do not see sponsorship, billing or prices for it anywhere, and posting jobs stays free.','Optional. When you want to offer paid sponsorship, connect Stripe (docs/STRIPE-SETUP.md) and set SPONSORED_JOBS=on where the site is hosted, then redeploy.');
+ else if(has['billing']!==true)add('Payments and advertising',stripeTitle,'off','The billing function is not installed, so employers cannot pay yet. They are told paid sponsorship is not switched on; nothing fails part-way.','Follow docs/STRIPE-SETUP.md.');
  else if(stripe.credit===null)add('Payments and advertising',stripeTitle,'check','The billing function is installed but is an older version that cannot report whether Stripe is connected.','Redeploy the billing function with the latest code, then check again.');
  else if(!stripe.credit)add('Payments and advertising',stripeTitle,'off','Stripe is not connected (the billing function has no STRIPE_SECRET_KEY or APP_ORIGIN). Employers are told paid sponsorship is not switched on yet.','Follow docs/STRIPE-SETUP.md to add your Stripe keys.');
  else if(!stripe.sponsor)add('Payments and advertising',stripeTitle,'attention','Pay-per-click credit can be bought, but the fixed 30-day sponsorship has no price set (STRIPE_PRICE_SPONSOR).','Create the price in Stripe and set STRIPE_PRICE_SPONSOR (docs/STRIPE-SETUP.md).');

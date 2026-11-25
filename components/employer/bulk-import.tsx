@@ -123,7 +123,7 @@ function Sheet({ctx}:{ctx:PortalContext}){
    </Card>
    <Card title="Next"><ul className="ep-list">
     <li><div className="ep-grow"><strong>Add screening questions</strong><small>Open any job to add more questions and deal-breakers.</small></div></li>
-    <li><div className="ep-grow"><strong>Sponsor your busiest roles</strong><small>Pay per click, only for real visits.</small></div><Link className="ep-btn secondary sm" href="/employer?view=advertising">Sponsor</Link></li>
+    {ctx.sponsoring&&<li><div className="ep-grow"><strong>Sponsor your busiest roles</strong><small>Pay per click, only for real visits.</small></div><Link className="ep-btn secondary sm" href="/employer?view=advertising">Sponsor</Link></li>}
     <li><div className="ep-grow"><strong>Invite matching candidates</strong><small>People who chose to be found.</small></div><Link className="ep-btn secondary sm" href="/employer?view=candidates">Search</Link></li>
    </ul></Card>
   </div>}

@@ -1,4 +1,5 @@
 import {authenticatedClient,response,failure,ApiError} from '@/lib/backend/server';
+import {sponsoredJobs} from '@/lib/backend/features';
 export const dynamic='force-dynamic';
 export async function GET(request:Request){try{
  const {client,user}=await authenticatedClient();
@@ -36,5 +37,5 @@ export async function GET(request:Request){try{
  if(mine.length){const own=await client.from('companies').select('id,name,verified_at,sourced').in('id',mine);if(own.error)throw new ApiError(503,'The database schema is not ready. Please contact the platform owner.');companies.data?.push(...(own.data||[]));}
  // A company handed over from job sourcing is public but has not had its ABN checked, so its team sees it as awaiting verification.
  const listed=(companies.data||[]).map(({sourced,...c})=>({...c,verified_at:sourced?null:c.verified_at}));
- return response({profile:profile.data,resumes:resumes.data,applications:applications.data,memberships:memberships.data,companies:listed,jobs:jobs.data,isAdmin:admin.data});
+ return response({profile:profile.data,resumes:resumes.data,applications:applications.data,memberships:memberships.data,companies:listed,jobs:jobs.data,isAdmin:admin.data,features:{sponsoredJobs:sponsoredJobs()}});
 }catch(error){return failure(error);}}
