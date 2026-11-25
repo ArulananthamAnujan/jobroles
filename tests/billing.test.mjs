@@ -44,3 +44,11 @@ test('credit checkout accepts only the listed packs and needs permission',async(
  const r=await s.handler(req({companyId:company,amount:25000}));assert.deepEqual(await r.json(),{url:'https://checkout.stripe.com/c/1'});
  const form=s.calls[0][2];assert.equal(form['line_items[0][price_data][unit_amount]'],'25000');assert.equal(form['metadata[purpose]'],'credit');assert.equal(form['metadata[company_id]'],company);assert.equal(form['invoice_creation[enabled]'],'true');
 });
+test('status says whether paying is possible, without needing a sign-in or revealing a key',async()=>{
+ const ask=async env=>{const {handler,calls}=setup({env});const r=await handler(new Request('https://f.test/billing/status',{method:'POST',body:'{}'}));return [r.status,await r.json(),calls.length];};
+ const [s1,b1,c1]=await ask({});assert.deepEqual([s1,b1,c1],[200,{credit:true,sponsor:true},0]);
+ assert.deepEqual((await ask({STRIPE_PRICE_SPONSOR:''}))[1],{credit:true,sponsor:false});
+ assert.deepEqual((await ask({STRIPE_SECRET_KEY:''}))[1],{credit:false,sponsor:false});
+ assert.deepEqual((await ask({APP_ORIGIN:''}))[1],{credit:false,sponsor:false});
+ assert.ok(!JSON.stringify(b1).includes('sk'));
+});

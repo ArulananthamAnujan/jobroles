@@ -16,7 +16,7 @@ export default function Events({ctx}:{ctx:PortalContext}){
  const load=useCallback(async(signal?:AbortSignal)=>{const d=await employerGet<{events:Ev[]}>('events',{company:ctx.company.id},signal);EV(d.events);},[ctx.company.id]);
  useEffect(()=>{const c=new AbortController();Promise.resolve().then(()=>load(c.signal)).catch(e=>{if(e.name!=='AbortError')E(e.message);});return()=>c.abort();},[load]);
  // What the Starts and Ends boxes currently hold, read back in words so a mistyped day or year is obvious before saving.
- const [times,TM]=useState<{start:string;end:string}>({start:'',end:''}),[limits,LM]=useState({now:'',max:'',maxEnd:''});
+ const [times,TM]=useState<{start:string;end:string}>({start:'',end:''}),[limits,LM]=useState({now:'',max:'',maxEnd:''}),[fresh,FR]=useState('');
  const spoken=(v:string)=>{const d=new Date(v);return v&&!Number.isNaN(d.getTime())?new Intl.DateTimeFormat('en-AU',{weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'numeric',minute:'2-digit'}).format(d):'';};
  const stamp=(d:Date)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}T${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
  function timeProblem(start:string,end:string,isNew:boolean){const s=new Date(start),e=new Date(end),now=Date.now();
@@ -33,15 +33,19 @@ export default function Events({ctx}:{ctx:PortalContext}){
   <Notice error={error} message={note}/>
   {!ctx.company.verified_at&&<p className="ep-muted">Hiring events open once your company is verified.</p>}
   {!events?<p role="status">Loading…</p>:events.length?<div className="ep-table-wrap"><table className="ep-table"><thead><tr><th>Event</th><th>When</th><th>Where</th><th className="num">Registered</th><th>Status</th><th/></tr></thead><tbody>
-   {events.map(e=><tr key={e.id}><td><div className="ep-row-title">{e.title}</div></td><td>{when(e.startsAt,{weekday:'short',day:'numeric',month:'short',hour:'numeric',minute:'2-digit',timeZone:e.timeZone})}</td><td>{e.mode==='online'?'Online':e.location}</td>
+   {events.map(e=><tr key={e.id} className={fresh===e.title?'ep-fresh':undefined}><td><div className="ep-row-title">{e.title}{fresh===e.title&&<span className="ep-saved-tag">Saved just now</span>}</div></td><td>{when(e.startsAt,{weekday:'short',day:'numeric',month:'short',hour:'numeric',minute:'2-digit',timeZone:e.timeZone})}</td><td>{e.mode==='online'?'Online':e.location}</td>
     <td className="num">{e.registered}{e.capacity?` / ${e.capacity}`:''}</td><td>{e.cancelled?<Pill tone="red">Cancelled</Pill>:<Pill tone="teal">Open</Pill>}</td>
     <td><div className="ep-row-actions"><Button size="sm" tone="secondary" onClick={()=>VW(e)}>Attendees</Button><Link className="ep-btn ghost sm" href={`/events/${e.id}`}>View</Link>{canRun&&!e.cancelled&&<><Button size="sm" tone="ghost" onClick={()=>open(e)}>Edit</Button>
      <Button size="sm" tone="danger" disabled={busy} onClick={async()=>{if(!confirm('Cancel this event? Registrants will see it as cancelled.'))return;B(true);E('');try{await employerPost({action:'event.cancel',id:e.id});EV(all=>all&&all.map(x=>x.id===e.id?{...x,cancelled:true}:x));N('Event cancelled.');forgetAnswers();await load();}catch(err){E((err as Error).message);}finally{B(false);}}}>Cancel</Button></>}</div></td></tr>)}
   </tbody></table></div>:<Card><Empty title="No hiring events yet" action={canRun&&<Button onClick={()=>open('new')}>Create event</Button>}>Open days and online info sessions help you meet many candidates at once.</Empty></Card>}
   <Drawer open={Boolean(edit)} onClose={()=>ED(null)} title={current?'Edit event':'Create a hiring event'}>{edit&&<form className="ep-form" onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const zone=String(f.get('timeZone'));
-    const wrong=timeProblem(String(f.get('start')),String(f.get('end')),!current);if(wrong){E(wrong);return;}B(true);E('');
+    const wrong=timeProblem(String(f.get('start')),String(f.get('end')),!current);if(wrong){E(wrong);return;}
+    const title=String(f.get('title')||'').trim(),startsAt=zonedIso(String(f.get('start')),zone);
+    // The same event created twice would show twice to job seekers: ask first.
+    if(!current&&(events||[]).some(x=>!x.cancelled&&x.title.trim().toLowerCase()===title.toLowerCase()&&new Date(x.startsAt).getTime()===new Date(startsAt).getTime())&&!window.confirm(`You already have an event called “${title}” at that time. Choose OK to create a second one anyway, or Cancel to go back.`))return;
+    B(true);E('');
     try{await employerPost({action:'event.save',event:{id:current?.id,companyId:ctx.company.id,title:f.get('title'),description:f.get('description'),startsAt:zonedIso(String(f.get('start')),zone),endsAt:zonedIso(String(f.get('end')),zone),timeZone:zone,mode,
-     location:mode==='in_person'?String(f.get('location')||''):undefined,joinUrl:mode==='online'?String(f.get('joinUrl')||''):undefined,capacity:f.get('capacity')?Number(f.get('capacity')):null}});N(current?'Event updated.':'Event created. It now appears on the events page and your company page.');ED(null);forgetAnswers();await load();}
+     location:mode==='in_person'?String(f.get('location')||''):undefined,joinUrl:mode==='online'?String(f.get('joinUrl')||''):undefined,capacity:f.get('capacity')?Number(f.get('capacity')):null}});N(current?'Event updated.':'Event created. It now appears on the events page and your company page.');FR(title);ED(null);forgetAnswers();await load();}
     catch(err){E((err as Error).message);}finally{B(false);}}}>
    <Notice error={error}/>
    <Field label="Title" wide><input name="title" required minLength={5} maxLength={140} defaultValue={current?.title} placeholder="e.g. Nursing open day: interviews on the spot"/></Field>

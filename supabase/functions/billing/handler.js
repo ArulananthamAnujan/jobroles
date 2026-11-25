@@ -44,6 +44,9 @@ export function makeBillingHandler(createClient,env,send=fetch){
    const url=await invoiceUrl(session);if(url)await client.rpc('jp_set_sponsorship_invoice',{session:session.id,url});
    return reply(200,{recorded:true});
   }
+  // Lets the site say up front whether paying is possible, instead of failing when someone presses a button.
+  // It reveals only yes or no, never a key.
+  if(path.endsWith('/status')){const key=env('STRIPE_SECRET_KEY'),origin=env('APP_ORIGIN');return reply(200,{credit:Boolean(key&&origin),sponsor:Boolean(key&&origin&&env('STRIPE_PRICE_SPONSOR'))});}
   if(path.endsWith('/credit')){
    const key=env('STRIPE_SECRET_KEY'),origin=env('APP_ORIGIN')?.replace(/\/$/,'');
    if(!key||!origin)return reply(503,{error:'Advertising credit is not available yet.'});

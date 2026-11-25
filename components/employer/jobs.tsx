@@ -14,7 +14,10 @@ const isExpired=(j:Job)=>j.state==='live'&&!!j.expires_at&&new Date(j.expires_at
 const status=(j:Job)=>isExpired(j)?'expired':j.state;
 const payText=(j:Pick<Job,'salary_min'|'salary_max'|'salary_period'>)=>j.salary_min!==null&&j.salary_max!==null?`${money(Number(j.salary_min))}–${money(Number(j.salary_max))} per ${j.salary_period}`:'Pay not set';
 
-function Editor({ctx,job,copy,applicants,onClose,onSaved}:{ctx:PortalContext;job:Job|null;copy:boolean;applicants:number;onClose:()=>void;onSaved:(msg:string)=>void}){
+function Editor({ctx,job,copy,applicants,existing,onClose,onSaved}:{ctx:PortalContext;job:Job|null;copy:boolean;applicants:number;existing:Job[];onClose:()=>void;onSaved:(msg:string,id:string)=>void}){
+ // Once a new job has been saved, a second press (for example after a later step failed) updates that same job
+ // instead of creating another one.
+ const savedId=useRef<string|undefined>(undefined);
  const formRef=useRef<HTMLFormElement>(null);
  const editing=job&&!copy?job:null,source=job;
  const [questions,Q]=useState<Question[]>([{question:'Are you authorised to work in Australia?',mustHave:true,expected:'Yes'}]);
@@ -26,14 +29,19 @@ function Editor({ctx,job,copy,applicants,onClose,onSaved}:{ctx:PortalContext;job
  useEffect(()=>{if(!source)return;const c=new AbortController();employerGet<{rules:{id:string;must_have:boolean;expected_answer:string}[]}>('rules',{job:source.id},c.signal).then(r=>{const map=new Map(r.rules.map(x=>[x.id,x]));const qs=source.screening_questions.map(q=>({question:q.question,mustHave:map.get(q.id)?.must_have??false,expected:(map.get(q.id)?.expected_answer==='No'?'No':'Yes') as 'Yes'|'No'}));if(qs.length)Q(qs);}).catch(()=>{});return()=>c.abort();},[source]);
  function values(){const f=new FormData(formRef.current!);return Object.fromEntries([...f.entries()].map(([k,v])=>[k,String(v)]));}
  async function save(submit:boolean){
-  const f=values();B(true);E('');
+  const f=values(),id0=editing?.id??savedId.current;
+  // Posting the same role twice by accident splits applicants between two listings: ask first.
+  if(!id0){const same=(t:string)=>t.trim().toLowerCase().replace(/\s+/g,' '),place=same(f.location.split('\n')[0]||'');
+   const twin=existing.find(j=>['draft','pending_review','live','paused'].includes(j.state)&&!(j.state==='live'&&j.expires_at&&new Date(j.expires_at)<new Date())&&same(j.title)===same(f.title)&&j.job_locations.some(l=>same(l.label)===place));
+   if(twin&&!window.confirm(`You already have “${twin.title}” in ${twin.job_locations[0]?.label||'that location'} (${(STATE[twin.state]?.[0]||twin.state).toLowerCase()}). Posting it again would create a second listing.\n\nChoose OK to create another one anyway, or Cancel to go back.`))return;}
+  B(true);E('');
   try{
-   const saved=await command('job.save',{id:editing?.id,companyId:ctx.company.id,title:f.title,description:f.description,locations:f.location.split('\n').map(x=>x.trim()).filter(Boolean),type:f.type,arrangement:f.arrangement,min:Number(f.min),max:Number(f.max),period:f.period,sponsorship:f.sponsorship==='on',submit}) as {result:{id:string}};
-   const id=saved.result.id;
+   const saved=await command('job.save',{id:id0,companyId:ctx.company.id,title:f.title,description:f.description,locations:f.location.split('\n').map(x=>x.trim()).filter(Boolean),type:f.type,arrangement:f.arrangement,min:Number(f.min),max:Number(f.max),period:f.period,sponsorship:f.sponsorship==='on',submit}) as {result:{id:string}};
+   const id=saved.result.id;savedId.current=id;
    await employerPost({action:'extras',jobId:id,benefits,startDate:f.startDate||'',externalApplyUrl:f.externalApplyUrl||''});
    await employerPost({action:'job.assessment',jobId:id,code:f.assessment||null});
    if(!locked)await employerPost({action:'screening',jobId:id,questions:questions.filter(q=>q.question.trim().length>=5)});
-   onSaved(submit?'Sent for approval. It goes live in about a minute, once our automatic checks pass. This page updates by itself.':'Draft saved. Job seekers cannot see it until you open it and choose Submit for approval.');
+   onSaved(submit?'Sent for approval. It goes live in about a minute, once our automatic checks pass. This page updates by itself.':'Draft saved. Job seekers cannot see it until you open it and choose Submit for approval.',id);
   }catch(e){E((e as Error).message);}finally{B(false);}
  }
  return <Drawer open wide onClose={onClose} title={editing?`Edit ${editing.title}`:copy?`Copy of ${source?.title}`:'Post a job'}>
@@ -67,7 +75,7 @@ function Editor({ctx,job,copy,applicants,onClose,onSaved}:{ctx:PortalContext;job
 
 export default function Jobs({ctx}:{ctx:PortalContext}){
  const params=useSearchParams();
- const [jobs,J]=useState<Job[]|null>(null),[stats,S]=useState<Stat[]>([]),[tab,T]=useState(params.get('tab')||'all'),[q,Q]=useState(''),[error,E]=useState(''),[note,N]=useState(''),[version,V]=useState(0);
+ const [jobs,J]=useState<Job[]|null>(null),[stats,S]=useState<Stat[]>([]),[tab,T]=useState(params.get('tab')||'all'),[q,Q]=useState(''),[error,E]=useState(''),[note,N]=useState(''),[version,V]=useState(0),[fresh,FR]=useState('');
  const [editor,ED]=useState<null|{job:Job|null;copy:boolean}>(params.get('new')?{job:null,copy:false}:null);
  useEffect(()=>{const c=new AbortController();employerGet<{jobs:Job[];stats:Stat[]}>('jobs',{company:ctx.company.id},c.signal).then(d=>{J(d.jobs);S(d.stats);const edit=params.get('edit');if(edit){const j=d.jobs.find(x=>x.id===edit);if(j)ED({job:j,copy:status(j)==='expired'||j.state==='closed'});}}).catch(e=>{if(e.name!=='AbortError')E(e.message);});return()=>c.abort();},[ctx.company.id,version,params]);
  const canEdit=ctx.role==='owner'||ctx.role==='recruiter';
@@ -78,14 +86,14 @@ export default function Jobs({ctx}:{ctx:PortalContext}){
  const shown=(jobs||[]).filter(j=>(tab==='all'||status(j)===tab||(tab==='closed'&&status(j)==='expired'))&&j.title.toLowerCase().includes(q.toLowerCase()));
  const stat=(id:string)=>stats.find(s=>s.job_id===id);
  async function remove(j:Job){E('');N('');try{await post('/api/manage',{action:'job.delete',id:j.id});N(`Draft “${j.title}” deleted.`);V(v=>v+1);}catch(e){E((e as Error).message);}}
- async function setState(j:Job,state:string,msg:string){E('');N('');try{await command('job.state',{id:j.id,state});J(all=>all&&all.map(x=>x.id===j.id?{...x,state}:x));N(msg);V(v=>v+1);}catch(e){E((e as Error).message);}}
+ async function setState(j:Job,state:string,msg:string){E('');N('');try{await command('job.state',{id:j.id,state});J(all=>all&&all.map(x=>x.id===j.id?{...x,state}:x));N(msg);FR(j.id);V(v=>v+1);}catch(e){E((e as Error).message);}}
  return <Section title="Jobs" sub="Every listing shows its pay range. New and edited jobs are checked before they go live." actions={canEdit&&<><Link className="ep-btn secondary md" href="/employer?view=import">Import from spreadsheet</Link><Button onClick={()=>ED({job:null,copy:false})}>Post a job</Button></>}>
   <Notice error={error} message={note} next={note.startsWith('Sent for approval')?[['Complete your company page','/employer?view=company'],['Back to overview','/employer']]:note.startsWith('Draft saved')?[['Back to overview','/employer']]:undefined}/>
   <Tabs value={tab} onChange={T} items={[['all','All',counts.all],['live','Live',counts.live||0],['pending_review','Going live shortly',counts.pending_review||0],['draft','Drafts',counts.draft||0],['paused','Paused',counts.paused||0],['closed','Closed',(counts.closed||0)+(counts.expired||0)]]}/>
   <div className="ep-toolbar"><input type="search" placeholder="Search jobs" value={q} onChange={e=>Q(e.target.value)} aria-label="Search jobs"/></div>
   {!jobs?<p role="status">Loading jobs…</p>:shown.length?<div className="ep-table-wrap"><table className="ep-table"><thead><tr><th>Job</th><th>Status</th><th className="num">Applicants</th><th className="num">Views, 30 days</th><th>Pay</th><th>Closes</th><th><span className="visually-hidden">Actions</span></th></tr></thead><tbody>
-   {shown.map(j=>{const st=STATE[status(j)]??[j.state,'neutral'],s=stat(j.id);return <tr key={j.id}>
-    <td><div className="ep-row-title">{canEdit?<button type="button" className="ep-row-link" onClick={()=>ED({job:j,copy:j.state==='closed'||status(j)==='expired'})}>{j.title}</button>:<Link className="ep-row-link" href={`/employer?view=applicants&job=${j.id}`}>{j.title}</Link>}</div><div className="ep-row-sub">{j.job_locations.map(l=>l.label).join(', ')} · {j.employment_type}{j.benefits.length?` · ${j.benefits.length} ${j.benefits.length===1?'benefit':'benefits'}`:''}</div></td>
+   {shown.map(j=>{const st=STATE[status(j)]??[j.state,'neutral'],s=stat(j.id);return <tr key={j.id} className={fresh===j.id?'ep-fresh':undefined}>
+    <td><div className="ep-row-title">{canEdit?<button type="button" className="ep-row-link" onClick={()=>ED({job:j,copy:j.state==='closed'||status(j)==='expired'})}>{j.title}</button>:<Link className="ep-row-link" href={`/employer?view=applicants&job=${j.id}`}>{j.title}</Link>}{fresh===j.id&&<span className="ep-saved-tag">Saved just now</span>}</div><div className="ep-row-sub">{j.job_locations.map(l=>l.label).join(', ')} · {j.employment_type}{j.benefits.length?` · ${j.benefits.length} ${j.benefits.length===1?'benefit':'benefits'}`:''}</div></td>
     <td><Pill tone={st[1]}>{st[0]}</Pill></td>
     <td className="num">{s?<Link href={`/employer?view=applicants&job=${j.id}`}>{s.applications}</Link>:0}</td><td className="num">{s?.views_30d??0}</td>
     <td className="ep-nowrap">{payText(j)}</td><td>{j.expires_at?when(j.expires_at):'–'}</td>
@@ -102,6 +110,6 @@ export default function Jobs({ctx}:{ctx:PortalContext}){
      {j.state==='live'&&<Link className="ep-btn ghost sm" href={`/jobs/${j.id}`}>View</Link>}
     </div></td></tr>;})}
   </tbody></table></div>:<div className="ep-card"><Empty title={jobs.length?'No jobs here':'No jobs yet'} action={canEdit&&<Button onClick={()=>ED({job:null,copy:false})}>Post a job</Button>}>{jobs.length?'Try another tab or search.':'Post your first job, or import a spreadsheet of jobs at once.'}</Empty></div>}
-  {editor&&<Editor ctx={ctx} job={editor.job} copy={editor.copy} applicants={editor.job?stat(editor.job.id)?.applications??0:0} onClose={()=>ED(null)} onSaved={msg=>{ED(null);N(msg);V(v=>v+1);}}/>}
+  {editor&&<Editor ctx={ctx} job={editor.job} copy={editor.copy} applicants={editor.job?stat(editor.job.id)?.applications??0:0} existing={jobs||[]} onClose={()=>ED(null)} onSaved={(msg,id)=>{ED(null);N(msg);FR(id);T('all');V(v=>v+1);}}/>}
  </Section>;
 }

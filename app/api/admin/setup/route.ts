@@ -1,5 +1,6 @@
 import {authenticatedClient,failure,response,ApiError,sameOrigin,jsonBody} from '@/lib/backend/server';
 import {enabledProviders} from '@/lib/backend/providers';
+import {billingStatus} from '@/lib/backend/billing-status';
 export const dynamic='force-dynamic';
 // The newest database update this version of the site expects (see supabase/migrations).
 const EXPECTED='20261111000002';
@@ -70,7 +71,13 @@ export async function GET(request:Request){try{
  add('Getting jobs in','Search engines',process.env.SITE_INDEXING==='true'?'ok':'off',process.env.SITE_INDEXING==='true'?'Google and other search engines may index the site.':'Search engines are told not to index the site, so jobs will not appear in Google.','When you are ready to launch, set SITE_INDEXING=true where the site is hosted, rebuild, and submit /sitemap.xml in Google Search Console.');
 
  // --- Money
- add('Payments and advertising','Sponsored listings and advertising credit (Stripe)',has['billing']===true?'check':'off',has['billing']===true?'The billing function is installed. Whether Stripe is connected cannot be read from here.':'Employers cannot pay yet: the billing function is not installed.',has['billing']===true?'Open Employer portal > Sponsored jobs and choose a credit amount. Reaching Stripe’s checkout means it is connected.':'Follow docs/STRIPE-SETUP.md.');
+ const stripe=has['billing']===true?await billingStatus(token):{credit:false,sponsor:false};
+ const stripeTitle='Sponsored listings and advertising credit (Stripe)';
+ if(has['billing']!==true)add('Payments and advertising',stripeTitle,'off','The billing function is not installed, so employers cannot pay yet. They are told paid sponsorship is not switched on; nothing fails part-way.','Follow docs/STRIPE-SETUP.md.');
+ else if(stripe.credit===null)add('Payments and advertising',stripeTitle,'check','The billing function is installed but is an older version that cannot report whether Stripe is connected.','Redeploy the billing function with the latest code, then check again.');
+ else if(!stripe.credit)add('Payments and advertising',stripeTitle,'off','Stripe is not connected (the billing function has no STRIPE_SECRET_KEY or APP_ORIGIN). Employers are told paid sponsorship is not switched on yet.','Follow docs/STRIPE-SETUP.md to add your Stripe keys.');
+ else if(!stripe.sponsor)add('Payments and advertising',stripeTitle,'attention','Pay-per-click credit can be bought, but the fixed 30-day sponsorship has no price set (STRIPE_PRICE_SPONSOR).','Create the price in Stripe and set STRIPE_PRICE_SPONSOR (docs/STRIPE-SETUP.md).');
+ else add('Payments and advertising',stripeTitle,'ok','Stripe is connected: employers can buy advertising credit and fixed 30-day sponsorships.');
  add('Payments and advertising','Charging for sponsored clicks',has['ad-click']===true&&set('AD_CLICK_SECRET')?'ok':'off',has['ad-click']===true&&set('AD_CLICK_SECRET')?'Clicks on sponsored jobs are recorded and charged.':'Sponsored clicks are not being counted or charged.','Deploy ad-click with --no-verify-jwt and set the same AD_CLICK_SECRET on the function and where the site is hosted.');
 
  // --- Safety and extras

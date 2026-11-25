@@ -1,7 +1,7 @@
 'use client';
 import {useCallback,useEffect,useState} from 'react';
 import {useSearchParams} from 'next/navigation';
-import {employerGet,employerPost,post,money,when} from './api';
+import {employerGet,employerPost,get,post,money,when} from './api';
 import {Button,Card,Empty,Notice,Pill,Stat} from './ui';
 import {Section,type PortalContext} from './portal';
 type Campaign={dailyBudget:number;cpc:number;active:boolean};
@@ -16,7 +16,13 @@ export default function Advertising({ctx}:{ctx:PortalContext}){
  const load=useCallback(async(signal?:AbortSignal)=>{A(await employerGet<Account>('advertising',{company:ctx.company.id},signal));},[ctx.company.id]);
  useEffect(()=>{const c=new AbortController();Promise.resolve().then(()=>load(c.signal)).catch(e=>{if(e.name!=='AbortError')E(e.message);});return()=>c.abort();},[load]);
  const canPay=ctx.role==='owner'||ctx.role==='recruiter';
- async function buy(amount:number){B(`buy-${amount}`);E('');try{const r=await post<{url:string}>('/api/billing/credit',{companyId:ctx.company.id,amount});window.location.assign(r.url);}catch(e){E((e as Error).message);B('');}}
+ // Is paying switched on? Asked up front so nobody finds out by pressing a button that fails.
+ const [pay,PAY]=useState<{credit:boolean|null;sponsor:boolean|null}|null>(null);
+ useEffect(()=>{let live=true;get<{credit:boolean|null;sponsor:boolean|null}>('/api/billing/status').then(d=>{if(live)PAY(d);}).catch(()=>{});return()=>{live=false;};},[]);
+ const off=pay?.credit===false&&(a?.balance??0)<=0;
+ async function buy(amount:number){B(`buy-${amount}`);E('');try{const r=await post<{url:string}>('/api/billing/credit',{companyId:ctx.company.id,amount});window.location.assign(r.url);}catch(e){
+  // If the status could not be read beforehand, the first refusal settles it: stop offering buttons that cannot work.
+  if(/not available yet/i.test((e as Error).message)){PAY({credit:false,sponsor:false});E('');}else E((e as Error).message);B('');}}
  async function save(row:Row,active:boolean){const v=edit[row.jobId],budget=Math.round(Number(v?.budget??(row.campaign?.dailyBudget??2000)/100)*100),cpc=Math.round(Number(v?.cpc??(row.campaign?.cpc??150)/100)*100);
   B(row.jobId);E('');N('');try{await employerPost({action:'campaign',jobId:row.jobId,dailyBudget:budget,cpc,active});N(active?`${row.title} is sponsored at ${dollars(budget)} a day and up to ${dollars(cpc)} a click. Saved.`:`${row.title} is paused. Its amounts are saved.`);ED(all=>{const rest={...all};delete rest[row.jobId];return rest;});await load();}catch(e){E((e as Error).message);}finally{B('');}}
  if(!canPay)return <Section title="Sponsored jobs"><Card><Empty title="Owners and recruiters only">Ask an owner to give you the recruiter role to manage sponsored jobs.</Empty></Card></Section>;
@@ -27,7 +33,8 @@ export default function Advertising({ctx}:{ctx:PortalContext}){
    <div className="ep-stats"><Stat label="Credit balance" value={dollars(a.balance)} hint="Before GST"/><Stat label="Running campaigns" value={running.length}/><Stat label="Clicks, 7 days" value={a.jobs.reduce((n,j)=>n+Number(j.clicks7),0)}/><Stat label="Spent, 7 days" value={dollars(a.jobs.reduce((n,j)=>n+Number(j.spent7),0))} hint={a.invalid7?`${a.invalid7} invalid clicks filtered, not charged`:'Invalid clicks are never charged'}/></div>
    <Card title="Add credit" action={!ctx.company.verified_at?<Pill tone="amber">Available once verified</Pill>:undefined}>
     <p className="ep-muted" style={{marginBottom:12}}>Credit never expires while your account is open. Stripe adds GST and emails a tax invoice with your ABN.</p>
-    <div className="ep-actions">{PACKS.map(p=><Button key={p} tone="secondary" disabled={Boolean(busy)||!ctx.company.verified_at} onClick={()=>buy(p)}>{busy===`buy-${p}`?'Opening Stripe…':dollars(p)}</Button>)}</div>
+    {pay?.credit===false?<p className="ep-notice warn" style={{marginBottom:0}}><strong>Paid sponsorship is not switched on yet.</strong> You cannot be charged and nothing here will fail part-way. Your jobs are live and searchable for free in the meantime, and this page will offer credit as soon as payments open.</p>:
+    <div className="ep-actions">{PACKS.map(p=><Button key={p} tone="secondary" disabled={Boolean(busy)||!ctx.company.verified_at} onClick={()=>buy(p)}>{busy===`buy-${p}`?'Opening Stripe…':dollars(p)}</Button>)}</div>}
    </Card>
    {a.jobs.length>0&&<p className="ep-muted" style={{fontSize:13,margin:'0 0 8px'}}>Type a daily budget and the most you will pay per click, then choose Sponsor (or Update for a running campaign). Amounts are only saved when you press that button.</p>}
    {a.jobs.length?<div className="ep-table-wrap"><table className="ep-table"><thead><tr><th>Job</th><th>Budget a day</th><th>Per click</th><th className="num">Spent today</th><th className="num">Clicks (7d)</th><th className="num">Applies (7d)</th><th>Status</th><th/></tr></thead><tbody>
@@ -39,7 +46,7 @@ export default function Advertising({ctx}:{ctx:PortalContext}){
       <td className="num">{dollars(r.spentToday)}</td><td className="num">{r.clicks7}</td><td className="num">{r.applications7}</td>
       <td>{r.campaign?.active?(r.showing?<Pill tone="teal">Showing</Pill>:<Pill tone="amber">{a.balance<(r.campaign.cpc)?'Out of credit':'Daily budget reached'}</Pill>):<Pill>{r.campaign?'Paused':'Not sponsored'}</Pill>}</td>
       <td><div className="ep-row-actions">{r.campaign?.active?<><Button size="sm" tone="secondary" disabled={busy===r.jobId} onClick={()=>save(r,true)}>Update</Button><Button size="sm" tone="ghost" disabled={busy===r.jobId} onClick={()=>save(r,false)}>Pause</Button></>
-       :<Button size="sm" disabled={busy===r.jobId||!ctx.company.verified_at} onClick={()=>save(r,true)}>Sponsor</Button>}</div></td></tr>;})}
+       :<Button size="sm" disabled={busy===r.jobId||!ctx.company.verified_at||off} title={off?'Paid sponsorship is not switched on yet':undefined} onClick={()=>save(r,true)}>Sponsor</Button>}</div></td></tr>;})}
    </tbody></table></div>:<Card><Empty title="No live jobs" action={<Button onClick={()=>ctx.go('jobs',{new:'1'})}>Post a job</Button>}>Sponsor a job once it is live.</Empty></Card>}
    {a.ledger.length>0&&<Card title="Credit history"><ul className="ep-list">{a.ledger.map(l=><li key={l.id}><div className="ep-grow">{l.kind==='topup'?'Credit purchase':l.kind==='refund'?'Refund':'Adjustment'}<small>{when(l.createdAt)}</small></div><strong>{l.amount>0?'+':''}{dollars(l.amount)}</strong>{l.invoiceUrl&&<a className="ep-btn ghost sm" href={l.invoiceUrl} target="_blank" rel="noopener noreferrer">Tax invoice</a>}</li>)}</ul></Card>}
   </>}

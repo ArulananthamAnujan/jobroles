@@ -435,3 +435,10 @@ div.ep-notice{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
 
 .ep-row-link{background:none;border:0;padding:0;font:inherit;font-weight:600;color:inherit;text-align:left;cursor:pointer}
 .ep-row-link:hover{text-decoration:underline}
+
+/* The row someone just created or changed is marked for a few seconds, so there is no doubt that it saved. */
+.ep-fresh{animation:ep-fresh 8s ease-out 1}
+.ep-fresh td:first-child,li.ep-fresh{box-shadow:inset 3px 0 0 var(--teal,#076d65)}
+@keyframes ep-fresh{0%,60%{background:var(--mint)}100%{background:transparent}}
+@media(prefers-reduced-motion:reduce){.ep-fresh{animation:none;background:var(--mint)}}
+.ep-saved-tag{display:inline-block;margin-left:8px;font-size:12px;font-weight:600;color:var(--teal,#076d65)}
