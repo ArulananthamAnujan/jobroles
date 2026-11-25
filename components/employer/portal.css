@@ -432,3 +432,6 @@ div.ep-notice{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
 .gs-body{margin-top:6px;display:grid;gap:10px}
 .gs-body p{color:var(--soft)}
 .ep-btn.busy{opacity:.6;pointer-events:none}
+
+.ep-row-link{background:none;border:0;padding:0;font:inherit;font-weight:600;color:inherit;text-align:left;cursor:pointer}
+.ep-row-link:hover{text-decoration:underline}

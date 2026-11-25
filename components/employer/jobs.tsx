@@ -78,19 +78,20 @@ export default function Jobs({ctx}:{ctx:PortalContext}){
  const shown=(jobs||[]).filter(j=>(tab==='all'||status(j)===tab||(tab==='closed'&&status(j)==='expired'))&&j.title.toLowerCase().includes(q.toLowerCase()));
  const stat=(id:string)=>stats.find(s=>s.job_id===id);
  async function remove(j:Job){E('');N('');try{await post('/api/manage',{action:'job.delete',id:j.id});N(`Draft “${j.title}” deleted.`);V(v=>v+1);}catch(e){E((e as Error).message);}}
- async function setState(j:Job,state:string,msg:string){E('');N('');try{await command('job.state',{id:j.id,state});N(msg);V(v=>v+1);}catch(e){E((e as Error).message);}}
+ async function setState(j:Job,state:string,msg:string){E('');N('');try{await command('job.state',{id:j.id,state});J(all=>all&&all.map(x=>x.id===j.id?{...x,state}:x));N(msg);V(v=>v+1);}catch(e){E((e as Error).message);}}
  return <Section title="Jobs" sub="Every listing shows its pay range. New and edited jobs are checked before they go live." actions={canEdit&&<><Link className="ep-btn secondary md" href="/employer?view=import">Import from spreadsheet</Link><Button onClick={()=>ED({job:null,copy:false})}>Post a job</Button></>}>
   <Notice error={error} message={note} next={note.startsWith('Sent for approval')?[['Complete your company page','/employer?view=company'],['Back to overview','/employer']]:note.startsWith('Draft saved')?[['Back to overview','/employer']]:undefined}/>
   <Tabs value={tab} onChange={T} items={[['all','All',counts.all],['live','Live',counts.live||0],['pending_review','Going live shortly',counts.pending_review||0],['draft','Drafts',counts.draft||0],['paused','Paused',counts.paused||0],['closed','Closed',(counts.closed||0)+(counts.expired||0)]]}/>
   <div className="ep-toolbar"><input type="search" placeholder="Search jobs" value={q} onChange={e=>Q(e.target.value)} aria-label="Search jobs"/></div>
   {!jobs?<p role="status">Loading jobs…</p>:shown.length?<div className="ep-table-wrap"><table className="ep-table"><thead><tr><th>Job</th><th>Status</th><th className="num">Applicants</th><th className="num">Views, 30 days</th><th>Pay</th><th>Closes</th><th><span className="visually-hidden">Actions</span></th></tr></thead><tbody>
    {shown.map(j=>{const st=STATE[status(j)]??[j.state,'neutral'],s=stat(j.id);return <tr key={j.id}>
-    <td><div className="ep-row-title">{j.title}</div><div className="ep-row-sub">{j.job_locations.map(l=>l.label).join(', ')} · {j.employment_type}{j.benefits.length?` · ${j.benefits.length} ${j.benefits.length===1?'benefit':'benefits'}`:''}</div></td>
+    <td><div className="ep-row-title">{canEdit?<button type="button" className="ep-row-link" onClick={()=>ED({job:j,copy:j.state==='closed'||status(j)==='expired'})}>{j.title}</button>:<Link className="ep-row-link" href={`/employer?view=applicants&job=${j.id}`}>{j.title}</Link>}</div><div className="ep-row-sub">{j.job_locations.map(l=>l.label).join(', ')} · {j.employment_type}{j.benefits.length?` · ${j.benefits.length} ${j.benefits.length===1?'benefit':'benefits'}`:''}</div></td>
     <td><Pill tone={st[1]}>{st[0]}</Pill></td>
     <td className="num">{s?<Link href={`/employer?view=applicants&job=${j.id}`}>{s.applications}</Link>:0}</td><td className="num">{s?.views_30d??0}</td>
     <td className="ep-nowrap">{payText(j)}</td><td>{j.expires_at?when(j.expires_at):'–'}</td>
     <td><div className="ep-row-actions">
      <Link className="ep-btn secondary sm" href={`/employer?view=applicants&job=${j.id}`}>Applicants</Link>
+     {status(j)==='live'&&<Link className="ep-btn ghost sm" href={`/jobs/${j.id}`} target="_blank">View listing</Link>}
      {status(j)==='live'&&<Link className="ep-btn ghost sm" href={`/employer?${new URLSearchParams({view:'candidates',q:j.title,near:j.job_locations[0]?.label||'',title:j.title})}`}>Matches</Link>}
      {canEdit&&(j.state==='closed'||status(j)==='expired'?<Button size="sm" tone="ghost" onClick={()=>ED({job:j,copy:true})}>Repost</Button>:<Button size="sm" tone="ghost" onClick={()=>ED({job:j,copy:false})}>Edit</Button>)}
      {canEdit&&<Button size="sm" tone="ghost" onClick={()=>ED({job:j,copy:true})}>Duplicate</Button>}

@@ -27,6 +27,11 @@ export default function Applicants({ctx}:{ctx:PortalContext}){
  const counts=useMemo(()=>Object.fromEntries(STAGES.map(([k])=>[k,filtered.filter(a=>a.state==='submitted'&&a.stage===k).length])),[filtered]);
  const visible=filtered.filter(a=>stage==='all'?true:stage==='withdrawn'?a.state==='withdrawn':a.state==='submitted'&&a.stage===stage);
  async function move(ids:string[],to:string,message?:string){if(!ids.length)return;B(true);E('');N('');try{if(ids.length===1&&!message)await command('application.move',{id:ids[0],stage:to});else await employerPost({action:'bulk',ids,stage:to,message});N(`${ids.length} ${ids.length===1?'applicant':'applicants'} moved to ${stageLabel(to)}.`);SEL(new Set());V(v=>v+1);}catch(e){E((e as Error).message);}finally{B(false);}}
+ // Downloads the applicants as a spreadsheet file, and says so; with nobody to export it says that instead of doing nothing.
+ async function exportCsv(){E('');N('');if(!list?.length){N('There are no applicants to export for this job yet.');return;}
+  B(true);try{const r=await fetch(`/api/employer/export?job=${job}`,{cache:'no-store'});if(!r.ok)throw new Error((await r.json().catch(()=>({})) as {error?:string}).error||'The export could not be created.');
+   const url=URL.createObjectURL(await r.blob()),a=document.createElement('a');a.href=url;a.download=`applicants-${(current?.title||'job').replace(/[^a-z0-9]+/gi,'-').toLowerCase().slice(0,40)}.csv`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);
+   N(`Exported ${list.length} ${list.length===1?'applicant':'applicants'}. Check your downloads.`);}catch(e){E((e as Error).message);}finally{B(false);}}
  const toggle=(id:string)=>{const s=new Set(selected);if(s.has(id))s.delete(id);else s.add(id);SEL(s);};
  const card=(a:Applicant)=><div key={a.application_id} className="ep-cand" draggable={canMove&&a.state==='submitted'} aria-pressed={open===a.application_id} onDragStart={()=>DR(a.application_id)} onDragEnd={()=>{DR('');OV('');}} onClick={()=>O(a.application_id)} onKeyDown={e=>{if(e.key==='Enter')O(a.application_id);}} tabIndex={0} role="button">
   <div className="ep-cand-row">{canMove&&<input type="checkbox" checked={selected.has(a.application_id)} onClick={e=>e.stopPropagation()} onChange={()=>toggle(a.application_id)} aria-label={`Select ${a.full_name}`}/>}<Avatar name={a.full_name||'Applicant'} size={24}/><strong>{a.full_name||'Applicant'}</strong>{a.unread>0&&<Pill tone="blue">{a.unread} new</Pill>}</div>
@@ -34,7 +39,7 @@ export default function Applicants({ctx}:{ctx:PortalContext}){
   <div className="ep-cand-row">{questions.some(x=>x.must_have)&&(a.meets_requirements?<Pill tone="teal">Meets deal-breakers</Pill>:<Pill tone="amber">Missing a deal-breaker</Pill>)}{a.state==='withdrawn'&&<Pill tone="red">Withdrawn</Pill>}{a.reinstatement_requested&&<Pill tone="amber">Asks to reinstate</Pill>}<span className={a.state==='submitted'&&a.stage==='new'&&now-new Date(a.submitted_at).getTime()>3*864e5?'ep-late':'ep-muted'}>{ago(a.submitted_at)}</span></div>
  </div>;
  const current=jobs?.find(j=>j.id===job);
- return <Section title="Applicants" sub={current?`${current.title} · ${list?.length??0} ${list?.length===1?'applicant':'applicants'}`:'Choose a job to see its applicants'} actions={job&&<a className="ep-btn secondary md" href={`/api/employer/export?job=${job}`}>Export CSV</a>}>
+ return <Section title="Applicants" sub={current?`${current.title} · ${list?.length??0} ${list?.length===1?'applicant':'applicants'}`:'Choose a job to see its applicants'} actions={job&&<Button tone="secondary" disabled={busy||!list} onClick={()=>void exportCsv()}>Export CSV</Button>}>
   <Notice error={error} message={note}/>
   {jobs&&!jobs.length?<div className="ep-card"><Empty title="No jobs yet" action={<Button onClick={()=>ctx.go('jobs',{new:'1'})}>Post a job</Button>}>Applicants appear here once your first job is live.</Empty></div>:<>
   <div className="ep-toolbar">
