@@ -16,13 +16,16 @@ const plural=(n:number,one:string,many=`${one}s`)=>`${n} ${n===1?one:many}`;
 
 // The employer's question on this screen: who is waiting on us, and is each job's pipeline moving?
 export default function Dashboard({ctx}:{ctx:PortalContext}){
- const [d,D]=useState<Dash|null>(null),[o,O]=useState<Overview|null>(null),[error,E]=useState('');
+ const [d,D]=useState<Dash|null>(null),[o,O]=useState<Overview|null>(null),[error,E]=useState(''),[tick,TK]=useState(0);
  useEffect(()=>{const c=new AbortController(),q={company:ctx.company.id};
   // If the overview is unavailable (for example before its database update is applied), the screen still shows
   // what the older dashboard data can say, and leaves out the parts it cannot.
   Promise.all([employerGet<Dash>('dashboard',q,c.signal),employerGet<Overview>('overview',q,c.signal).catch(e=>{if(e.name==='AbortError')throw e;return null;})]).then(([a,b])=>{D(a);
    O(b??{partial:true,pipeline:[],daily:[],waitingTotal:a.unreviewed,waitingOver3:0,response:{applications:0,responded:0,respondedShare:null,medianDays:null,public:false},
-    waiting:a.awaiting.map(x=>({applicationId:x.applicationId,name:x.name||'Applicant',jobTitle:x.jobTitle,submittedAt:x.submittedAt,days:Math.max(0,Math.floor((Date.now()-new Date(x.submittedAt).getTime())/864e5))}))});}).catch(e=>{if(e.name!=='AbortError')E(e.message);});return()=>c.abort();},[ctx.company.id]);
+    waiting:a.awaiting.map(x=>({applicationId:x.applicationId,name:x.name||'Applicant',jobTitle:x.jobTitle,submittedAt:x.submittedAt,days:Math.max(0,Math.floor((Date.now()-new Date(x.submittedAt).getTime())/864e5))}))});}).catch(e=>{if(e.name!=='AbortError')E(e.message);});return()=>c.abort();},[ctx.company.id,tick]);
+ // While a job is waiting to go live, look again every few seconds so the numbers change without a refresh.
+ const pending=d?.pending??0;
+ useEffect(()=>{if(!pending)return;const t=setInterval(()=>{forgetAnswers();TK(n=>n+1);},6000);return()=>clearInterval(t);},[pending]);
  const canPost=ctx.role==='owner'||ctx.role==='recruiter';
  if(error)return <Section title={ctx.company.name}><Notice error={error}/></Section>;
  if(!d||!o)return <Section title={ctx.company.name} sub="Loading your hiring overview…"><div className="ep-stats" aria-hidden="true" style={{height:96}}/></Section>;

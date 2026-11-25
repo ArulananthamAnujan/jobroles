@@ -4,6 +4,7 @@ import {get,post,employerGet,employerPost,command,STAGES,stageLabel,when,ago} fr
 import {monthLabel} from '@/lib/resume-pdf';
 import {Button,Field,Notice,Pill} from './ui';
 import type {PortalContext} from './portal';
+import ResumeView from './resume-view';
 import {isVideoInterview} from '@/lib/calendar';
 type Detail={userId:string;role:string|null;application:{id:string;job_id:string;seeker_id:string;state:string;stage:string;reinstatement_requested_at:string|null;submitted_at?:string};
  job:{title:string;screening_questions:{id:string;question:string;must_have:boolean;expected_answer:string|null}[]}|null;
@@ -38,7 +39,8 @@ export default function Candidate({id,ctx,templates,onChange}:{id:string;ctx:Por
   {d.application.state==='withdrawn'&&!d.snapshot&&<p className="ep-notice">This person withdrew their application, so the details they shared are no longer available. If they ask to be reinstated and you accept, their application comes back.</p>}
   <section className="ep-section"><h3>Profile</h3><dl className="ep-dl"><div><dt>Name</dt><dd>{p?.full_name}</dd></div><div><dt>Headline</dt><dd>{p?.headline||'–'}</dd></div><div><dt>Location</dt><dd>{p?.location||'–'}</dd></div><div><dt>Email</dt><dd>{p?.email?<a href={`mailto:${p.email}`}>{p.email}</a>:'–'}</dd></div></dl>
    {p?.skills?.length?<div className="ep-chips" style={{marginTop:10}}>{p.skills.map(s=><span key={s}>{s}</span>)}</div>:null}
-   {d.snapshot?.resume_version_id&&<p style={{marginTop:12}}><a className="ep-btn secondary sm" href={`/api/resumes/${d.snapshot.resume_version_id}`}>Download resume</a></p>}</section>
+  </section>
+  {d.snapshot?.resume_version_id&&<ResumeView id={d.snapshot.resume_version_id} name={p?.full_name||''}/>}
   {x&&(x.readyToWork||x.availability)&&<p className="ep-notice">{x.readyToWork&&<><Pill tone="teal">Ready to work</Pill> </>}{x.availability}</p>}
   {x?.summary&&<section className="ep-section"><h3>Summary</h3><p className="job-description">{x.summary}</p></section>}
   {x&&x.experience.length>0&&<section className="ep-section"><h3>Experience</h3><ul className="ep-list">{x.experience.map((e,i)=><li key={i}><div className="ep-grow"><strong>{e.title}</strong> · {e.company}{e.location?`, ${e.location}`:''}<small>{monthLabel(e.start)} – {monthLabel(e.end)}</small>{e.description&&<span className="job-description">{e.description}</span>}</div></li>)}</ul></section>}

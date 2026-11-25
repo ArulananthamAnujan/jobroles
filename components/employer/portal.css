@@ -449,3 +449,31 @@ div.ep-notice{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
 .ep-import-table td:nth-child(3){min-width:110px}
 .ep-import-table td:nth-child(5){min-width:120px}
 .ep-when{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:8px}
+
+/* An applicant's resume, readable in place */
+.ep-resume-text{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.55;background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 16px;max-height:320px;overflow:auto}
+.ep-resume-text.tall{max-height:none}
+.ep-linkish{background:none;border:0;padding:6px 0 0;font:inherit;font-size:13px;font-weight:600;color:var(--teal,#076d65);cursor:pointer;text-decoration:underline}
+/* The applicant board fits its seven stages across a normal screen instead of scrolling sideways */
+.ep-board{grid-auto-columns:minmax(132px,1fr)}
+.ep-cand strong{overflow-wrap:anywhere}
+
+/* "More" menu on a row */
+.ep-more{position:relative;display:inline-block}.ep-more>summary{list-style:none;cursor:pointer}.ep-more>summary::-webkit-details-marker{display:none}
+.ep-more-menu{position:absolute;right:0;top:calc(100% + 4px);z-index:20;min-width:210px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 32px #172b3a26;padding:6px;display:grid}
+.ep-more-menu a,.ep-more-menu button{display:block;text-align:left;background:none;border:0;border-radius:6px;padding:9px 10px;font:inherit;font-size:14px;color:var(--ink);cursor:pointer;white-space:nowrap}
+.ep-more-menu a:hover,.ep-more-menu button:hover{background:var(--wash)}.ep-more-menu .danger{color:#a12f2f}
+.ep-row-actions{flex-wrap:nowrap}
+.ep-checking{display:flex;align-items:center;gap:6px;max-width:210px;white-space:normal;margin-top:6px}
+.ep-spin{width:10px;height:10px;flex:0 0 10px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--teal,#076d65);animation:ep-spin 0.9s linear infinite}
+@keyframes ep-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.ep-spin{animation:none}}
+/* Let the "More" menu hang outside the table on screens wide enough not to need sideways scrolling */
+@media(min-width:1100px){.ep-table-wrap:has(.ep-more){overflow:visible}}
+
+/* The jobs table fits the window: fewer buttons per row, and on narrower screens the two least-used columns
+   (views and closing date, both also shown on Performance and in the editor) step aside. */
+.ep-jobs-table .ep-row-actions{min-width:0;max-width:none}
+.ep-jobs-table td:first-child{min-width:180px}
+@media(max-width:1400px){.ep-jobs-table th:nth-child(4),.ep-jobs-table td:nth-child(4),.ep-jobs-table th:nth-child(6),.ep-jobs-table td:nth-child(6){display:none}}
+@media(max-width:1180px){.ep-jobs-table th:nth-child(5),.ep-jobs-table td:nth-child(5){display:none}}

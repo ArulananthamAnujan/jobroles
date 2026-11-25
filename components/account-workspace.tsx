@@ -45,7 +45,7 @@ export default function AccountWorkspace({portal='seeker',embedded=false}:{porta
  async function refresh(){const status:Account=await api<Account>('/api/account');A(status);if(status.user?.confirmed)D(await api<Data>('/api/data?'+search));else D(null);}
  useEffect(()=>{let current=true;api<Account>('/api/account').then(async status=>{const next=status.user?.confirmed?await api<Data>('/api/data?'+search):null;if(current){A(status);D(next);}}).catch(e=>{if(current)E(e.message);});return()=>{current=false;};},[search]);
  async function run(fn:()=>Promise<unknown>){B(true);E('');N('');NX([]);try{await fn();await refresh();}catch(e){E((e as Error).message);}finally{B(false);}}
- async function command(action:string,payload:unknown){await api('/api/command',{action,payload});N(action==='application.submit'?'Application sent. The employer now has your resume and answers. Follow its progress under Applications.':action==='application.draft'?'Draft saved. You can finish it later from Applications.':'Changes saved securely.');if(action==='application.submit')window.scrollTo({top:0,behavior:'smooth'});}
+ async function command(action:string,payload:unknown){await api('/api/command',{action,payload});N(action==='application.submit'?'Application sent.':action==='application.draft'?'Draft saved. You can finish it later from Applications.':'Changes saved securely.');if(action==='application.submit')window.scrollTo({top:0,behavior:'smooth'});}
  function auth(e:FormEvent<HTMLFormElement>){e.preventDefault();const form=new FormData(e.currentTarget);
   const password=String(form.get('password')||'');
   if(mode==='signup'){const problem=passwordProblem(password,String(form.get('confirm')||''));if(problem){E(problem);N('');return;}}
