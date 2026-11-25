@@ -442,3 +442,10 @@ div.ep-notice{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
 @keyframes ep-fresh{0%,60%{background:var(--mint)}100%{background:transparent}}
 @media(prefers-reduced-motion:reduce){.ep-fresh{animation:none;background:var(--mint)}}
 .ep-saved-tag{display:inline-block;margin-left:8px;font-size:12px;font-weight:600;color:var(--teal,#076d65)}
+
+/* Words in portal tables stay whole: a column may not shrink until its text stacks one letter per line. */
+.ep-table td,.ep-table th{overflow-wrap:break-word;word-break:normal}
+.ep-import-table td:nth-child(2){min-width:240px}
+.ep-import-table td:nth-child(3){min-width:110px}
+.ep-import-table td:nth-child(5){min-width:120px}
+.ep-when{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:8px}

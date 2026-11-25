@@ -10,6 +10,10 @@ const ZONES=['Australia/Melbourne','Australia/Sydney','Australia/Brisbane','Aust
 // Wall-clock time in an Australian zone to an ISO instant.
 function zonedIso(local:string,zone:string){const guess=new Date(`${local}:00Z`);const parts=new Intl.DateTimeFormat('en-US',{timeZone:zone,hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).formatToParts(guess);const v=(t:string)=>Number(parts.find(p=>p.type===t)?.value);return new Date(guess.getTime()-(Date.UTC(v('year'),v('month')-1,v('day'),v('hour'),v('minute'))-guess.getTime())).toISOString();}
 function toLocal(iso:string,zone:string){const p=new Intl.DateTimeFormat('en-CA',{timeZone:zone,hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).formatToParts(new Date(iso));const v=(t:string)=>p.find(x=>x.type===t)?.value;return `${v('year')}-${v('month')}-${v('day')}T${v('hour')}:${v('minute')}`;}
+// Every quarter hour of the day, labelled the way people say it (9:00 am, 5:30 pm).
+const CLOCK:[string,string][]=Array.from({length:96},(_,i)=>{const h=Math.floor(i/4),m=(i%4)*15;return [`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`,`${h%12||12}:${String(m).padStart(2,'0')} ${h<12?'am':'pm'}`];});
+// The list of times, plus the event's own time when it is not on a quarter hour (an event made before this list existed).
+const clock=(now:string):[string,string][]=>!now||CLOCK.some(([v])=>v===now)?CLOCK:[...CLOCK,[now,`${Number(now.slice(0,2))%12||12}:${now.slice(3,5)} ${Number(now.slice(0,2))<12?'am':'pm'}`] as [string,string]].sort((a,b)=>a[0].localeCompare(b[0]));
 // Hiring events: online or in-person open days that job seekers register for.
 export default function Events({ctx}:{ctx:PortalContext}){
  const [events,EV]=useState<Ev[]|null>(null),[edit,ED]=useState<Ev|'new'|null>(null),[view,VW]=useState<Ev|null>(null),[mode,M]=useState<'online'|'in_person'>('online'),[error,E]=useState(''),[note,N]=useState(''),[busy,B]=useState(false);
@@ -27,7 +31,7 @@ export default function Events({ctx}:{ctx:PortalContext}){
   if(e.getTime()-s.getTime()>14*864e5)return `The event would run for more than two weeks (${spoken(start)} to ${spoken(end)}). Check the dates.`;
   return '';}
  const canRun=(ctx.role==='owner'||ctx.role==='recruiter')&&Boolean(ctx.company.verified_at);
- const open=(e:Ev|'new')=>{ED(e);M(e==='new'?'online':e.mode);E('');const t=Date.now();LM({now:stamp(new Date(t)),max:stamp(new Date(t+2*365*864e5)),maxEnd:stamp(new Date(t+2*365*864e5+14*864e5))});TM(e==='new'?{start:'',end:''}:{start:toLocal(e.startsAt,e.timeZone),end:toLocal(e.endsAt,e.timeZone)});};
+ const open=(e:Ev|'new')=>{ED(e);M(e==='new'?'online':e.mode);E('');const t=Date.now();LM({now:stamp(new Date(t)),max:stamp(new Date(t+2*365*864e5)),maxEnd:stamp(new Date(t+2*365*864e5+14*864e5))});const tomorrow=stamp(new Date(t+864e5)).slice(0,10);TM(e==='new'?{start:`${tomorrow}T09:00`,end:`${tomorrow}T10:00`}:{start:toLocal(e.startsAt,e.timeZone),end:toLocal(e.endsAt,e.timeZone)});};
  const current=edit&&edit!=='new'?edit:null;
  return <Section title="Hiring events" sub="Run online or in-person open days. Job seekers register on your company page and the events list." actions={canRun&&<Button onClick={()=>open('new')}>Create event</Button>}>
   <Notice error={error} message={note}/>
@@ -39,19 +43,21 @@ export default function Events({ctx}:{ctx:PortalContext}){
      <Button size="sm" tone="danger" disabled={busy} onClick={async()=>{if(!confirm('Cancel this event? Registrants will see it as cancelled.'))return;B(true);E('');try{await employerPost({action:'event.cancel',id:e.id});EV(all=>all&&all.map(x=>x.id===e.id?{...x,cancelled:true}:x));N('Event cancelled.');forgetAnswers();await load();}catch(err){E((err as Error).message);}finally{B(false);}}}>Cancel</Button></>}</div></td></tr>)}
   </tbody></table></div>:<Card><Empty title="No hiring events yet" action={canRun&&<Button onClick={()=>open('new')}>Create event</Button>}>Open days and online info sessions help you meet many candidates at once.</Empty></Card>}
   <Drawer open={Boolean(edit)} onClose={()=>ED(null)} title={current?'Edit event':'Create a hiring event'}>{edit&&<form className="ep-form" onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const zone=String(f.get('timeZone'));
-    const wrong=timeProblem(String(f.get('start')),String(f.get('end')),!current);if(wrong){E(wrong);return;}
-    const title=String(f.get('title')||'').trim(),startsAt=zonedIso(String(f.get('start')),zone);
+    const wrong=timeProblem(times.start,times.end,!current);if(wrong){E(wrong);return;}
+    const title=String(f.get('title')||'').trim(),startsAt=zonedIso(times.start,zone);
     // The same event created twice would show twice to job seekers: ask first.
     if(!current&&(events||[]).some(x=>!x.cancelled&&x.title.trim().toLowerCase()===title.toLowerCase()&&new Date(x.startsAt).getTime()===new Date(startsAt).getTime())&&!window.confirm(`You already have an event called “${title}” at that time. Choose OK to create a second one anyway, or Cancel to go back.`))return;
     B(true);E('');
-    try{await employerPost({action:'event.save',event:{id:current?.id,companyId:ctx.company.id,title:f.get('title'),description:f.get('description'),startsAt:zonedIso(String(f.get('start')),zone),endsAt:zonedIso(String(f.get('end')),zone),timeZone:zone,mode,
+    try{await employerPost({action:'event.save',event:{id:current?.id,companyId:ctx.company.id,title:f.get('title'),description:f.get('description'),startsAt,endsAt:zonedIso(times.end,zone),timeZone:zone,mode,
      location:mode==='in_person'?String(f.get('location')||''):undefined,joinUrl:mode==='online'?String(f.get('joinUrl')||''):undefined,capacity:f.get('capacity')?Number(f.get('capacity')):null}});N(current?'Event updated.':'Event created. It now appears on the events page and your company page.');FR(title);ED(null);forgetAnswers();await load();}
     catch(err){E((err as Error).message);}finally{B(false);}}}>
    <Notice error={error}/>
    <Field label="Title" wide><input name="title" required minLength={5} maxLength={140} defaultValue={current?.title} placeholder="e.g. Nursing open day: interviews on the spot"/></Field>
    <Field label="Description" wide><textarea name="description" required minLength={20} maxLength={5000} defaultValue={current?.description} placeholder="Who should come, what to bring, which roles you are hiring for."/></Field>
-   <Field label="Starts" hint={spoken(times.start)||'Day, month, year and time'}><input name="start" type="datetime-local" required min={current?undefined:limits.now} max={limits.max} defaultValue={current?toLocal(current.startsAt,current.timeZone):undefined} onChange={e=>TM(t=>({...t,start:e.target.value}))}/></Field>
-   <Field label="Ends" hint={spoken(times.end)||'Day, month, year and time'}><input name="end" type="datetime-local" required min={times.start||undefined} max={limits.maxEnd} defaultValue={current?toLocal(current.endsAt,current.timeZone):undefined} onChange={e=>TM(t=>({...t,end:e.target.value}))}/></Field>
+   <Field label="Starts" hint={spoken(times.start)||'Choose the day, then the time'}><span className="ep-when"><input type="date" required aria-label="Start date" min={current?undefined:limits.now.slice(0,10)} max={limits.max.slice(0,10)} value={times.start.slice(0,10)} onChange={e=>TM(t=>({...t,start:`${e.target.value}T${t.start.slice(11,16)||'09:00'}`,end:t.end&&t.end.slice(0,10)>=e.target.value?t.end:`${e.target.value}T${t.end.slice(11,16)||'10:00'}`}))}/>
+    <select aria-label="Start time" value={times.start.slice(11,16)||'09:00'} onChange={e=>TM(t=>({...t,start:`${t.start.slice(0,10)}T${e.target.value}`}))}>{clock(times.start.slice(11,16)).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></span></Field>
+   <Field label="Ends" hint={spoken(times.end)||'Choose the day, then the time'}><span className="ep-when"><input type="date" required aria-label="End date" min={times.start.slice(0,10)||undefined} max={limits.maxEnd.slice(0,10)} value={times.end.slice(0,10)} onChange={e=>TM(t=>({...t,end:`${e.target.value}T${t.end.slice(11,16)||'10:00'}`}))}/>
+    <select aria-label="End time" value={times.end.slice(11,16)||'10:00'} onChange={e=>TM(t=>({...t,end:`${t.end.slice(0,10)}T${e.target.value}`}))}>{clock(times.end.slice(11,16)).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></span></Field>
    <Field label="Time zone"><select name="timeZone" defaultValue={current?.timeZone||'Australia/Melbourne'}>{ZONES.map(z=><option key={z} value={z}>{z.replace('Australia/','')}</option>)}</select></Field>
    <Field label="Places (optional)"><input name="capacity" type="number" min={1} max={10000} defaultValue={current?.capacity??undefined}/></Field>
    <div className="ep-actions ep-field wide"><label className="ep-check"><input type="radio" checked={mode==='online'} onChange={()=>M('online')}/>Online</label><label className="ep-check"><input type="radio" checked={mode==='in_person'} onChange={()=>M('in_person')}/>In person</label></div>
