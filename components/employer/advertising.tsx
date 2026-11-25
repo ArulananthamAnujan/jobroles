@@ -18,7 +18,7 @@ export default function Advertising({ctx}:{ctx:PortalContext}){
  const canPay=ctx.role==='owner'||ctx.role==='recruiter';
  async function buy(amount:number){B(`buy-${amount}`);E('');try{const r=await post<{url:string}>('/api/billing/credit',{companyId:ctx.company.id,amount});window.location.assign(r.url);}catch(e){E((e as Error).message);B('');}}
  async function save(row:Row,active:boolean){const v=edit[row.jobId],budget=Math.round(Number(v?.budget??(row.campaign?.dailyBudget??2000)/100)*100),cpc=Math.round(Number(v?.cpc??(row.campaign?.cpc??150)/100)*100);
-  B(row.jobId);E('');N('');try{await employerPost({action:'campaign',jobId:row.jobId,dailyBudget:budget,cpc,active});N(active?`${row.title} is now sponsored.`:`${row.title} is paused.`);await load();}catch(e){E((e as Error).message);}finally{B('');}}
+  B(row.jobId);E('');N('');try{await employerPost({action:'campaign',jobId:row.jobId,dailyBudget:budget,cpc,active});N(active?`${row.title} is sponsored at ${dollars(budget)} a day and up to ${dollars(cpc)} a click. Saved.`:`${row.title} is paused. Its amounts are saved.`);ED(all=>{const rest={...all};delete rest[row.jobId];return rest;});await load();}catch(e){E((e as Error).message);}finally{B('');}}
  if(!canPay)return <Section title="Sponsored jobs"><Card><Empty title="Owners and recruiters only">Ask an owner to give you the recruiter role to manage sponsored jobs.</Empty></Card></Section>;
  const running=(a?.jobs||[]).filter(j=>j.campaign?.active);
  return <Section title="Sponsored jobs" sub="Pay only when someone clicks. Sponsored jobs appear higher in search and are labelled Sponsored. Each person is charged once per job per day.">
@@ -29,9 +29,11 @@ export default function Advertising({ctx}:{ctx:PortalContext}){
     <p className="ep-muted" style={{marginBottom:12}}>Credit never expires while your account is open. Stripe adds GST and emails a tax invoice with your ABN.</p>
     <div className="ep-actions">{PACKS.map(p=><Button key={p} tone="secondary" disabled={Boolean(busy)||!ctx.company.verified_at} onClick={()=>buy(p)}>{busy===`buy-${p}`?'Opening Stripe…':dollars(p)}</Button>)}</div>
    </Card>
+   {a.jobs.length>0&&<p className="ep-muted" style={{fontSize:13,margin:'0 0 8px'}}>Type a daily budget and the most you will pay per click, then choose Sponsor (or Update for a running campaign). Amounts are only saved when you press that button.</p>}
    {a.jobs.length?<div className="ep-table-wrap"><table className="ep-table"><thead><tr><th>Job</th><th>Budget a day</th><th>Per click</th><th className="num">Spent today</th><th className="num">Clicks (7d)</th><th className="num">Applies (7d)</th><th>Status</th><th/></tr></thead><tbody>
     {a.jobs.map(r=>{const v=edit[r.jobId]||{budget:String((r.campaign?.dailyBudget??2000)/100),cpc:String((r.campaign?.cpc??150)/100)};const set=(k:'budget'|'cpc',x:string)=>ED({...edit,[r.jobId]:{...v,[k]:x}});
-     return <tr key={r.jobId}><td><div className="ep-row-title">{r.title}</div></td>
+     const unsaved=Boolean(edit[r.jobId])&&(Math.round(Number(v.budget)*100)!==(r.campaign?.dailyBudget??2000)||Math.round(Number(v.cpc)*100)!==(r.campaign?.cpc??150));
+     return <tr key={r.jobId}><td><div className="ep-row-title">{r.title}</div>{unsaved&&<div className="ep-row-sub" role="status" style={{color:'var(--amber)'}}>Not saved yet. Choose {r.campaign?.active?'Update':'Sponsor'} to save these amounts.</div>}</td>
       <td><label className="ep-money"><span>$</span><input type="number" min={5} max={1000} step={1} value={v.budget} onChange={e=>set('budget',e.target.value)} aria-label={`Daily budget for ${r.title}`}/></label></td>
       <td><label className="ep-money"><span>$</span><input type="number" min={0.5} max={20} step={0.05} value={v.cpc} onChange={e=>set('cpc',e.target.value)} aria-label={`Cost per click for ${r.title}`}/></label></td>
       <td className="num">{dollars(r.spentToday)}</td><td className="num">{r.clicks7}</td><td className="num">{r.applications7}</td>

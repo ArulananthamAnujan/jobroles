@@ -11,7 +11,9 @@ export default function Team({ctx}:{ctx:PortalContext}){
  useEffect(()=>{const c=new AbortController();Promise.all([employerGet<TeamData>('team',{company:ctx.company.id},c.signal),employerGet<{jobs:{id:string;title:string;state:string}[]}>('jobs',{company:ctx.company.id},c.signal)]).then(([t,j])=>{T(t);J(j.jobs.filter(x=>!['closed','expired'].includes(x.state)));}).catch(e=>{if(e.name!=='AbortError')E(e.message);});return()=>c.abort();},[ctx.company.id,version]);
  const [emailed,EMD]=useState(false);
  // Creates the invitation and emails it. Used by the form and by “Send again”.
- async function invite(email:string,role:string){B(true);E('');N('');L('');try{const r=await post<{invitationUrl?:string;emailed?:boolean;emailProblem?:string}>('/api/team',{action:'invite',companyId:ctx.company.id,email,role});L(r.invitationUrl||'');EMD(Boolean(r.emailed));
+ async function invite(email:string,role:string){E('');N('');L('');
+  if(team?.members.some(m=>m.email.toLowerCase()===email.trim().toLowerCase())){E(`${email.trim()} is already on your team. To change what they can do, use the Role menu next to their name.`);return false;}
+  B(true);try{const r=await post<{invitationUrl?:string;emailed?:boolean;emailProblem?:string}>('/api/team',{action:'invite',companyId:ctx.company.id,email,role});L(r.invitationUrl||'');EMD(Boolean(r.emailed));
    N(r.emailed?`Invitation created. We’re emailing it to ${email} now; the list below shows when it has been sent. They have 7 days to accept.`:`Invitation created, but we could not email it${r.emailProblem?`: ${r.emailProblem}`:'.'} Send ${email} the link below yourself.`);V(v=>v+1);return true;}catch(e){E((e as Error).message);return false;}finally{B(false);}}
  // While an email is on its way, check again every 20 seconds so “Sending” turns into “Email sent” by itself.
  const mailStates=Object.values(team?.invitationMail||{}),sending=mailStates.includes('sending')||mailStates.includes('delayed'),stuck=mailStates.includes('delayed')||mailStates.includes('failed');

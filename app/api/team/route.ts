@@ -17,6 +17,11 @@ export async function POST(request:Request){try{
  }
  const {client}=await authenticatedClient();const parsed=schema.safeParse(raw);if(!parsed.success)throw new ApiError(400,'Check the team form fields.');
  const {action,...fields}=parsed.data;let token:string|undefined;let payload:Record<string,unknown>=fields;
+ if(parsed.data.action==='invite'){
+  // Someone already on the team does not need an invitation; say so instead of emailing them one.
+  const wanted=parsed.data.email.trim().toLowerCase(),team=await client.rpc('jp_team',{company:parsed.data.companyId});
+  if(!team.error&&((team.data as {members?:{email:string}[]})?.members||[]).some(m=>m.email?.toLowerCase()===wanted))throw new ApiError(400,`${parsed.data.email.trim()} is already on your team.`);
+ }
  if(action==='invite')token=Array.from(crypto.getRandomValues(new Uint8Array(32)),x=>x.toString(16).padStart(2,'0')).join('');
  if(parsed.data.action==='accept')token=parsed.data.token;
  if(token){payload={...fields,hash:await sha(token)};delete payload.token;}
