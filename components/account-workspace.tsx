@@ -1,4 +1,5 @@
 'use client';
+import {forgetSignedIn} from '@/lib/signed-in-hint';
 import PasswordField,{PASSWORD_HINT,passwordProblem} from './password-field';
 import Captcha,{resetCaptcha} from '@/components/captcha';
 import JobFeeds from '@/components/job-feeds';
@@ -27,7 +28,7 @@ import PersistentJobs,{type LiveJob} from './persistent-jobs';
 import {Brand,Heading,Panel,Field,Btn,Badge} from './market-ui';
 type Account={configured:boolean;user:null|{id:string;email:string;confirmed:boolean};providers?:string[]};
 type Data={profile:null|{full_name:string;headline:string;location:string;skills:string[];searchable:boolean};resumes:{id:string;filename:string;version:number;created_at?:string}[];applications:{id:string;job_id:string;state:string;stage:string}[];memberships:{company_id:string;role:string}[];companies:{id:string;name:string;verified_at:string|null}[];jobs:LiveJob[];isAdmin:boolean};
-async function api<T={ok:boolean;confirmationRequired?:boolean}>(path:string,body?:unknown){const res=await fetch(path,{method:body?'POST':'GET',credentials:'same-origin',cache:'no-store',headers:body?{'Content-Type':'application/json'}:undefined,body:body?JSON.stringify(body):undefined});const data=await res.json() as T & {error?:string};if(!res.ok)throw new Error(data.error||'Request failed.');return data;}
+async function api<T={ok:boolean;confirmationRequired?:boolean}>(path:string,body?:unknown){if(body&&path==='/api/account')forgetSignedIn();const res=await fetch(path,{method:body?'POST':'GET',credentials:'same-origin',cache:'no-store',headers:body?{'Content-Type':'application/json'}:undefined,body:body?JSON.stringify(body):undefined});const data=await res.json() as T & {error?:string};if(!res.ok)throw new Error(data.error||'Request failed.');return data;}
 export default function AccountWorkspace({portal='seeker',embedded=false}:{portal?:'seeker'|'employer';embedded?:boolean}){
  const search=useSearchParams().toString(),router=useRouter();
  // Why "Continue with Google" did not finish, when it did not (set by /auth/callback).

@@ -25,7 +25,9 @@ export default function SavedView(){
       <strong>{open(s.jobs)?<Link href={`/jobs/${s.job_id}`}>{s.jobs?.title}</Link>:s.jobs?.title||'Job no longer available'}</strong>
       <small>{s.jobs?.companies?.name}{s.jobs&&open(s.jobs)?` · closes ${when(s.jobs.expires_at,{day:'numeric',month:'short'})}`:''} · saved {when(s.created_at,{day:'numeric',month:'short'})}</small></div>
       {open(s.jobs)?<Link className="ep-btn secondary sm" href={`/jobs/${s.job_id}`}>View and apply</Link>:<Pill>Closed</Pill>}
-      <Button size="sm" tone="ghost" disabled={busy} onClick={()=>act(async()=>{await post('/api/command',{action:'saved.toggle',payload:{jobId:s.job_id,saved:false}});if(saved.length===1&&page>1)P(page-1);},'Removed from saved jobs.')}>Remove</Button></li>)}</ul>
+      <Button size="sm" tone="ghost" disabled={busy} onClick={()=>act(async()=>{await post('/api/command',{action:'saved.toggle',payload:{jobId:s.job_id,saved:false}});
+       // Take it off the list and the count straight away; the reload that follows confirms it.
+       S(all=>all&&all.filter(x=>x.job_id!==s.job_id));T(n=>Math.max(0,n-1));if(saved.length===1&&page>1)P(page-1);},`“${s.jobs?.title||'That job'}” removed from your saved jobs.`)}>Remove</Button></li>)}</ul>
      :<Empty title="No saved jobs" action={<Link className="ep-btn secondary md" href="/search">Search jobs</Link>}>Tap the bookmark on any job to keep it here.</Empty>}
      {total>20&&<div className="ep-actions" style={{justifyContent:'center',padding:'8px 0'}}><Button size="sm" tone="secondary" disabled={page===1} onClick={()=>P(page-1)}>Previous</Button><span className="ep-muted">Page {page}</span><Button size="sm" tone="secondary" disabled={page*20>=total} onClick={()=>P(page+1)}>Next</Button></div>}
     </Card>
@@ -36,14 +38,14 @@ export default function SavedView(){
       <div className="ep-grow"><strong><Link href={`/search?${new URLSearchParams(s.filters)}`}>{s.filters.q||'All jobs'}</Link></strong><small>{rest.join(' · ')||'Anywhere, any setting'}</small></div>
       <select aria-label={`Emails for ${s.filters.q||'all jobs'}`} value={s.frequency||'off'} disabled={busy} style={{width:'auto',height:30,minHeight:30,fontSize:13}} onChange={e=>act(()=>post('/api/launch',{action:'search.alerts',payload:{id:s.id,frequency:e.target.value}}),'Alert updated.')}>
        <option value="off">No emails</option><option value="daily">Daily</option><option value="instant">Instantly</option></select>
-      <Button size="sm" tone="ghost" disabled={busy} aria-label={`Delete ${s.filters.q||'all jobs'} search`} onClick={()=>act(()=>post('/api/launch',{action:'search.delete',payload:{id:s.id}}),'Search deleted.')}>Delete</Button></li>;})}</ul>
+      <Button size="sm" tone="ghost" disabled={busy} aria-label={`Delete ${s.filters.q||'all jobs'} search`} onClick={()=>act(async()=>{await post('/api/launch',{action:'search.delete',payload:{id:s.id}});L(l=>l&&{...l,searches:l.searches.filter(x=>x.id!==s.id)});},'Search deleted.')}>Delete</Button></li>;})}</ul>
      :<Empty title="No job alerts">Search for jobs and choose “Save search” to get new roles by email.</Empty>}</Card>
     <h2>Emails about your applications</h2>
     <Card><AppEmails/></Card>
     {launch&&launch.reports.length>0&&<><h2>Jobs you reported</h2><Card><ul className="ep-list">{launch.reports.map(r=><li key={r.id}><div className="ep-grow"><strong><Link href={`/jobs/${r.job_id}`}>Reported job</Link></strong><small>{r.resolution||r.reason}</small></div><Pill tone={r.state==='open'?'amber':'teal'}>{r.state==='open'?'Under review':'Reviewed'}</Pill></li>)}</ul></Card></>}
    </aside>
   </div>
-   {hidden.length>0&&<Card title={`Jobs you hid (${hidden.length})`}><p className="ep-muted" style={{marginBottom:8}}>Jobs you marked “Not interested” are left out of your search results. Bring one back if you change your mind.</p><ul className="ep-list">{hidden.map(h=><li key={h.job_id}><div className="ep-grow"><strong>{h.jobs?.title||'Job no longer listed'}</strong><small>{h.jobs?.companies?.name?`${h.jobs.companies.name} · `:''}hidden {when(h.created_at,{day:'numeric',month:'short'})}</small></div>{h.jobs&&<Link className="ep-btn ghost sm" href={`/jobs/${h.job_id}`}>View</Link>}<Button size="sm" tone="secondary" disabled={busy} onClick={()=>act(()=>post('/api/career',{action:'hide',jobId:h.job_id,hide:false}),'The job will show in your searches again.')}>Show again</Button></li>)}</ul></Card>}
+   {hidden.length>0&&<Card title={`Jobs you hid (${hidden.length})`}><p className="ep-muted" style={{marginBottom:8}}>Jobs you marked “Not interested” are left out of your search results. Bring one back if you change your mind.</p><ul className="ep-list">{hidden.map(h=><li key={h.job_id}><div className="ep-grow"><strong>{h.jobs?.title||'Job no longer listed'}</strong><small>{h.jobs?.companies?.name?`${h.jobs.companies.name} · `:''}hidden {when(h.created_at,{day:'numeric',month:'short'})}</small></div>{h.jobs&&<Link className="ep-btn ghost sm" href={`/jobs/${h.job_id}`}>View</Link>}<Button size="sm" tone="secondary" disabled={busy} onClick={()=>act(async()=>{await post('/api/career',{action:'hide',jobId:h.job_id,hide:false});H(all=>all.filter(x=>x.job_id!==h.job_id));},'The job will show in your searches again.')}>Show again</Button></li>)}</ul></Card>}
  </Section>;
 }
 

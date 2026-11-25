@@ -1,35 +1,19 @@
 'use client';
 // Small fetch helpers for the employer portal. Errors carry the server's message for display.
-// Answers are remembered for half a minute so moving between screens does not wait on the server again, and two
-// parts of a page asking for the same thing share one request. Anything that saves a change empties the memory,
-// so people always see their own changes straight away.
-const FRESH_MS=30000,remembered=new Map<string,{at:number;data:unknown}>(),inFlight=new Map<string,Promise<unknown>>();
-export function forgetAnswers(){remembered.clear();inFlight.clear();}
-// Every request that changes something empties the memory. Two safeguards, because a stale list after a save is
-// worse than a slow one:
-//  1. post() below empties it directly, before and after the request.
-//  2. Saves made elsewhere with a plain fetch are caught by wrapping window.fetch. Browser extensions that watch
-//     network traffic can replace window.fetch after this file has loaded, which would silently drop the wrapper,
-//     so it is checked and put back on every get() and post().
-type Marked=typeof fetch&{__jr?:boolean};
-function watchSaves(){
- if(typeof window==='undefined'||(window.fetch as Marked).__jr)return;
- const real=window.fetch.bind(window);
- const wrapped:Marked=(input,init)=>{const method=(init?.method||(input instanceof Request?input.method:'GET')).toUpperCase();if(method==='GET'||method==='HEAD')return real(input,init);forgetAnswers();
-  // Signing in or out changes who the header should show.
-  if(String(input instanceof Request?input.url:input).includes('/api/account')){try{sessionStorage.removeItem('jr.signedInAs');}catch{}}
-  return real(input,init).finally(forgetAnswers);};
- wrapped.__jr=true;window.fetch=wrapped;
-}
-watchSaves();
-async function ask(path:string):Promise<unknown>{watchSaves();const r=await fetch(path,{cache:'no-store'});const d=await r.json().catch(()=>({})) as {error?:string};if(!r.ok)throw new Error(d.error||'Something went wrong. Please try again.');return d;}
+// Two parts of a page that ask for the same thing at the same moment share one request. Nothing is remembered once
+// an answer has arrived: every later read goes to the server, so a list can never show data from before a change.
+// (An earlier version remembered answers for 30 seconds to speed up screen changes; it could show a stale list after
+// a save, which is worse than a short wait.)
+const inFlight=new Map<string,Promise<unknown>>();
+// Kept so screens can call it after a save; it drops any request still on its way, so its answer is not reused.
+export function forgetAnswers(){inFlight.clear();}
+async function ask(path:string):Promise<unknown>{const r=await fetch(path,{cache:'no-store'});const d=await r.json().catch(()=>({})) as {error?:string};if(!r.ok)throw new Error(d.error||'Something went wrong. Please try again.');return d;}
 export async function get<T>(path:string,signal?:AbortSignal):Promise<T>{
- const hit=remembered.get(path);let answer:Promise<unknown>;
- if(hit&&Date.now()-hit.at<FRESH_MS)answer=Promise.resolve(hit.data);
- else{answer=inFlight.get(path)||ask(path).then(d=>{if(inFlight.get(path)===answer)remembered.set(path,{at:Date.now(),data:d});return d;}).finally(()=>{if(inFlight.get(path)===answer)inFlight.delete(path);});inFlight.set(path,answer);}
+ let answer=inFlight.get(path);
+ if(!answer){const mine:Promise<unknown>=ask(path).finally(()=>{if(inFlight.get(path)===mine)inFlight.delete(path);});answer=mine;inFlight.set(path,mine);}
  const data=await answer;if(signal?.aborted)throw new DOMException('Aborted','AbortError');return data as T;
 }
-export async function post<T=unknown>(path:string,body:unknown,method='POST'):Promise<T>{watchSaves();forgetAnswers();const r=await fetch(path,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).finally(forgetAnswers);const d=await r.json().catch(()=>({})) as T&{error?:string};if(!r.ok)throw new Error(d.error||'The change could not be saved.');return d;}
+export async function post<T=unknown>(path:string,body:unknown,method='POST'):Promise<T>{forgetAnswers();const r=await fetch(path,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).finally(forgetAnswers);const d=await r.json().catch(()=>({})) as T&{error?:string};if(!r.ok)throw new Error(d.error||'The change could not be saved.');return d;}
 export const employerGet=<T,>(resource:string,params:Record<string,string>,signal?:AbortSignal)=>get<T>(`/api/employer?${new URLSearchParams({resource,...params})}`,signal);
 export const employerPost=<T=unknown,>(body:Record<string,unknown>)=>post<T>('/api/employer',body);
 export const command=(action:string,payload:unknown)=>post('/api/command',{action,payload});

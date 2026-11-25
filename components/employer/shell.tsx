@@ -1,4 +1,5 @@
 'use client';
+import {forgetSignedIn} from '@/lib/signed-in-hint';
 import {useEffect,useRef,useState,type ReactNode} from 'react';
 import Link from 'next/link';
 import {usePathname,useRouter} from 'next/navigation';
@@ -43,7 +44,7 @@ export function AccountMenu({email,links}:{email:string;links:[string,string][]}
  return <div ref={ref} style={{display:'contents'}}><button className="ep-avatar" aria-label="Account" aria-expanded={open} onClick={()=>O(!open)}>{initials}</button>
   {open&&<div className="ep-pop" role="menu" style={{width:260}}><div className="ep-pop-head">Signed in as<br/><strong style={{color:'var(--ink)'}}>{email}</strong></div>
    {links.map(([href,label])=><Link key={href} role="menuitem" href={href} onClick={()=>O(false)}>{label}</Link>)}
-   <button role="menuitem" onClick={async()=>{await fetch('/api/account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})});router.replace('/');router.refresh();}}>Sign out</button></div>}</div>;
+   <button role="menuitem" onClick={async()=>{forgetSignedIn();await fetch('/api/account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})});router.replace('/');router.refresh();}}>Sign out</button></div>}</div>;
 }
 
 // The title row of a screen: one h1, a grey line stating what matters, and the actions on the right.

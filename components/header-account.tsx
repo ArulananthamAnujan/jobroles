@@ -3,9 +3,10 @@ import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
 const never=()=>()=>{},unknown=()=>undefined;
 import Link from 'next/link';
 import {get} from './employer/api';
+import {SIGNED_IN_KEY} from '@/lib/signed-in-hint';
 // What the header last knew about who is signed in. It is shown straight away on every page change, then checked,
 // so a signed-in person never sees "Sign in" flash up between pages.
-const KEY='jr.signedInAs';
+const KEY=SIGNED_IN_KEY;
 function recall():string|null|undefined{try{const v=sessionStorage.getItem(KEY);return v===null?undefined:v||null;}catch{return undefined;}}
 function remember(v:string|null){try{sessionStorage.setItem(KEY,v||'');}catch{}}
 // Shows "Sign in" to visitors and an account menu to signed-in people, like the main job sites do.

@@ -3,7 +3,7 @@ import {useEffect,useMemo,useRef,useState,type ReactNode} from 'react';
 import Link from 'next/link';
 import {useSearchParams} from 'next/navigation';
 import {employerGet,employerPost,money} from './api';
-import {Button,Card,Icon,Notice,Pill,Tabs} from './ui';
+import {Button,Card,Drawer,Icon,Notice,Pill,Tabs} from './ui';
 import {Section,type PortalContext} from './portal';
 import {FIELDS,TYPES,autoMap,duplicates,jobKeys,parseDelimited,problems,readXlsx,templateCsv,toJob,type Field,type JobRow} from '../../lib/spreadsheet';
 type Result={saved:number;failed:number;skipped?:number;results:({row:number;ok:true;id:string;state:string}|{row:number;ok:false;error:string;duplicate?:boolean})[]};
@@ -106,6 +106,9 @@ function Sheet({ctx}:{ctx:PortalContext}){
      editing={editing===i} onEdit={()=>EG(editing===i?null:i)} onSave={j=>{ED(e=>({...e,[i]:j}));EG(null);}} onRevert={()=>{ED(e=>{const n={...e};delete n[i];return n;});EG(null);}} original={toJob(cells,map)}
      onLeave={()=>LO(s=>{const n=new Set(s);if(n.has(i))n.delete(i);else n.add(i);return n;})}/>)}
    </tbody></table></div>
+   {(()=>{const r=editing===null?null:jobs.find(x=>x.i===editing);if(!r)return null;
+    // In a side panel, so it is always fully on screen whatever the table is doing.
+    return <Drawer open onClose={()=>EG(null)} title={<>Fix row {r.i+2}{r.job.title?`: ${r.job.title}`:''}</>}><RowEditor key={r.i} job={r.job} edited={r.edited} original={toJob(r.cells,map)} onSave={j=>{ED(e=>({...e,[r.i]:j}));EG(null);}} onRevert={()=>{ED(e=>{const n={...e};delete n[r.i];return n;});EG(null);}} onCancel={()=>EG(null)}/></Drawer>;})()}
    <Card className="ep-import-go"><div className="ep-import-sum" style={{margin:0}}>
     <div className="ep-seg" role="radiogroup" aria-label="After import">
      <label><input type="radio" name="submit" checked={submit} onChange={()=>SU(true)}/>Submit for approval</label>
@@ -135,7 +138,7 @@ function payOf(j:JobRow){
 }
 
 const STATUS=(issues:string[],dup:null|'open'|'file',skip:boolean,out:boolean)=>out?<Pill>Left out</Pill>:issues.length?<Pill tone="red">Fix first</Pill>:dup?<Pill tone="amber">{dup==='open'?'Already open':'Repeated in file'}{skip?' · skip':''}</Pill>:<Pill tone="teal">Ready</Pill>;
-function RowView({i,job,issues,edited,out,dup,skipDup,editing,onEdit,onSave,onRevert,onLeave,original}:{i:number;job:JobRow;issues:string[];edited:boolean;out:boolean;dup:null|'open'|'file';skipDup:boolean;editing:boolean;
+function RowView({i,job,issues,edited,out,dup,skipDup,editing,onEdit,onLeave}:{i:number;job:JobRow;issues:string[];edited:boolean;out:boolean;dup:null|'open'|'file';skipDup:boolean;editing:boolean;
  onEdit:()=>void;onSave:(j:JobRow)=>void;onRevert:()=>void;onLeave:()=>void;original:JobRow}){
  return <>
   <tr className={!out&&issues.length?'bad':''} style={out?{opacity:.55}:undefined}>
@@ -147,7 +150,6 @@ function RowView({i,job,issues,edited,out,dup,skipDup,editing,onEdit,onSave,onRe
    <td>{STATUS(issues,dup,skipDup,out)}</td>
    <td><div className="ep-row-actions">{!out&&<Button size="sm" tone={issues.length?'secondary':'ghost'} aria-expanded={editing} onClick={onEdit}>{issues.length?'Fix':'Edit'}</Button>}<Button size="sm" tone="ghost" onClick={onLeave}>{out?'Include':'Leave out'}</Button></div></td>
   </tr>
-  {editing&&<tr className="ep-edit-row"><td/><td colSpan={5}><RowEditor job={job} edited={edited} original={original} onSave={onSave} onRevert={onRevert} onCancel={onEdit}/></td></tr>}
  </>;
 }
 // Edit one row in place; the problems update as you type, and saving needs none left.

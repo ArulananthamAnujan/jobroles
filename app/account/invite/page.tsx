@@ -6,6 +6,7 @@ import {SiteHeader} from '@/components/site-chrome';
 import PasswordField,{PASSWORD_HINT,passwordProblem} from '@/components/password-field';
 import Captcha,{resetCaptcha} from '@/components/captcha';
 import {saveInvite,pendingInvite,forgetInvite} from '@/lib/invite-token';
+import {forgetSignedIn} from '@/lib/signed-in-hint';
 // Where an emailed team invitation lands. It says who is inviting the person, asks whether they already have an
 // account, lets them sign in or create one on the spot, and then accepts the invitation.
 // The secret arrives after "#" so it never reaches server logs.
@@ -13,7 +14,7 @@ type Invitation={state:'open'|'used'|'cancelled'|'expired'|'unknown';company?:st
 type Me={email:string;confirmed:boolean}|null;
 const ROLE:Record<string,string>={recruiter:'a recruiter',hiring_manager:'a hiring manager'};
 const CAN:Record<string,string>={recruiter:'You will be able to post jobs and manage applicants for the jobs you are assigned.',hiring_manager:'You will be able to read applications and add notes on the jobs you are assigned.'};
-async function send<T>(path:string,body:unknown):Promise<T>{const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json().catch(()=>({})) as T&{error?:string};if(!r.ok)throw new Error(d.error||'Something went wrong. Please try again.');return d;}
+async function send<T>(path:string,body:unknown):Promise<T>{if(path==='/api/account')forgetSignedIn();const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json().catch(()=>({})) as T&{error?:string};if(!r.ok)throw new Error(d.error||'Something went wrong. Please try again.');return d;}
 export default function Invite(){
  const [token,T]=useState<string|null>(null),[inv,I]=useState<Invitation|null>(null),[me,M]=useState<Me|undefined>(undefined);
  const [step,S]=useState<'ask'|'signin'|'signup'|'sent'>('ask'),[busy,B]=useState(false),[error,E]=useState(''),[done,D]=useState(false);
