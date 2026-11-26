@@ -1,4 +1,11 @@
 import type { NextConfig } from "next";
+import { execSync } from "node:child_process";
+
+// Stamped into every build so anyone can tell which version a site is serving: open /api/health and compare.
+// The code version comes from git where the build has it; the time is always there.
+const builtAt = new Date().toISOString();
+let buildId = "unknown";
+try { buildId = execSync("git rev-parse --short HEAD", { stdio: ["ignore", "pipe", "ignore"] }).toString().trim() || "unknown"; } catch {}
 
 // Baseline browser protections for every route. The CSP only restricts framing, plugins, base and form targets,
 // so it does not interfere with Next.js inline scripts; tighten script-src with nonces separately.
@@ -23,6 +30,7 @@ process.env.UV_THREADPOOL_SIZE ??= String(Math.max(4, buildCpus));
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  env: { BUILD_ID: buildId, BUILD_AT: builtAt },
   experimental: { cpus: buildCpus, workerThreads: false, memoryBasedWorkersCount: false, staticGenerationMaxConcurrency: 4 },
   async headers() {
     return [
