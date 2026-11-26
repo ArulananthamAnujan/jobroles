@@ -77,3 +77,21 @@ input[type=file]::file-selector-button:hover{background:var(--mint)}
 .as-next{display:grid;gap:10px;padding-left:22px;margin:0}.as-next li{margin:0}
 .as-jobs{list-style:none;padding:0;margin:12px 0;display:grid;gap:10px}.as-jobs li{margin:0;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:#fff}
 .as-jobs .jp-btn{min-height:40px;padding:8px 14px;font-size:15px}.as-title{font-weight:700;font-size:17px}.as-title:hover{text-decoration:underline;color:var(--teal)}.as-none{display:grid;gap:10px;justify-items:start}
+.jr-ask{border:0;padding:0;border-radius:14px;max-width:min(460px,calc(100vw - 32px));width:100%;box-shadow:0 24px 70px #172b3a55;color:var(--ink)}
+.jr-ask::backdrop{background:#172b3a66}
+.jr-ask-box{padding:22px 22px 18px;display:grid;gap:10px}
+.jr-ask-q{font-size:17px;font-weight:700;line-height:1.4}.jr-ask-more{color:var(--text-muted);font-size:15px;line-height:1.5;white-space:pre-line}
+.jr-ask-actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;margin-top:10px}
+.jr-ask-actions button{min-height:44px;padding:10px 16px;border-radius:8px;font:inherit;font-size:15px;font-weight:700;cursor:pointer}
+.jr-ask-no{background:#fff;color:var(--ink);border:1px solid var(--input-line)}.jr-ask-no:hover{background:var(--paper)}
+.jr-ask-yes{background:var(--teal);color:#fff;border:1px solid var(--teal)}.jr-ask-yes:hover{background:#055b54}
+.jr-ask-yes.danger{background:#a12f2f;border-color:#a12f2f}.jr-ask-yes.danger:hover{background:#872626}
+.save-job{position:relative;display:inline-flex}
+.save-job-note{position:absolute;left:0;top:calc(100% + 4px);font-size:13px;white-space:nowrap;color:#a12f2f}.save-job-note:empty{display:none}.save-job-note .text-link{font-size:13px}
+.jp-btn.secondary.is-saved{background:var(--mint);border-color:var(--teal)}
+.is-applied{background:var(--mint)!important;color:var(--teal)!important;border:1px solid var(--teal)!important}
+.legal-page{max-width:900px;margin:0 auto;display:grid;gap:18px}
+.place-input{position:relative;display:block;min-width:0}
+.place-list{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:40;list-style:none;margin:0;padding:6px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 14px 36px #172b3a26;max-height:280px;overflow:auto;min-width:220px}
+.place-list li{margin:0;padding:10px 12px;border-radius:6px;font-size:15px;cursor:pointer;color:var(--ink);text-align:left}
+.place-list li.on,.place-list li:hover{background:var(--mint)}

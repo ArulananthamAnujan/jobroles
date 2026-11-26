@@ -1,4 +1,5 @@
 'use client';
+import {ask} from '@/components/confirm';
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
 import {isVideoInterview} from '@/lib/calendar';
@@ -134,7 +135,7 @@ function SeekerApplications(){
  return <Section title="Applications" sub={h?`${lists.active.length} in progress · ${all.length} sent in total`:'Loading…'} actions={<Link className="ep-btn primary md" href="/search">Find jobs</Link>}>
   <Notice error={error}/>
   <Tabs value={tab} onChange={T} items={[['active','In progress',lists.active.length],['interview','Interviews',lists.interview.length],['drafts','Drafts',drafts.length],['closed','Closed',lists.closed.length]]}/>
-  {tab==='drafts'?(drafts.length?<Card><ul className="ep-list">{drafts.map(d=><li key={d.id}><div className="ep-grow"><strong>{d.jobs?.title||'Application'}</strong><small>{d.jobs?.companies?.name} · not sent yet</small></div><Link className="ep-btn secondary sm" href={`/job-seeker?job=${d.job_id}#application`}>Continue</Link><Button size="sm" tone="danger" onClick={async()=>{if(!window.confirm('Discard this draft application? What you wrote will be deleted.'))return;try{await post('/api/manage',{action:'draft.discard',id:d.id});D(drafts.filter(x=>x.id!==d.id));}catch(e){E((e as Error).message);}}}>Discard</Button></li>)}</ul></Card>
+  {tab==='drafts'?(drafts.length?<Card><ul className="ep-list">{drafts.map(d=><li key={d.id}><div className="ep-grow"><strong>{d.jobs?.title||'Application'}</strong><small>{d.jobs?.companies?.name} · not sent yet</small></div><Link className="ep-btn secondary sm" href={`/job-seeker?job=${d.job_id}#application`}>Continue</Link><Button size="sm" tone="danger" onClick={async()=>{if(!(await ask('Discard this draft application? What you wrote will be deleted.')))return;try{await post('/api/manage',{action:'draft.discard',id:d.id});D(drafts.filter(x=>x.id!==d.id));}catch(e){E((e as Error).message);}}}>Discard</Button></li>)}</ul></Card>
    :<Card><Empty title="No drafts">Applications you start but don’t send are kept here.</Empty></Card>)
   :!h?null:lists[tab].length?<Card><AppRows apps={lists[tab]}/></Card>
   :<Card><Empty title={tab==='closed'?'Nothing closed':tab==='interview'?'No interviews yet':'No applications in progress'} action={tab==='active'?<Link className="ep-btn primary md" href="/search">Find jobs</Link>:undefined}>{tab==='interview'?'When an employer invites you to interview, it shows here with the time and a link to join.':tab==='closed'?'Withdrawn applications and roles that didn’t go ahead are kept here.':'Apply for a role and follow each step here.'}</Empty></Card>}

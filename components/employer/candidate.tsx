@@ -1,4 +1,5 @@
 'use client';
+import {ask} from '@/components/confirm';
 import {useCallback,useEffect,useState} from 'react';
 import {get,post,employerGet,employerPost,command,STAGES,stageLabel,when,ago} from './api';
 import {monthLabel} from '@/lib/resume-pdf';
@@ -65,7 +66,7 @@ export default function Candidate({id,ctx,templates,onChange}:{id:string;ctx:Por
     <div className="ep-actions"><Button size="sm" disabled={busy}>{mode==='single'?'Book interview':'Send times'}</Button></div></form>}
   </section>
   <section className="ep-section"><h3>Team notes</h3><p className="ep-muted" style={{marginBottom:8}}>Only your hiring team sees notes and ratings.</p>
-   <ul className="ep-list">{d.notes.map(n=><li key={n.id}><div className="ep-grow"><span className="job-description">{n.body}</span><small>{when(n.created_at)}</small></div>{n.rating&&<Pill tone="amber">Rated {n.rating} of 5</Pill>}{n.author_id===d.userId&&<Button size="sm" tone="ghost" type="button" disabled={busy} onClick={()=>{if(window.confirm('Delete this note?'))void act(()=>post('/api/manage',{action:'note.delete',id:n.id}),'Note deleted.');}}>Delete</Button>}</li>)}</ul>
+   <ul className="ep-list">{d.notes.map(n=><li key={n.id}><div className="ep-grow"><span className="job-description">{n.body}</span><small>{when(n.created_at)}</small></div>{n.rating&&<Pill tone="amber">Rated {n.rating} of 5</Pill>}{n.author_id===d.userId&&<Button size="sm" tone="ghost" type="button" disabled={busy} onClick={async()=>{if((await ask('Delete this note?')))void act(()=>post('/api/manage',{action:'note.delete',id:n.id}),'Note deleted.');}}>Delete</Button>}</li>)}</ul>
    {d.role&&<form onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);const form=e.currentTarget;void act(async()=>{await command('application.note',{id,body:String(f.get('body')),rating:f.get('rating')?Number(f.get('rating')):undefined});form.reset();},'Note saved.');}} style={{display:'grid',gap:8,marginTop:8}}>
     <textarea name="body" required maxLength={5000} placeholder="Add a note for your team" aria-label="Note"/><div className="ep-actions"><select name="rating" aria-label="Rating"><option value="">No rating</option>{[5,4,3,2,1].map(n=><option key={n} value={n}>{n} of 5</option>)}</select><Button size="sm" tone="secondary" disabled={busy}>Save note</Button></div></form>}
   </section>

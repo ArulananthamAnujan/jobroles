@@ -11,7 +11,7 @@ import {jobPostingJsonLd,serializeJsonLd,siteOrigin} from '@/lib/job-posting';
 import {SiteHeader,SiteFooter} from '@/components/site-chrome';
 import SimilarJobs from '@/components/similar-jobs';
 import '@/components/job-page.css';
-import SaveJob from '@/components/save-job';
+import SaveJob,{ApplyNow} from '@/components/save-job';
 import {ReportJob} from '@/components/launch-tools';
 // Server-rendered so search engines read the full listing and its JobPosting data.
 export const dynamic='force-dynamic';
@@ -57,7 +57,7 @@ export default async function JobPage({params}:{params:Promise<{id:string}>}){
       <p className="jp-company"><Link href={`/companies/${job.companies.id}`}>{job.companies.name}</Link>{job.companies.sourced?<span className="jp-sourced">From the employer’s careers site</span>:<span className="jp-verified">ABN-verified employer</span>}</p>
       <p>{where(job)}</p>
       <p className="jp-pay">{salaryLabel(job).replace(/^AUD /,'')} · {job.employment_type}</p>
-      <div className="jp-actions">{external?<a className="jp-apply" href={external} target="_blank" rel="noopener noreferrer nofollow">Apply on company site</a>:<Link className="jp-apply" href={apply}>Apply now</Link>}<SaveJob id={job.id}/></div>
+      <div className="jp-actions">{external?<a className="jp-apply" href={external} target="_blank" rel="noopener noreferrer nofollow">Apply on company site</a>:<ApplyNow id={job.id} href={apply} className="jp-apply"/>}<SaveJob id={job.id}/></div>
       <p className="jp-note">{external?'You apply on the employer’s own website.':'Your resume is shared only when you submit.'} Posted {date(job.published_at)} · closes {date(job.expires_at)}.</p>
      </header>
      <section><h2>Job details</h2><dl className="jp-details"><div><dt>Pay</dt><dd>{salaryLabel(job).replace(/^AUD /,'')}</dd></div><div><dt>Job type</dt><dd>{job.employment_type}</dd></div><div><dt>Work setting</dt><dd>{ARR[job.arrangement]??job.arrangement}</dd></div><div><dt>Location</dt><dd>{where(job)}</dd></div>{job.start_date&&<div><dt>Start date</dt><dd>{date(job.start_date)}</dd></div>}</dl></section>
@@ -69,7 +69,7 @@ export default async function JobPage({params}:{params:Promise<{id:string}>}){
     </article>
     <aside className="jp-aside" aria-label="Similar jobs"><SimilarJobs id={job.id} title={job.title}/></aside>
    </div>
-   <div className="jp-sticky">{external?<a className="jp-apply" href={external} target="_blank" rel="noopener noreferrer nofollow">Apply on company site</a>:<Link className="jp-apply" href={apply}>Apply now</Link>}</div>
+   <div className="jp-sticky">{external?<a className="jp-apply" href={external} target="_blank" rel="noopener noreferrer nofollow">Apply on company site</a>:<ApplyNow id={job.id} href={apply} className="jp-apply"/>}</div>
   </main>
   <SiteFooter/>
  </div>;

@@ -5,7 +5,7 @@ import {usePathname,useRouter,useSearchParams} from 'next/navigation';
 import {salaryLabel} from '@/lib/salary';
 import {SECTORS} from '@/lib/search';
 import {SaveSearch,ReportJob} from './launch-tools';
-import SaveJob from './save-job';
+import SaveJob,{ApplyNow} from './save-job';
 import PlaceInput from './place-input';
 import {SiteHeader,SiteFooter} from './site-chrome';
 import './job-search.css';
@@ -88,7 +88,7 @@ function JobPane({job:j,query}:{job:Job;query:string}){
    <p className="jr-company"><Link href={`/companies/${j.companies.id}`}>{j.companies.name}</Link>{j.companies.sourced?<span className="jr-sourced">From the employer’s careers site</span>:<span className="jr-verified">Verified employer</span>}</p>
    <p className="jr-location">{where(j)}</p>
    <p className="jr-pane-pay">{pay(j)} · {j.employment_type}</p>
-   <div className="jr-actions">{j.external_apply_url?<a className="jr-primary" href={apply} target="_blank" rel="noopener noreferrer nofollow">Apply on company site</a>:<Link className="jr-primary" href={apply}>Apply now</Link>}<SaveJob key={j.id} id={j.id}/><Link className="jr-secondary" href={`/jobs/${j.id}${query?`?${query}`:''}`}>Open job page</Link></div>
+   <div className="jr-actions">{j.external_apply_url?<a className="jr-primary" href={apply} target="_blank" rel="noopener noreferrer nofollow">Apply on company site</a>:<ApplyNow key={`a${j.id}`} id={j.id} href={apply} className="jr-primary"/>}<SaveJob key={j.id} id={j.id}/><Link className="jr-secondary" href={`/jobs/${j.id}${query?`?${query}`:''}`}>Open job page</Link></div>
   </header>
   <div className="jr-pane-body">
    <section><h3>Job details</h3><dl className="jr-details"><div><dt>Pay</dt><dd>{pay(j)}</dd></div><div><dt>Job type</dt><dd>{j.employment_type}</dd></div><div><dt>Work setting</dt><dd>{ARRANGEMENT[j.arrangement]??j.arrangement}</dd></div><div><dt>Location</dt><dd>{where(j)}</dd></div></dl></section>

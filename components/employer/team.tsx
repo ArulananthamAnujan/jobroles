@@ -1,4 +1,5 @@
 'use client';
+import {ask} from '@/components/confirm';
 import {useEffect,useState} from 'react';
 import {employerGet,employerPost,command,post,when,forgetAnswers} from './api';
 import {Button,Card,Empty,Field,Notice,Pill} from './ui';
@@ -23,7 +24,7 @@ export default function Team({ctx}:{ctx:PortalContext}){
   <Notice error={error} message={note}/>
   {!team?<p role="status">Loading team…</p>:<div className="ep-grid" style={{gap:16}}>
    <div className="ep-table-wrap"><table className="ep-table"><thead><tr><th>Member</th><th>Role</th><th className="num">Assigned jobs</th><th/></tr></thead><tbody>{team.members.map(m=><tr key={m.userId}><td><div className="ep-row-title">{m.email}</div>{m.userId===ctx.userId&&<div className="ep-row-sub">You</div>}</td><td>{team.isOwner&&m.role!=='owner'?<select aria-label={`Role for ${m.email}`} value={m.role} disabled={busy} onChange={e=>void run(()=>post('/api/manage',{action:'member.role',companyId:ctx.company.id,userId:m.userId,role:e.target.value}),`${m.email} is now a ${ROLE[e.target.value]?.toLowerCase()||e.target.value}.`)}><option value="recruiter">{ROLE.recruiter}</option><option value="hiring_manager">{ROLE.hiring_manager}</option></select>:<Pill tone={m.role==='owner'?'teal':'neutral'}>{ROLE[m.role]??m.role}</Pill>}</td><td className="num">{m.role==='owner'?'All':m.assignedJobs}</td>
-    <td><div className="ep-row-actions">{team.isOwner&&m.role!=='owner'&&<Button size="sm" tone="danger" disabled={busy} onClick={()=>{if(window.confirm(`Remove ${m.email}? They lose access straight away.`))void run(()=>command('member.remove',{companyId:ctx.company.id,userId:m.userId}),'Access removed.');}}>Remove</Button>}</div></td></tr>)}</tbody></table></div>
+    <td><div className="ep-row-actions">{team.isOwner&&m.role!=='owner'&&<Button size="sm" tone="danger" disabled={busy} onClick={async()=>{if((await ask(`Remove ${m.email}? They lose access straight away.`)))void run(()=>command('member.remove',{companyId:ctx.company.id,userId:m.userId}),'Access removed.');}}>Remove</Button>}</div></td></tr>)}</tbody></table></div>
    {team.isOwner&&<div className="ep-grid two">
     <Card title="Invite a team member"><form style={{display:'grid',gap:12}} onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget),form=e.currentTarget;const to=String(f.get('email')||'');void invite(to,String(f.get('role')||'recruiter')).then(ok=>{if(ok)form.reset();});}}>
      <Field label="Email"><input name="email" type="email" required maxLength={254}/></Field>

@@ -1,4 +1,5 @@
 'use client';
+import {ask} from '@/components/confirm';
 import {useCallback,useEffect,useState} from 'react';
 import Link from 'next/link';
 import {employerGet,employerPost,when,forgetAnswers} from './api';
@@ -40,13 +41,13 @@ export default function Events({ctx}:{ctx:PortalContext}){
    {events.map(e=><tr key={e.id} className={fresh===e.title?'ep-fresh':undefined}><td><div className="ep-row-title">{e.title}{fresh===e.title&&<span className="ep-saved-tag">Saved just now</span>}</div></td><td>{when(e.startsAt,{weekday:'short',day:'numeric',month:'short',hour:'numeric',minute:'2-digit',timeZone:e.timeZone})}</td><td>{e.mode==='online'?'Online':e.location}</td>
     <td className="num">{e.registered}{e.capacity?` / ${e.capacity}`:''}</td><td>{e.cancelled?<Pill tone="red">Cancelled</Pill>:<Pill tone="teal">Open</Pill>}</td>
     <td><div className="ep-row-actions"><Button size="sm" tone="secondary" onClick={()=>VW(e)}>Attendees</Button><Link className="ep-btn ghost sm" href={`/events/${e.id}`}>View</Link>{canRun&&!e.cancelled&&<><Button size="sm" tone="ghost" onClick={()=>open(e)}>Edit</Button>
-     <Button size="sm" tone="danger" disabled={busy} onClick={async()=>{if(!confirm('Cancel this event? Registrants will see it as cancelled.'))return;B(true);E('');try{await employerPost({action:'event.cancel',id:e.id});EV(all=>all&&all.map(x=>x.id===e.id?{...x,cancelled:true}:x));N('Event cancelled.');forgetAnswers();await load();}catch(err){E((err as Error).message);}finally{B(false);}}}>Cancel</Button></>}</div></td></tr>)}
+     <Button size="sm" tone="danger" disabled={busy} onClick={async()=>{if(!(await ask('Cancel this event? Registrants will see it as cancelled.')))return;B(true);E('');try{await employerPost({action:'event.cancel',id:e.id});EV(all=>all&&all.map(x=>x.id===e.id?{...x,cancelled:true}:x));N('Event cancelled.');forgetAnswers();await load();}catch(err){E((err as Error).message);}finally{B(false);}}}>Cancel</Button></>}</div></td></tr>)}
   </tbody></table></div>:<Card><Empty title="No hiring events yet" action={canRun&&<Button onClick={()=>open('new')}>Create event</Button>}>Open days and online info sessions help you meet many candidates at once.</Empty></Card>}
   <Drawer open={Boolean(edit)} onClose={()=>ED(null)} title={current?'Edit event':'Create a hiring event'}>{edit&&<form className="ep-form" onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const zone=String(f.get('timeZone'));
     const wrong=timeProblem(times.start,times.end,!current);if(wrong){E(wrong);return;}
     const title=String(f.get('title')||'').trim(),startsAt=zonedIso(times.start,zone);
     // The same event created twice would show twice to job seekers: ask first.
-    if(!current&&(events||[]).some(x=>!x.cancelled&&x.title.trim().toLowerCase()===title.toLowerCase()&&new Date(x.startsAt).getTime()===new Date(startsAt).getTime())&&!window.confirm(`You already have an event called “${title}” at that time. Choose OK to create a second one anyway, or Cancel to go back.`))return;
+    if(!current&&(events||[]).some(x=>!x.cancelled&&x.title.trim().toLowerCase()===title.toLowerCase()&&new Date(x.startsAt).getTime()===new Date(startsAt).getTime())&&!(await ask(`You already have an event called “${title}” at that time. Choose OK to create a second one anyway, or Cancel to go back.`)))return;
     B(true);E('');
     try{await employerPost({action:'event.save',event:{id:current?.id,companyId:ctx.company.id,title:f.get('title'),description:f.get('description'),startsAt,endsAt:zonedIso(times.end,zone),timeZone:zone,mode,
      location:mode==='in_person'?String(f.get('location')||''):undefined,joinUrl:mode==='online'?String(f.get('joinUrl')||''):undefined,capacity:f.get('capacity')?Number(f.get('capacity')):null}});N(current?'Event updated.':'Event created. It now appears on the events page and your company page.');FR(title);ED(null);forgetAnswers();await load();}

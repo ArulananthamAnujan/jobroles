@@ -1,4 +1,5 @@
 'use client';
+import {ask} from '@/components/confirm';
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
 import {get,post,when} from '../employer/api';
@@ -13,7 +14,7 @@ export default function Contributions(){
  const [data,D]=useState<Data|null>(null),[error,E]=useState(''),[note,N]=useState(''),[busy,B]=useState(''),[version,V]=useState(0);
  useEffect(()=>{let live=true;get<{data:Data}>('/api/manage?resource=contributions').then(r=>{if(live)D(r.data);}).catch(e=>{if(live)E((e as Error).message);});return()=>{live=false;};},[version]);
  const total=data?GROUPS.reduce((n,[k])=>n+data[k].length,0):0;
- async function remove(kind:string,item:Item,what:string){if(!window.confirm(`Delete this ${what}? This cannot be undone.`))return;B(item.id);E('');N('');try{await post('/api/manage',{action:'contribution.delete',kind,id:item.id});N(`Your ${what} was deleted.`);V(v=>v+1);}catch(e){E((e as Error).message);}finally{B('');}}
+ async function remove(kind:string,item:Item,what:string){if(!(await ask(`Delete this ${what}? This cannot be undone.`)))return;B(item.id);E('');N('');try{await post('/api/manage',{action:'contribution.delete',kind,id:item.id});N(`Your ${what} was deleted.`);V(v=>v+1);}catch(e){E((e as Error).message);}finally{B('');}}
  return <Section title="My reviews and contributions" sub="Reviews, salaries, interview experiences, questions and answers you have shared. They are shown without your name." actions={<Link className="ep-btn secondary md" href="/companies">Find a company to review</Link>}>
   <Notice error={error} message={note}/>
   {!data?(!error&&<p role="status" className="ep-muted">Loading…</p>):!total?<Card><Empty title="You haven’t shared anything yet" action={<Link className="ep-btn primary md" href="/companies">Find your employer</Link>}>Review somewhere you have worked or applied, or add your salary. It helps other job seekers and stays anonymous.</Empty></Card>

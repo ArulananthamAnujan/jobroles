@@ -1,4 +1,5 @@
 'use client';
+import {ask} from '@/components/confirm';
 import {useEffect,useState} from 'react';
 import {employerGet,employerPost,ago} from './api';
 import {Avatar,Button,Card,Drawer,Empty,Field,Notice,Tabs} from './ui';
@@ -30,10 +31,10 @@ export default function Messages({ctx}:{ctx:PortalContext}){
     {!narrow&&<div className="ep-inbox-pane">{active?<Candidate key={active} id={active} ctx={ctx} templates={templates} onChange={()=>V(v=>v+1)}/>:<Empty title="Choose a conversation"/>}</div>}
    </div>:<div className="ep-card"><Empty title="No conversations yet">Message an applicant from their profile on the Applicants page. Their replies arrive here.</Empty></div>}
   </>:<div className="ep-grid two">
-   <Card title="Saved templates">{templates.length?<ul className="ep-list">{templates.map(t=><li key={t.id} className={fresh===t.name?'ep-fresh':undefined}><div className="ep-grow"><strong>{t.name}{fresh===t.name&&<span className="ep-saved-tag">Saved just now</span>}</strong><small style={{whiteSpace:'pre-wrap'}}>{t.body.slice(0,160)}{t.body.length>160?'…':''}</small></div>{canEdit&&<Button size="sm" tone="ghost" onClick={async()=>{if(!window.confirm(`Delete the template “${t.name}”? This cannot be undone.`))return;try{await employerPost({action:'template.delete',id:t.id});TP(all=>all.filter(x=>x.id!==t.id));N(`Template “${t.name}” deleted.`);V(v=>v+1);}catch(e){E((e as Error).message);}}}>Delete</Button>}</li>)}</ul>:<Empty title="No templates yet">Save replies you send often, such as an interview invitation or a polite “not progressing” note.</Empty>}</Card>
+   <Card title="Saved templates">{templates.length?<ul className="ep-list">{templates.map(t=><li key={t.id} className={fresh===t.name?'ep-fresh':undefined}><div className="ep-grow"><strong>{t.name}{fresh===t.name&&<span className="ep-saved-tag">Saved just now</span>}</strong><small style={{whiteSpace:'pre-wrap'}}>{t.body.slice(0,160)}{t.body.length>160?'…':''}</small></div>{canEdit&&<Button size="sm" tone="ghost" onClick={async()=>{if(!(await ask(`Delete the template “${t.name}”? This cannot be undone.`)))return;try{await employerPost({action:'template.delete',id:t.id});TP(all=>all.filter(x=>x.id!==t.id));N(`Template “${t.name}” deleted.`);V(v=>v+1);}catch(e){E((e as Error).message);}}}>Delete</Button>}</li>)}</ul>:<Empty title="No templates yet">Save replies you send often, such as an interview invitation or a polite “not progressing” note.</Empty>}</Card>
    {canEdit&&<Card title="New template"><form style={{display:'grid',gap:12}} onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget),form=e.currentTarget;E('');N('');try{const name=String(f.get('name')||'').trim(),body=String(f.get('body')||'');
      if(saving)return;
-     if(templates.some(x=>x.name.trim().toLowerCase()===name.toLowerCase())&&!window.confirm(`You already have a template called “${name}”. Choose OK to save another with the same name, or Cancel to go back and rename it.`))return;
+     if(templates.some(x=>x.name.trim().toLowerCase()===name.toLowerCase())&&!(await ask(`You already have a template called “${name}”. Choose OK to save another with the same name, or Cancel to go back and rename it.`)))return;
      SV(true);await employerPost({action:'template.save',companyId:ctx.company.id,name,body});
      // Show it in the list straight away; the reload that follows replaces it with the saved copy.
      TP(all=>[...all.filter(x=>x.name!==name),{id:`new-${name}`,name,body} as Template].sort((a,b)=>a.name.localeCompare(b.name)));form.reset();N(`Template “${name}” saved. It is in the list on the left.`);FR(name);V(v=>v+1);}catch(err){E((err as Error).message);}finally{SV(false);}}}>

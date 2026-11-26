@@ -1,4 +1,5 @@
 'use client';
+import {ask} from '@/components/confirm';
 import {useEffect,useState} from 'react';
 import {get,post,when} from '../employer/api';
 import {Button,Card,Field,Notice,Pill,Stat} from '../employer/ui';
@@ -22,6 +23,6 @@ export default function SetupStatus(){
   {abn&&<Card title="Connect the ABN register"><Notice error={keyError} message={note}/>
    <p className="ep-muted" style={{marginBottom:12}}>{abn.connected?'Connected. Paste a new key to replace it.':'With this connected, a company is verified only when the Australian Business Register says its ABN is active and registered to a matching name.'} The key is free: register at abr.business.gov.au/Tools/WebServices and it is emailed to you.</p>
    <form className="ep-form" onSubmit={e=>{e.preventDefault();void saveKey(key.trim());}}><Field label="ABN Lookup access key (GUID)" hint="Looks like xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx. It is stored in your database and never shown again."><input value={key} onChange={e=>K(e.target.value)} required autoComplete="off" spellCheck={false} maxLength={60}/></Field>
-    <div className="ep-actions"><Button disabled={busy}>{busy?'Saving…':abn.connected?'Replace key':'Save key'}</Button>{abn.connected&&<Button type="button" tone="danger" disabled={busy} onClick={()=>{if(window.confirm('Disconnect the ABN register? Companies will be checked by ABN format only.'))void saveKey('');}}>Disconnect</Button>}</div></form></Card>}
+    <div className="ep-actions"><Button disabled={busy}>{busy?'Saving…':abn.connected?'Replace key':'Save key'}</Button>{abn.connected&&<Button type="button" tone="danger" disabled={busy} onClick={async()=>{if((await ask('Disconnect the ABN register? Companies will be checked by ABN format only.')))void saveKey('');}}>Disconnect</Button>}</div></form></Card>}
  </>;
 }

@@ -1,4 +1,5 @@
 'use client';
+import {ask} from '@/components/confirm';
 import {useEffect,useState} from 'react';
 import {Panel,Btn,Field,Badge} from './market-ui';
 type Feed={id:string;company_id:string;url:string;format:string;active:boolean;auto_publish:boolean;last_run_at:string|null;last_status:string|null;last_error:string|null};
@@ -19,7 +20,7 @@ export default function JobFeeds({companies,ownerOf,isAdmin}:{companies:Company[
    <Field label="Format"><select name="format"><option value="xml">XML (Indeed format, JobAdder, PageUp and most ATS exports)</option><option value="json">JSON</option><option value="greenhouse">Greenhouse</option><option value="lever">Lever</option><option value="ashby">Ashby</option><option value="smartrecruiters">SmartRecruiters</option></select></Field>
    <Btn disabled={busy}>Add feed</Btn></form></Panel>}
   <div className="grid-three">{feeds.map(f=><Panel key={f.id}><Badge tone={f.last_status==='failed'?'amber':'teal'}>{f.active?f.last_status==='failed'?'Last import failed':'Active':'Paused'}</Badge><h3>{companies.find(c=>c.id===f.company_id)?.name||'Company'}</h3><p style={{overflowWrap:'anywhere'}}>{f.url}</p><p>{f.format.toUpperCase()} · {f.auto_publish?'Trusted: publishes without review':'New roles go to review'}</p><p className="muted">{f.last_run_at?`Last checked ${new Date(f.last_run_at).toLocaleString('en-AU')}: ${f.last_status}`:'Not checked yet'}</p>{f.last_error&&<p role="alert">{f.last_error}</p>}
-   {ownerOf.includes(f.company_id)&&<><Btn secondary disabled={busy} onClick={()=>act(f.active?'pause':'resume',{id:f.id})}>{f.active?'Pause feed':'Resume feed'}</Btn><Btn secondary disabled={busy} onClick={()=>{if(window.confirm('Remove this feed? Roles imported from it will close.'))void act('delete',{id:f.id},'Feed removed and its roles closed.');}}>Remove feed</Btn></>}
+   {ownerOf.includes(f.company_id)&&<><Btn secondary disabled={busy} onClick={()=>act(f.active?'pause':'resume',{id:f.id})}>{f.active?'Pause feed':'Resume feed'}</Btn><Btn secondary disabled={busy} onClick={async()=>{if((await ask('Remove this feed? Roles imported from it will close.')))void act('delete',{id:f.id},'Feed removed and its roles closed.');}}>Remove feed</Btn></>}
    {isAdmin&&<Btn secondary disabled={busy} onClick={()=>act('trust',{id:f.id,autoPublish:!f.auto_publish})}>{f.auto_publish?'Require review again':'Trust feed (publish without review)'}</Btn>}
   </Panel>)}</div></section>;
 }

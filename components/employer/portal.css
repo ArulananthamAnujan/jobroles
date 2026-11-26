@@ -489,3 +489,11 @@ div.ep-notice{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
 .ep-panel-nav button{background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font:inherit;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer}.ep-panel-nav button:hover:not(:disabled){background:var(--wash)}.ep-panel-nav button:disabled{opacity:.4;cursor:default}
 .ep-panel-match{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;color:var(--soft);margin:0 0 12px}
 .ep-drawer-head h2{flex:1;min-width:0}
+
+/* The applicant board wraps onto a second row on narrower screens, so every stage is visible without scrolling sideways */
+.ep-board{grid-auto-flow:row;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));overflow-x:visible}
+@media(min-width:1500px){.ep-board{grid-template-columns:repeat(7,minmax(0,1fr))}}
+/* Buttons that are links keep readable text inside the dashboard: white on the dark primary, dark on the light secondary */
+.ep a.jp-btn,.ep a.jp-btn:visited,.ep button.jp-btn{color:#fff}
+.ep a.jp-btn.secondary,.ep a.jp-btn.secondary:visited,.ep button.jp-btn.secondary{color:var(--ink)}
+.ep a.jp-btn.is-applied,.ep a.jp-btn.secondary.is-saved{color:var(--teal,#076d65)}

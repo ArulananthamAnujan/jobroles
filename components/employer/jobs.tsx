@@ -1,4 +1,5 @@
 'use client';
+import {ask} from '@/components/confirm';
 import {useEffect,useMemo,useRef,useState} from 'react';
 import Link from 'next/link';
 import {useSearchParams} from 'next/navigation';
@@ -33,7 +34,7 @@ function Editor({ctx,job,copy,applicants,existing,onClose,onSaved}:{ctx:PortalCo
   // Posting the same role twice by accident splits applicants between two listings: ask first.
   if(!id0){const same=(t:string)=>t.trim().toLowerCase().replace(/\s+/g,' '),place=same(f.location.split('\n')[0]||'');
    const twin=existing.find(j=>['draft','pending_review','live','paused'].includes(j.state)&&!(j.state==='live'&&j.expires_at&&new Date(j.expires_at)<new Date())&&same(j.title)===same(f.title)&&j.job_locations.some(l=>same(l.label)===place));
-   if(twin&&!window.confirm(`You already have “${twin.title}” in ${twin.job_locations[0]?.label||'that location'} (${(STATE[twin.state]?.[0]||twin.state).toLowerCase()}). Posting it again would create a second listing.\n\nChoose OK to create another one anyway, or Cancel to go back.`))return;}
+   if(twin&&!(await ask(`You already have “${twin.title}” in ${twin.job_locations[0]?.label||'that location'} (${(STATE[twin.state]?.[0]||twin.state).toLowerCase()}). Posting it again would create a second listing.\n\nChoose OK to create another one anyway, or Cancel to go back.`)))return;}
   B(true);E('');
   try{
    const saved=await command('job.save',{id:id0,companyId:ctx.company.id,title:f.title,description:f.description,locations:f.location.split('\n').map(x=>x.trim()).filter(Boolean),type:f.type,arrangement:f.arrangement,min:Number(f.min),max:Number(f.max),period:f.period,sponsorship:f.sponsorship==='on',submit}) as {result:{id:string}};
@@ -74,10 +75,18 @@ function Editor({ctx,job,copy,applicants,existing,onClose,onSaved}:{ctx:PortalCo
 }
 
 export default function Jobs({ctx}:{ctx:PortalContext}){
- const params=useSearchParams();
+ const params=useSearchParams(),opened=useRef('');
+ // Close any open More menu when the person clicks elsewhere or presses Escape.
+ useEffect(()=>{const shut=(keep?:Element|null)=>document.querySelectorAll<HTMLDetailsElement>('details.ep-more[open]').forEach(d=>{if(d!==keep)d.open=false;});
+  const click=(e:MouseEvent)=>shut((e.target as Element|null)?.closest?.('details.ep-more'));const key=(e:KeyboardEvent)=>{if(e.key==='Escape')shut();};
+  document.addEventListener('click',click);document.addEventListener('keydown',key);return()=>{document.removeEventListener('click',click);document.removeEventListener('keydown',key);};},[]);
  const [jobs,J]=useState<Job[]|null>(null),[stats,S]=useState<Stat[]>([]),[tab,T]=useState(params.get('tab')||'all'),[q,Q]=useState(''),[error,E]=useState(''),[note,N]=useState(''),[version,V]=useState(0),[fresh,FR]=useState('');
  const [editor,ED]=useState<null|{job:Job|null;copy:boolean}>(params.get('new')?{job:null,copy:false}:null);
- useEffect(()=>{const c=new AbortController();employerGet<{jobs:Job[];stats:Stat[]}>('jobs',{company:ctx.company.id},c.signal).then(d=>{J(d.jobs);S(d.stats);const edit=params.get('edit');if(edit){const j=d.jobs.find(x=>x.id===edit);if(j)ED({job:j,copy:status(j)==='expired'||j.state==='closed'});}}).catch(e=>{if(e.name!=='AbortError')E(e.message);});return()=>c.abort();},[ctx.company.id,version,params]);
+ useEffect(()=>{const c=new AbortController();employerGet<{jobs:Job[];stats:Stat[]}>('jobs',{company:ctx.company.id},c.signal).then(d=>{J(d.jobs);S(d.stats);const edit=params.get('edit');
+   // An address such as ?edit=… opens that job once. Without this guard the list's own refresh (every few seconds
+   // while a job is going live) reopened the editor again and again, with no way to close it.
+   if(edit&&opened.current!==edit){opened.current=edit;const j=d.jobs.find(x=>x.id===edit);if(j)ED({job:j,copy:status(j)==='expired'||j.state==='closed'});}}).catch(e=>{if(e.name!=='AbortError')E(e.message);});return()=>c.abort();},[ctx.company.id,version,params]);
+ const tidy=()=>{if(params.get('edit')||params.get('new'))window.history.replaceState(null,'','/employer?view=jobs');};
  const canEdit=ctx.role==='owner'||ctx.role==='recruiter';
  // While a job is waiting to go live, check again every 20 seconds so it turns Live without a refresh.
  const waiting=(jobs||[]).some(j=>j.state==='pending_review');
@@ -110,11 +119,11 @@ export default function Jobs({ctx}:{ctx:PortalContext}){
       {canEdit&&<button type="button" onClick={()=>ED({job:j,copy:true})}>Duplicate</button>}
       {canEdit&&j.state==='live'&&status(j)!=='expired'&&<button type="button" onClick={()=>void setState(j,'paused','Job paused. It no longer appears in search.')}>Pause</button>}
       {canEdit&&j.state==='paused'&&<button type="button" onClick={()=>void setState(j,'pending_review','Sent for approval to go live again.')}>Resume</button>}
-      {canEdit&&!['closed','draft'].includes(j.state)&&<button type="button" className="danger" onClick={()=>{if(window.confirm(`Close “${j.title}”? Applicants keep access to their application.`))void setState(j,'closed','Job closed.');}}>Close job</button>}
-      {canEdit&&j.state==='draft'&&!j.published_at&&<button type="button" className="danger" onClick={()=>{if(window.confirm(`Delete the draft “${j.title}”? This cannot be undone.`))void remove(j);}}>Delete draft</button>}
+      {canEdit&&!['closed','draft'].includes(j.state)&&<button type="button" className="danger" onClick={async()=>{if((await ask(`Close “${j.title}”? Applicants keep access to their application.`)))void setState(j,'closed','Job closed.');}}>Close job</button>}
+      {canEdit&&j.state==='draft'&&!j.published_at&&<button type="button" className="danger" onClick={async()=>{if((await ask(`Delete the draft “${j.title}”? This cannot be undone.`)))void remove(j);}}>Delete draft</button>}
      </div></details>}
     </div></td></tr>;})}
   </tbody></table></div>:<div className="ep-card"><Empty title={jobs.length?'No jobs here':'No jobs yet'} action={canEdit&&<Button onClick={()=>ED({job:null,copy:false})}>Post a job</Button>}>{jobs.length?'Try another tab or search.':'Post your first job, or import a spreadsheet of jobs at once.'}</Empty></div>}
-  {editor&&<Editor ctx={ctx} job={editor.job} copy={editor.copy} applicants={editor.job?stat(editor.job.id)?.applications??0:0} existing={jobs||[]} onClose={()=>ED(null)} onSaved={(msg,id)=>{ED(null);N(msg);FR(id);T('all');V(v=>v+1);}}/>}
+  {editor&&<Editor ctx={ctx} job={editor.job} copy={editor.copy} applicants={editor.job?stat(editor.job.id)?.applications??0:0} existing={jobs||[]} onClose={()=>{ED(null);tidy();}} onSaved={(msg,id)=>{ED(null);tidy();N(msg);FR(id);T('all');V(v=>v+1);}}/>}
  </Section>;
 }
