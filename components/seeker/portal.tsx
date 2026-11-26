@@ -39,7 +39,7 @@ export default function SeekerPortal(){
  const nav:NavItem[]=[...VIEWS.map(([group,id,label,icon])=>({group,id,label,icon,href:`/job-seeker?view=${id}`})),...TOOLS.map(([href,label,icon])=>({group:'Tools',id:href.endsWith('view=resume')?'resume':href,label,icon,href}))];
  const label=view==='resume'?'Resume builder':VIEWS.find(v=>v[1]===view)?.[2]||'Apply';
  return <AppShell nav={nav} current={view} crumb={<>Job seeker <span aria-hidden="true">/</span> <strong>{label}</strong></>}
-  search={{placeholder:'Search jobs, e.g. nurse in Geelong',onSubmit:q=>router.push(`/search?${new URLSearchParams({q})}`)}}
+  search={{placeholder:'Search jobs, e.g. nurse in Geelong',onSubmit:q=>window.location.assign(`/search?${new URLSearchParams({q})}`)}}
   end={account?.user&&<><Link className="ep-iconbtn" href="/help" aria-label="Help"><Icon name="help"/></Link><AccountMenu email={account.user.email} links={[['/job-seeker?view=profile','Profile and resume'],['/job-seeker?view=account','Account and password'],['/alerts','Job alerts'],...(employer?[['/employer','Employer portal'] as [string,string]]:[['/employer','Hire on JobRoles'] as [string,string]]),...(admin?[['/admin','Admin console'] as [string,string]]:[])]}/></>}
   foot={<><Link href="/employer">{employer?'Switch to employer':'Hiring? Post a job'}</Link></>}>
   {!account?<p role="status" className="ep-muted">Loading…</p>:view==='overview'?<SeekerHome/>:view==='applications'?<SeekerApplications/>:view==='saved'?<SavedView/>:view==='contributions'?<Contributions/>:view==='account'?<AccountSettings email={account.user?.email||''}/>:view==='resume'?<div className="ep-resume"><ResumeBuilder/></div>:

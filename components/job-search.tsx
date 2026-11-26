@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useMemo,useRef,useState,useSyncExternalStore} from 'react';
 import Link from 'next/link';
-import {usePathname,useRouter,useSearchParams} from 'next/navigation';
+import {usePathname,useSearchParams} from 'next/navigation';
 import {salaryLabel} from '@/lib/salary';
 import {SECTORS} from '@/lib/search';
 import {SaveSearch,ReportJob} from './launch-tools';
@@ -32,13 +32,15 @@ function subscribeRecent(cb:()=>void){window.addEventListener('storage',cb);retu
 // The address always carries the whole search (what, where and every filter), so a search can be bookmarked,
 // shared, refreshed and stepped through with the back button. `sent` stops the same address being added twice.
 let sent='';
+// Searching and filtering load the results page afresh instead of swapping it in place. The address bar then changes
+// the ordinary way, which every browser, extension, bookmark and "reload" understands, and Back steps through searches.
+function go(to:string){if(to===sent)return;sent=to;window.location.assign(to);}
 function typed(){const f=document.querySelector<HTMLFormElement>('form.jr-search');return {q:String(f?.elements.namedItem('q') instanceof HTMLInputElement?(f.elements.namedItem('q') as HTMLInputElement).value:'').trim(),near:String(f?.elements.namedItem('near') instanceof HTMLInputElement?(f.elements.namedItem('near') as HTMLInputElement).value:'').trim()};}
 function searchAddress(change?:(p:URLSearchParams)=>void){const next=new URLSearchParams(window.location.pathname==='/search'?window.location.search:''),t=typed();
  for(const k of ['q','near'] as const){if(t[k])next.set(k,t[k]);else next.delete(k);}if(!t.near)next.delete('radius');next.delete('location');change?.(next);return `/search${next.size?`?${next}`:''}`;}
 function SearchBar({q,near,compact}:{q:string;near:string;compact:boolean}){
- const router=useRouter();
  // Without JavaScript the form still works as an ordinary link to /search?q=…&near=….
- return <form action="/search" role="search" className={`jr-search ${compact?'compact':''}`} onSubmit={e=>{e.preventDefault();const t=typed();rememberSearch(t.q,t.near);const to=searchAddress(p=>p.delete('page'));sent=to;router.push(to);}}>
+ return <form action="/search" role="search" className={`jr-search ${compact?'compact':''}`} onSubmit={e=>{e.preventDefault();const t=typed();rememberSearch(t.q,t.near);go(searchAddress(p=>p.delete('page')));}}>
   <label className="jr-field"><span className="jr-field-label">What</span><input name="q" defaultValue={q} maxLength={120} placeholder="Job title, keywords or company" autoComplete="off"/></label>
   <label className="jr-field"><span className="jr-field-label">Where</span><PlaceInput defaultValue={near}/></label>
   <button type="submit" className="jr-primary">Find jobs</button>
@@ -46,8 +48,7 @@ function SearchBar({q,near,compact}:{q:string;near:string;compact:boolean}){
 }
 
 function Filters({params}:{params:URLSearchParams}){
- const router=useRouter();
- const set=(key:string,value:string)=>{const to=searchAddress(next=>{if(value)next.set(key,value);else next.delete(key);next.delete('page');if(key==='salaryMin'){if(value)next.set('salaryPeriod','year');else next.delete('salaryPeriod');}});if(to===sent)return;sent=to;router.push(to);};
+ const set=(key:string,value:string)=>{const to=searchAddress(next=>{if(value)next.set(key,value);else next.delete(key);next.delete('page');if(key==='salaryMin'){if(value)next.set('salaryPeriod','year');else next.delete('salaryPeriod');}});go(to);};
  // Some browsers' autofill and automation tools change a menu without the event React listens for; this catches those too.
  const box=useRef<HTMLDivElement>(null),latest=useRef(set);useEffect(()=>{latest.current=set;});
  useEffect(()=>{const el=box.current;if(!el)return;const on=(e:Event)=>{const t=e.target;if(t instanceof HTMLSelectElement&&t.dataset.filter)latest.current(t.dataset.filter,t.value);};el.addEventListener('change',on,true);el.addEventListener('input',on,true);return()=>{el.removeEventListener('change',on,true);el.removeEventListener('input',on,true);};},[]);
@@ -60,7 +61,7 @@ function Filters({params}:{params:URLSearchParams}){
   {pill('posted','Date posted',[['1','Last 24 hours'],['3','Last 3 days'],['7','Last 7 days'],['14','Last 14 days']])}
   {params.get('near')&&pill('radius','Distance',[['5','Within 5 km'],['10','Within 10 km'],['50','Within 50 km'],['100','Within 100 km'],['250','Within 250 km']])}
   {pill('sector','Sector',Object.entries(SECTORS).map(([id,s])=>[id,s.label] as [string,string]))}
-  {['salaryMin','pay','arrangement','type','posted','radius','sector','company'].some(k=>params.get(k))&&<Link className="jr-clear" href={`/search?${new URLSearchParams([...params].filter(([k])=>k==='q'||k==='near'))}`}>Clear filters</Link>}
+  {['salaryMin','pay','arrangement','type','posted','radius','sector','company'].some(k=>params.get(k))&&<a className="jr-clear" href={`/search?${new URLSearchParams([...params].filter(([k])=>k==='q'||k==='near'))}`}>Clear filters</a>}
  </div>;
 }
 
@@ -103,7 +104,7 @@ function JobPane({job:j,query}:{job:Job;query:string}){
 
 export default function JobSearch(){
  const path=usePathname(),params=useSearchParams(),query=params.toString(),home=path==='/';
- const router=useRouter(),[tab,T]=useState<'latest'|'foryou'>('latest'),[selected,S]=useState('');
+ const [tab,T]=useState<'latest'|'foryou'>('latest'),[selected,S]=useState('');
  const recent=useSyncExternalStore(subscribeRecent,recentSnapshot,()=>EMPTY);
  const key=`${home?tab:'search'}|${query}`;
  // One state object per request key: while a new key loads, the previous results stay on screen.
@@ -119,12 +120,8 @@ export default function JobSearch(){
   }).catch(e=>{if(e.name!=='AbortError')setState({key,error:(e as Error).message});});
   return()=>c.abort();
  },[key,query,home,tab]);
- // On the results page the address follows the What and Where boxes as they are typed, without piling up history.
  const hero=useRef<HTMLDivElement>(null);
  useEffect(()=>{sent=`${path}${query?`?${query}`:''}`;},[path,query]);
- useEffect(()=>{const el=hero.current;if(!el||home)return;let timer:ReturnType<typeof setTimeout>|undefined;
-  const on=(e:Event)=>{const t=e.target;if(!(t instanceof HTMLInputElement)||(t.name!=='q'&&t.name!=='near'))return;clearTimeout(timer);timer=setTimeout(()=>{const to=searchAddress(p=>p.delete('page'));if(to===sent)return;sent=to;router.replace(to,{scroll:false});},600);};
-  el.addEventListener('input',on,true);el.addEventListener('change',on,true);return()=>{clearTimeout(timer);el.removeEventListener('input',on,true);el.removeEventListener('change',on,true);};},[home,router]);
  const loading=state.key!==key,results=state.results,error=state.error,signIn=Boolean(state.signIn)&&!loading;
  const [hidden,H]=useState<Set<string>>(new Set()),[hideNote,HN]=useState<{id:string;text:string}|null>(null);
  async function hide(id:string,on=true){const r=await fetch('/api/career',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'hide',jobId:id,hide:on})}).catch(()=>null);
@@ -141,26 +138,26 @@ export default function JobSearch(){
    {home&&<h1 className="jr-home-title">Find a job in Australia, with pay up front</h1>}
    <SearchBar q={q} near={near} compact={!home}/>
    {home?<div className="jr-under">
-    {recent.length>0&&<p className="jr-chips"><span>Recent searches:</span>{recent.map(r=><Link key={`${r.q}|${r.near}`} href={`/search?${new URLSearchParams(Object.entries({q:r.q,near:r.near}).filter(([,v])=>v))}`}>{[r.q,r.near].filter(Boolean).join(' · ')}</Link>)}</p>}
-    <p className="jr-chips"><span>Popular:</span>{POPULAR.map(p=><Link key={p} href={`/search?q=${encodeURIComponent(p)}`}>{p}</Link>)}</p>
+    {recent.length>0&&<p className="jr-chips"><span>Recent searches:</span>{recent.map(r=><a key={`${r.q}|${r.near}`} href={`/search?${new URLSearchParams(Object.entries({q:r.q,near:r.near}).filter(([,v])=>v))}`}>{[r.q,r.near].filter(Boolean).join(' · ')}</a>)}</p>}
+    <p className="jr-chips"><span>Popular:</span>{POPULAR.map(p=><a key={p} href={`/search?q=${encodeURIComponent(p)}`}>{p}</a>)}</p>
     <p className="jr-post"><Link href="/employer">Employers: post a job</Link> · jobs posted here always show their pay and come from ABN-verified employers. We also list roles from employers’ own careers sites.</p>
    </div>:<Filters params={params}/>}
   </div>
   <main id="results" className="jr-main">
    {home&&<div className="jr-tabs" role="tablist" aria-label="Job feed"><button role="tab" aria-selected={tab==='latest'} onClick={()=>T('latest')}>Latest jobs</button><button role="tab" aria-selected={tab==='foryou'} onClick={()=>T('foryou')}>Jobs for you</button></div>}
-   <div className="jr-results-head"><h1 className={home?'jr-feed-title':'jr-results-title'} aria-live="polite">{loading&&!results?'Loading jobs…':heading}</h1>{!home&&results&&<div className="jr-results-tools"><SaveSearch key={query} query={query}/><label className="jr-sort">Sort by <select value={params.get('sort')||''} onChange={e=>{const next=new URLSearchParams(query);if(e.target.value)next.set('sort',e.target.value);else next.delete('sort');next.delete('page');router.push(`/search?${next}`);}}><option value="">relevance</option><option value="newest">date</option><option value="salary">pay</option>{params.get('near')&&<option value="distance">distance</option>}</select></label></div>}</div>
+   <div className="jr-results-head"><h1 className={home?'jr-feed-title':'jr-results-title'} aria-live="polite">{loading&&!results?'Loading jobs…':heading}</h1>{!home&&results&&<div className="jr-results-tools"><SaveSearch key={query} query={query}/><label className="jr-sort">Sort by <select value={params.get('sort')||''} onChange={e=>{const next=new URLSearchParams(query);if(e.target.value)next.set('sort',e.target.value);else next.delete('sort');next.delete('page');go(`/search${next.size?`?${next}`:''}`);}}><option value="">relevance</option><option value="newest">date</option><option value="salary">pay</option>{params.get('near')&&<option value="distance">distance</option>}</select></label></div>}</div>
    {error&&<div className="jr-empty" role="alert"><h2>We couldn’t load jobs</h2><p>{error}</p><button className="jr-secondary" onClick={()=>window.location.reload()}>Try again</button></div>}
    {signIn&&<div className="jr-empty"><h2>Sign in to see jobs for you</h2><p>We match roles to the skills, headline and location in your profile.</p><Link className="jr-primary" href="/job-seeker">Sign in</Link></div>}
-   {results&&!signIn&&!results.jobs.length&&!error&&<div className="jr-empty"><h2>{home&&tab==='foryou'?'Add skills to your profile to see matches':'No jobs match your search'}</h2><p>{home&&tab==='foryou'?'Your headline, location and skills decide what we suggest.':'Try fewer words, a nearby city, or clear a filter. Save the search to hear when new roles arrive.'}</p>{!home&&<Link className="jr-secondary" href="/search">See all jobs</Link>}</div>}
+   {results&&!signIn&&!results.jobs.length&&!error&&<div className="jr-empty"><h2>{home&&tab==='foryou'?'Add skills to your profile to see matches':'No jobs match your search'}</h2><p>{home&&tab==='foryou'?'Your headline, location and skills decide what we suggest.':'Try fewer words, a nearby city, or clear a filter. Save the search to hear when new roles arrive.'}</p>{!home&&<a className="jr-secondary" href="/search">See all jobs</a>}</div>}
    {results&&results.jobs.length>0&&<div className="jr-split">
     {hideNote&&<p className="jr-hidden-note" role="status">{hideNote.text}{hideNote.id&&<button type="button" className="text-link" onClick={()=>void hide(hideNote.id,false)}>Undo</button>}</p>}
     <ol className="jr-list" aria-label="Job results">{results.jobs.filter(j=>!hidden.has(j.id)).map(j=><JobCard key={j.id} job={j} query={query} selected={selected===j.id} onHide={hide} onSelect={()=>{S(j.id);paneRef.current?.scrollTo({top:0});}}/>)}</ol>
     <div className="jr-pane-wrap" ref={paneRef}>{chosen&&<JobPane job={chosen} query={query}/>}</div>
    </div>}
-   {results&&!home&&results.total>results.pageSize&&<nav className="jr-pages" aria-label="Results pages">{results.page>1&&<Link className="jr-secondary" href={pageHref(results.page-1)}>Previous</Link>}<span>Page {results.page} of {Math.ceil(results.total/results.pageSize)}</span>{results.page*results.pageSize<results.total&&<Link className="jr-secondary" href={pageHref(results.page+1)}>Next</Link>}</nav>}
-   {home&&results&&tab==='latest'&&results.total>results.jobs.length&&<p className="jr-more"><Link className="jr-secondary" href="/search">See all {results.total} jobs</Link></p>}
+   {results&&!home&&results.total>results.pageSize&&<nav className="jr-pages" aria-label="Results pages">{results.page>1&&<a className="jr-secondary" href={pageHref(results.page-1)}>Previous</a>}<span>Page {results.page} of {Math.ceil(results.total/results.pageSize)}</span>{results.page*results.pageSize<results.total&&<a className="jr-secondary" href={pageHref(results.page+1)}>Next</a>}</nav>}
+   {home&&results&&tab==='latest'&&results.total>results.jobs.length&&<p className="jr-more"><a className="jr-secondary" href="/search">See all {results.total} jobs</a></p>}
   </main>
-  {home&&<section className="jr-browse" aria-labelledby="browse-title"><h2 id="browse-title">Browse jobs</h2><div className="jr-browse-cols"><div><h3>By city</h3><ul>{['Melbourne','Sydney','Brisbane','Perth','Adelaide','Hobart','Canberra','Darwin','Geelong','Newcastle','Gold Coast'].map(c=><li key={c}><Link href={`/search?near=${c}`}>Jobs in {c}</Link></li>)}</ul></div><div><h3>By sector</h3><ul>{Object.entries(SECTORS).map(([id,s])=><li key={id}><Link href={`/search?sector=${id}`}>{s.label}</Link></li>)}</ul></div><div><h3>For employers</h3><ul><li><Link href="/employer">Post a job</Link></li><li><Link href="/employer?view=candidates">Search candidates</Link></li><li><Link href="/market-guide">Salary guides by role</Link></li></ul></div></div></section>}
+  {home&&<section className="jr-browse" aria-labelledby="browse-title"><h2 id="browse-title">Browse jobs</h2><div className="jr-browse-cols"><div><h3>By city</h3><ul>{['Melbourne','Sydney','Brisbane','Perth','Adelaide','Hobart','Canberra','Darwin','Geelong','Newcastle','Gold Coast'].map(c=><li key={c}><a href={`/search?near=${c}`}>Jobs in {c}</a></li>)}</ul></div><div><h3>By sector</h3><ul>{Object.entries(SECTORS).map(([id,s])=><li key={id}><a href={`/search?sector=${id}`}>{s.label}</a></li>)}</ul></div><div><h3>For employers</h3><ul><li><Link href="/employer">Post a job</Link></li><li><Link href="/employer?view=candidates">Search candidates</Link></li><li><Link href="/market-guide">Salary guides by role</Link></li></ul></div></div></section>}
   <SiteFooter/>
  </div>;
 }
