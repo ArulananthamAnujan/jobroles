@@ -477,3 +477,15 @@ div.ep-notice{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
 .ep-jobs-table td:first-child{min-width:180px}
 @media(max-width:1400px){.ep-jobs-table th:nth-child(4),.ep-jobs-table td:nth-child(4),.ep-jobs-table th:nth-child(6),.ep-jobs-table td:nth-child(6){display:none}}
 @media(max-width:1180px){.ep-jobs-table th:nth-child(5),.ep-jobs-table td:nth-child(5){display:none}}
+
+/* Applicants: match scores, resume search, paging and stepping through the panel */
+.ep-match{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 8px}.ep-match small{color:var(--soft);font-size:12px}
+.ep-snippet{display:block;font-size:12.5px;line-height:1.45;color:var(--soft);margin-top:4px;overflow-wrap:anywhere}.ep-snippet mark{background:#fff1b8;color:inherit;font-weight:600;padding:0 1px;border-radius:2px}
+.ep-insight{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:13px;color:var(--soft);margin:-8px 0 14px}
+.ep-sort{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--soft)}.ep-sort select{width:auto}
+.ep-show-more{width:100%;margin-top:8px;background:#fff;border:1px dashed var(--control,#b8c4cb);border-radius:8px;padding:8px;font:inherit;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer}.ep-show-more:hover{background:var(--mint)}
+.ep-panel-title{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;justify-content:space-between;width:100%}
+.ep-panel-nav{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--soft)}
+.ep-panel-nav button{background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font:inherit;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer}.ep-panel-nav button:hover:not(:disabled){background:var(--wash)}.ep-panel-nav button:disabled{opacity:.4;cursor:default}
+.ep-panel-match{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;color:var(--soft);margin:0 0 12px}
+.ep-drawer-head h2{flex:1;min-width:0}

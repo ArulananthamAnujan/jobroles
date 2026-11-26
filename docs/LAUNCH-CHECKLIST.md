@@ -55,6 +55,7 @@ After this migration, check in Supabase Storage that the `company-media` bucket 
 | `20261113000002_abn_register_lookup` | Checks each new company's ABN against the Australian Business Register (active, and registered to a matching name) before verifying it. Needs a free access key: see `docs/ABN-CHECK.md` |
 | `20261124000001_invitation_email` | Team invitations are emailed to the person invited, and the invitation page shows who invited them and lets them sign in or create an account there. After applying, redeploy the `notification-mail` function (`supabase functions deploy notification-mail`): it sends these emails |
 | `20261124000002_invitation_email_health` | Shows when an invitation email is delayed, and Admin > Setup status says why |
+| `20261126000001_applicant_search_and_match` | Employers can search inside applicants' resumes and sort applicants by how well their resume matches the job's key words |
 
 ## 2. Edge Functions
 

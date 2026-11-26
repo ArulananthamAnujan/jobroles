@@ -1,6 +1,8 @@
 import {z} from 'zod';
 import {authenticatedClient,failure,response,sameOrigin,jsonBody,ApiError} from '@/lib/backend/server';
 import {rateLimit} from '@/lib/backend/guard';
+import {resumeText} from '@/lib/backend/resume-autofill';
+export const runtime='nodejs';
 export const dynamic='force-dynamic';
 // One endpoint for the employer portal. Every read and write goes through a database function that checks the
 // caller's company role, so this route only validates shapes and maps errors.
@@ -22,6 +24,25 @@ async function read(client:Client,userId:string,resource:string,p:URLSearchParam
    return {jobs:(data||[]).map(j=>({...j,screening_questions:(j.screening_questions||[]).sort((a:{position:number},b:{position:number})=>a.position-b.position)})),stats:stats||[]};
   }
   case 'abn':{const {data,error}=await client.rpc('jp_abn_check',{company:need(company)});if(error)return {check:null};return {check:data};}
+  case 'insights':{
+   // Match scores and resume search for one job. Resumes uploaded before search existed are read here, a few at a
+   // time so the request stays quick; the screen asks again until none are left.
+   const target=need(job);
+   const todo=await client.rpc('jp_unindexed_resumes',{target});
+   if(todo.error?.code==='PGRST202')return {insights:null};
+   const started=Date.now();
+   for(const row of ((todo.data||[]) as {resume_version_id:string}[]).slice(0,12)){
+    if(Date.now()-started>7000)break;let text='';
+    try{const meta=await client.from('resume_versions').select('storage_key').eq('id',row.resume_version_id).maybeSingle();
+     const file=meta.data?await client.storage.from('resumes').download(meta.data.storage_key):null;
+     if(file?.data)text=await resumeText(new Uint8Array(await file.data.arrayBuffer()));}catch{}
+    // An unreadable or scanned resume is stored as empty so it is not tried again on every visit.
+    await client.rpc('jp_index_resume',{target:row.resume_version_id,body:text}).then(()=>{},()=>{});
+   }
+   const {data,error}=await client.rpc('jp_applicant_insights',{target,search:(p.get('q')||'').slice(0,200)||null});
+   if(error){if(error.code==='PGRST202')return {insights:null};denied(error,'Applicants unavailable.');}
+   return {insights:data};
+  }
   case 'rules':{const {data,error}=await client.rpc('jp_screening_rules',{target:need(job)});if(error)denied(error,'Questions unavailable.');return {rules:data};}
   case 'pipeline':{
    const {data,error}=await client.rpc('jp_pipeline',{target:need(job)});if(error)denied(error,'Applicants unavailable.');

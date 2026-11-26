@@ -24,6 +24,9 @@ export async function POST(request:Request){try{
  if(error)throw new ApiError(400,'The file uploaded but could not be linked. Save your profile and try again.');
  // Use what the resume says, so the person is not asked to type it again. A resume that cannot be read is still saved.
  let filled:Filled={profile:[],builder:[]};
- if(form.get('autofill')!=='no'){try{filled=await autofillFromResume(client,user.id,await resumeText(new Uint8Array(await file.arrayBuffer())));}catch{}}
+ let text='';try{text=await resumeText(new Uint8Array(await file.arrayBuffer()));}catch{}
+ // Kept so employers the person applies to can search inside the resume. Ignored on a database without that update.
+ await client.rpc('jp_index_resume',{target:data,body:text}).then(()=>{},()=>{});
+ if(form.get('autofill')!=='no'){try{filled=await autofillFromResume(client,user.id,text);}catch{}}
  return response({id:data,filename,filled,filledNote:filledSentence(filled)},201);
 }catch(error){return failure(error);}}
