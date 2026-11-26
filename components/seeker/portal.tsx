@@ -1,4 +1,6 @@
 'use client';
+import {rememberSignedIn,useSignedInHint} from '@/lib/signed-in-hint';
+import PortalLoading from '../portal-loading';
 import {ask} from '@/components/confirm';
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
@@ -30,12 +32,14 @@ const TOOLS:[string,string,string][]=[['/search','Find jobs','search'],['/job-se
 const SUBS:Record<string,string>={applications:'Every application you’ve sent, with its messages and history.',profile:'What employers see when you apply, and your resume versions.',preferences:'Choose how your applications are sent.',saved:'Jobs you saved and the searches we email you about.',privacy:'Download your data, ask us to correct it, or delete your account.',jobs:'Finish your application.'};
 
 export default function SeekerPortal(){
- const params=useSearchParams(),router=useRouter();
+ const params=useSearchParams(),router=useRouter(),hint=useSignedInHint();
  const [account,A]=useState<Account|null>(null),[error,E]=useState(''),[admin,AD]=useState(false),[employer,EM]=useState(false);
- useEffect(()=>{let live=true;Promise.all([get<Account>('/api/account'),get<{isAdmin:boolean;memberships:unknown[]}>('/api/data').catch(()=>null)]).then(([a,first])=>{const d=a.user?.confirmed?first:null;if(live){A(a);AD(Boolean(d?.isAdmin));EM(Boolean(d?.memberships?.length));}}).catch(e=>{if(live)E((e as Error).message);});return()=>{live=false;};},[]);
+ useEffect(()=>{let live=true;Promise.all([get<Account>('/api/account'),get<{isAdmin:boolean;memberships:unknown[]}>('/api/data').catch(()=>null)]).then(([a,first])=>{const d=a.user?.confirmed?first:null;if(live){rememberSignedIn(a.user?.email??null);A(a);AD(Boolean(d?.isAdmin));EM(Boolean(d?.memberships?.length));}}).catch(e=>{if(live)E((e as Error).message);});return()=>{live=false;};},[]);
  const raw=accountView(`?${params}`,''),view=['hiring','analytics','candidates','feeds','reviews'].includes(raw)?'overview':raw;
  if(error)return <AppShell nav={[]} current="" crumb="Job seeker"><Notice error={error}/></AppShell>;
  if(account&&!account.user?.confirmed)return <AccountWorkspace portal="seeker"/>;
+ // Until the server has answered, only someone this tab already knows is signed in sees the dashboard frame.
+ if(!account&&hint!=='in')return <PortalLoading what="Opening your account…"/>;
  const nav:NavItem[]=[...VIEWS.map(([group,id,label,icon])=>({group,id,label,icon,href:`/job-seeker?view=${id}`})),...TOOLS.map(([href,label,icon])=>({group:'Tools',id:href.endsWith('view=resume')?'resume':href,label,icon,href}))];
  const label=view==='resume'?'Resume builder':VIEWS.find(v=>v[1]===view)?.[2]||'Apply';
  return <AppShell nav={nav} current={view} crumb={<>Job seeker <span aria-hidden="true">/</span> <strong>{label}</strong></>}

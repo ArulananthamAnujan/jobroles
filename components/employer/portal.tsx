@@ -1,4 +1,6 @@
 'use client';
+import {rememberSignedIn,useSignedInHint} from '@/lib/signed-in-hint';
+import PortalLoading from '../portal-loading';
 import {useCallback,useEffect,useMemo,useState,type ReactNode} from 'react';
 import Link from 'next/link';
 import {usePathname,useRouter,useSearchParams} from 'next/navigation';
@@ -66,10 +68,10 @@ function Onboarding({onDone,email}:{onDone:()=>void;email:string}){
 }
 
 export default function EmployerPortal(){
- const router=useRouter(),path=usePathname(),params=useSearchParams();
+ const router=useRouter(),path=usePathname(),params=useSearchParams(),hint=useSignedInHint();
  const [account,A]=useState<Account|null>(null),[data,D]=useState<Data|null>(null),[error,E]=useState(''),[companyId,C]=useState(''),[version,V]=useState(0);
  const rawView=params.get('view')||'dashboard',named=LEGACY[rawView]??(NAV.some(n=>n[1]===rawView)?rawView:'dashboard');
- useEffect(()=>{let live=true;Promise.all([get<Account>('/api/account'),get<Data>('/api/data').catch(()=>null)]).then(async([a,first])=>{const d=a.user?.confirmed?first??await get<Data>('/api/data'):null;if(live){A(a);D(d);}}).catch(e=>{if(live)E((e as Error).message);});return()=>{live=false;};},[version]);
+ useEffect(()=>{let live=true;Promise.all([get<Account>('/api/account'),get<Data>('/api/data').catch(()=>null)]).then(async([a,first])=>{const d=a.user?.confirmed?first??await get<Data>('/api/data'):null;if(live){rememberSignedIn(a.user?.email??null);A(a);D(d);}}).catch(e=>{if(live)E((e as Error).message);});return()=>{live=false;};},[version]);
  // A new company is verified automatically a minute or two after registering: pick that up without a refresh.
  const unverified=Boolean(data?.companies.some(c=>!c.verified_at&&data.memberships.some(m=>m.company_id===c.id)));
  useEffect(()=>{if(!unverified)return;const t=setInterval(()=>{forgetAnswers();V(v=>v+1);},20000);return()=>clearInterval(t);},[unverified]);
@@ -80,7 +82,9 @@ export default function EmployerPortal(){
  const nav=NAV.filter(n=>sponsoring||!PAID.includes(n[1])).map(([group,id,label,icon])=>({group,id,label,icon,href:`/employer?view=${id}`}));
  const go=useCallback((next:string,extra:Record<string,string>={})=>{const p=new URLSearchParams({view:next,...extra});router.push(`${path}?${p}`,{scroll:true});},[router,path]);
  if(error)return <AppShell nav={[]} current="" crumb="Employer"><Notice error={error}/></AppShell>;
- if(!account)return <AppShell nav={nav} current={view} crumb="Employer"><p role="status" className="ep-muted">Loading your employer portal…</p></AppShell>;
+ // Until the server has answered: the dashboard frame only for someone this tab already knows is signed in.
+ // Anyone else gets a plain loading screen, so a visitor never sees a dashboard flash up before the sign-in form.
+ if(!account)return hint==='in'?<AppShell nav={nav} current={view} crumb="Employer"><p role="status" className="ep-muted">Loading your employer portal…</p></AppShell>:<PortalLoading what="Opening the employer portal…"/>;
  if(!account.user?.confirmed||!data)return <AccountWorkspace portal="employer"/>;
  const company=companies.find(c=>c.id===companyId),membership=data.memberships.find(m=>m.company_id===companyId);
  const ctx:PortalContext|null=company&&membership?{sponsoring,company,role:membership.role,companies,memberships:data.memberships,isAdmin:data.isAdmin,userId:account.user.id,go}:null;

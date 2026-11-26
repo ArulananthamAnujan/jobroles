@@ -95,3 +95,7 @@ input[type=file]::file-selector-button:hover{background:var(--mint)}
 .place-list{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:40;list-style:none;margin:0;padding:6px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 14px 36px #172b3a26;max-height:280px;overflow:auto;min-width:220px}
 .place-list li{margin:0;padding:10px 12px;border-radius:6px;font-size:15px;cursor:pointer;color:var(--ink);text-align:left}
 .place-list li.on,.place-list li:hover{background:var(--mint)}
+.portal-loading{min-height:60vh;display:grid;place-content:center;justify-items:center;gap:14px;color:var(--text-muted)}
+.portal-spin{width:28px;height:28px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--teal);animation:portal-spin .9s linear infinite}
+@keyframes portal-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.portal-spin{animation:none}}
