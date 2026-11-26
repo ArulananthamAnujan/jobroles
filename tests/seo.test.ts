@@ -29,3 +29,15 @@ test('pay is grouped by title and period for the salaries table',()=>{
  assert.deepEqual(s.map(x=>[x.title,x.period,x.low,x.high,x.count]),[['Nurse','hour',38,48,2],['Manager','year',120000,120000,1]]);
  assert.equal(s[1].label,'$120,000');
 });
+test('search engines may index a site at its real https address, and never a local or test one',async()=>{
+ const {indexingEnabled}=await import('../lib/job-posting.ts');
+ const env=process.env,keep={o:env.APP_ORIGIN,i:env.SITE_INDEXING};
+ const at=(origin:string|undefined,flag?:string)=>{if(origin===undefined)delete env.APP_ORIGIN;else env.APP_ORIGIN=origin;if(flag===undefined)delete env.SITE_INDEXING;else env.SITE_INDEXING=flag;return indexingEnabled();};
+ try{
+  assert.equal(at('https://jobroles.com.au'),true);assert.equal(at('https://www.jobroles.com.au/'),true);
+  assert.equal(at('https://jobroles.com.au','false'),false,'SITE_INDEXING=false hides a real site');
+  assert.equal(at('https://jobroles.com.au',' FALSE '),false);
+  for(const o of [undefined,'','http://localhost:3000','https://localhost','http://jobroles.com.au','https://127.0.0.1','https://staging.test','https://jobroles.example','not a url'])assert.equal(at(o),false,String(o));
+  assert.equal(at('http://localhost:3000','true'),true,'SITE_INDEXING=true forces it on');
+ }finally{if(keep.o===undefined)delete env.APP_ORIGIN;else env.APP_ORIGIN=keep.o;if(keep.i===undefined)delete env.SITE_INDEXING;else env.SITE_INDEXING=keep.i;}
+});

@@ -1,3 +1,4 @@
+import {siteOrigin} from '@/lib/job-posting';
 import type {Metadata} from 'next';
 import Link from 'next/link';
 import {publicJobsClient} from '@/lib/backend/public-jobs';
@@ -6,7 +7,7 @@ import {SiteHeader,SiteFooter} from '@/components/site-chrome';
 import '@/components/job-page.css';
 import '@/components/career.css';
 export const dynamic='force-dynamic';
-export const metadata:Metadata={title:'Hiring events: meet employers and get interviewed | JobRoles',description:'Online and in-person hiring events from verified Australian employers. Register free, meet the team and interview on the day.'};
+export const metadata:Metadata={alternates:{canonical:`${siteOrigin()}/events`},title:'Hiring events: meet employers and get interviewed | JobRoles',description:'Online and in-person hiring events from verified Australian employers. Register free, meet the team and interview on the day.'};
 type Ev={id:string;title:string;starts_at:string;ends_at:string;time_zone:string;mode:string;location:string|null;capacity:number|null;registered:number;companies:{id:string;name:string}};
 export default async function Events({searchParams}:{searchParams:Promise<Record<string,string|string[]|undefined>>}){
  const q=await searchParams,mode=q.mode==='online'||q.mode==='in_person'?q.mode:'';

@@ -122,7 +122,7 @@ Set these with **Builds and Functions** scope, then redeploy:
 - `APP_ORIGIN`: the canonical https origin. Production refuses to send auth emails without it.
 - `AD_CLICK_SECRET`: the same value as the `ad-click` function secret. Without it, sponsored clicks are not charged, so set it before selling credit.
 - Video interview relay (recommended): create a TURN key in Cloudflare Realtime and set `CLOUDFLARE_TURN_KEY_ID` and `CLOUDFLARE_TURN_API_TOKEN`. The site then issues short-lived relay credentials per call, so interviews connect on strict office, hotel and school networks. Any other TURN server works too with `TURN_URL`, `TURN_USERNAME`, `TURN_CREDENTIAL`.
-- `SITE_INDEXING=true`: set only when you are ready for Google, because it opens robots.txt and the sitemap.
+- Search engines: the site is open to Google automatically when `APP_ORIGIN` is its real https address. Set `SITE_INDEXING=false` to keep a real site hidden (for example a staging copy); remove it to open the site again. After opening, submit `/sitemap.xml` in Google Search Console.
   Then submit `https://<domain>/sitemap.xml` in Google Search Console.
 - Add an uptime monitor on `https://<domain>/api/health`.
 

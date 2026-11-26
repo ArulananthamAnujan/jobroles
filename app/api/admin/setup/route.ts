@@ -1,5 +1,6 @@
 import {authenticatedClient,failure,response,ApiError,sameOrigin,jsonBody} from '@/lib/backend/server';
 import {enabledProviders} from '@/lib/backend/providers';
+import {indexingEnabled} from '@/lib/job-posting';
 import {billingStatus} from '@/lib/backend/billing-status';
 import {sponsoredJobs} from '@/lib/backend/features';
 export const dynamic='force-dynamic';
@@ -69,7 +70,7 @@ export async function GET(request:Request){try{
   !db?'Needs the database updates first.':!feeds?.active?'No careers feeds have been added yet.':feedReady&&!feeds.neverRun&&!feeds.stale?`${feeds.active} ${feeds.active===1?'feed':'feeds'} importing${feeds.failed?`; ${feeds.failed} failed on the last run`:''}.`:`${feeds.neverRun+feeds.stale} of ${feeds.active} ${feeds.active===1?'feed has':'feeds have'} not imported recently. ${fnState('job-feed-import')==='missing'?'The job-feed-import function is not installed.':!scheduled('jobroles-job-feed-import')?'There is no schedule running it.':'Check its secret matches the schedule.'}`,
   !feeds?.active?'Add employers under Admin > Job sourcing.':feedReady&&!feeds.neverRun&&!feeds.stale?undefined:'Deploy job-feed-import, set JOB_FEED_WORKER_SECRET, and run docs/schedules.sql (docs/JOB-FEEDS.md).');
  add('Getting jobs in','“Import now” button',set('JOB_FEED_WORKER_SECRET')?'ok':'off',set('JOB_FEED_WORKER_SECRET')?'Runs an import straight away.':'Imports wait for the next scheduled pass (about hourly).','Optional. Set JOB_FEED_WORKER_SECRET where the site is hosted, with the same value as the function’s secret.');
- add('Getting jobs in','Search engines',process.env.SITE_INDEXING==='true'?'ok':'off',process.env.SITE_INDEXING==='true'?'Google and other search engines may index the site.':'Search engines are told not to index the site, so jobs will not appear in Google.','When you are ready to launch, set SITE_INDEXING=true where the site is hosted, rebuild, and submit /sitemap.xml in Google Search Console.');
+ add('Getting jobs in','Search engines',indexingEnabled()?'ok':'off',indexingEnabled()?'Google and other search engines may index the site. Submit /sitemap.xml in Google Search Console to speed it up.':process.env.SITE_INDEXING?.trim().toLowerCase()==='false'?'Search engines are told not to index the site because SITE_INDEXING is set to false.':'Search engines are told not to index the site, because it is not running at a real https address (APP_ORIGIN).',indexingEnabled()?undefined:'Remove SITE_INDEXING=false (or set APP_ORIGIN to the site’s real https address) where the site is hosted, then redeploy.');
 
  // --- Money
  const stripe=has['billing']===true?await billingStatus(token):{credit:false,sponsor:false};

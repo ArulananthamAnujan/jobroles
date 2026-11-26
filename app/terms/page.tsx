@@ -1,8 +1,9 @@
+import {siteOrigin} from '@/lib/job-posting';
 import Link from 'next/link';
 import {Panel} from '@/components/market-ui';
 import {SiteHeader,SiteFooter} from '@/components/site-chrome';
 import '@/components/job-page.css';
-export const metadata={title:'Terms of use · JobRoles',description:'The rules for job seekers and employers using JobRoles.'};
+export const metadata={alternates:{canonical:`${siteOrigin()}/terms`},title:'Terms of use · JobRoles',description:'The rules for job seekers and employers using JobRoles.'};
 export default function Terms(){return <div className="jp-page"><SiteHeader/><main id="main" className="main account-shell legal-page"><h1>Terms of use</h1><p className="muted">Last updated 23 October 2026.</p>
 <Panel><h2>Who we are</h2><p>JobRoles is an Australian job board that connects job seekers with verified employers. By creating an account or posting a role you agree to these terms and to our <Link className="text-link" href="/privacy">privacy information</Link>.</p>
 <h2>Job seekers</h2><p>Give accurate information in your profile and applications. Your resume is shared with an employer only when you submit an application to them. You may withdraw an application, block an employer and export or request deletion of your data at any time from your account.</p>

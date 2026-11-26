@@ -1,3 +1,4 @@
+import {siteOrigin} from '@/lib/job-posting';
 import type {Metadata} from 'next';
 import {publicJobsClient} from '@/lib/backend/public-jobs';
 import {backendConfigured} from '@/lib/backend/server';
@@ -5,7 +6,7 @@ import {SiteHeader,SiteFooter} from '@/components/site-chrome';
 import {AssessmentList} from '@/components/assessments';
 import '@/components/job-page.css';
 export const dynamic='force-dynamic';
-export const metadata:Metadata={title:'Skills assessments: show employers what you can do | JobRoles',description:'Free short skills tests in customer service, numeracy, written English, attention to detail, workplace safety and spreadsheets. Share your results with employers.'};
+export const metadata:Metadata={alternates:{canonical:`${siteOrigin()}/assessments`},title:'Skills assessments: show employers what you can do | JobRoles',description:'Free short skills tests in customer service, numeracy, written English, attention to detail, workplace safety and spreadsheets. Share your results with employers.'};
 export default async function Assessments(){
  const {data}=backendConfigured()?await publicJobsClient().from('assessments').select('code,title,description,minutes').order('sort'):{data:[]};
  return <div className="jp-page"><SiteHeader/><main id="main" className="co-page">

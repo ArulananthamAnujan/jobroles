@@ -24,4 +24,11 @@ export function jobPostingJsonLd(job:Job,origin:string){
 // Safe to place inside a <script> tag: no "</script>" or HTML comment can be formed.
 export function serializeJsonLd(data:unknown){return JSON.stringify(data).replace(/</g,'\\u003c').replace(/>/g,'\\u003e').replace(/&/g,'\\u0026');}
 export function siteOrigin(){return (process.env.APP_ORIGIN||'http://localhost:3000').replace(/\/$/,'');}
-export function indexingEnabled(){return process.env.SITE_INDEXING==='true';}
+// May search engines index the site? Yes when it runs at a real https address (APP_ORIGIN), so a launched site is
+// found on Google without anyone remembering a switch. SITE_INDEXING=false keeps a real site hidden (a staging copy,
+// or a pause); SITE_INDEXING=true forces it on. Local and test addresses are never indexed.
+export function indexingEnabled(){
+ const flag=process.env.SITE_INDEXING?.trim().toLowerCase();
+ if(flag==='true')return true;if(flag==='false')return false;
+ try{const u=new URL(process.env.APP_ORIGIN||'');return u.protocol==='https:'&&!/^(localhost$|127\.|0\.0\.0\.0$|\[)/.test(u.hostname)&&!/\.(local|localhost|test|example|invalid)$/.test(u.hostname);}catch{return false;}
+}
